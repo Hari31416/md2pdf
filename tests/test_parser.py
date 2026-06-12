@@ -1,0 +1,185 @@
+"""Tests for md2pdf.core.parser and md2pdf.core.preprocessors (Phase 2)."""
+
+from __future__ import annotations
+
+from md2pdf.core.parser import MarkdownParser
+from md2pdf.core.preprocessors import FrontMatterStripper, IncludeResolver
+from md2pdf.core.tokens import (
+    BLOCKQUOTE,
+    CODE_FENCE,
+    HEADING,
+    LATEX_BLOCK,
+    LIST,
+    MERMAID,
+    PARAGRAPH,
+    TABLE,
+    THEMATIC_BREAK,
+)
+
+# ---------------------------------------------------------------------------
+# MarkdownParser — helpers
+# ---------------------------------------------------------------------------
+
+
+def _types(tokens: list[dict]) -> list[str]:
+    """Extract just the 'type' field from a list of token dicts."""
+    return [t["type"] for t in tokens]
+
+
+# ---------------------------------------------------------------------------
+# MarkdownParser — basic token types
+# ---------------------------------------------------------------------------
+
+
+class TestMarkdownParserTokenTypes:
+    def test_heading(self):
+        tokens = MarkdownParser().parse("# Hello World\n")
+        assert HEADING in _types(tokens)
+
+    def test_heading_level(self):
+        tokens = MarkdownParser().parse("## H2\n")
+        heading = next(t for t in tokens if t["type"] == HEADING)
+        assert heading["attrs"]["level"] == 2
+
+    def test_paragraph(self):
+        tokens = MarkdownParser().parse("Just some text.\n")
+        assert PARAGRAPH in _types(tokens)
+
+    def test_unordered_list(self):
+        md = "- item one\n- item two\n"
+        tokens = MarkdownParser().parse(md)
+        assert LIST in _types(tokens)
+
+    def test_ordered_list(self):
+        md = "1. first\n2. second\n"
+        tokens = MarkdownParser().parse(md)
+        assert LIST in _types(tokens)
+        lst = next(t for t in tokens if t["type"] == LIST)
+        # ordered lists have a 'start' attribute
+        assert lst["attrs"].get("start") is not None
+
+    def test_blockquote(self):
+        tokens = MarkdownParser().parse("> A quoted line.\n")
+        assert BLOCKQUOTE in _types(tokens)
+
+    def test_thematic_break(self):
+        tokens = MarkdownParser().parse("---\n")
+        assert THEMATIC_BREAK in _types(tokens)
+
+    def test_table(self):
+        md = "| A | B |\n|---|---|\n| 1 | 2 |\n"
+        tokens = MarkdownParser().parse(md)
+        assert TABLE in _types(tokens)
+
+    def test_code_fence_generic(self):
+        md = "```python\nprint('hello')\n```\n"
+        tokens = MarkdownParser().parse(md)
+        assert CODE_FENCE in _types(tokens)
+
+    def test_code_fence_mermaid(self):
+        md = "```mermaid\ngraph LR\n  A --> B\n```\n"
+        tokens = MarkdownParser().parse(md)
+        assert MERMAID in _types(tokens), f"Got types: {_types(tokens)}"
+
+    def test_code_fence_latex(self):
+        md = "```latex\nE = mc^2\n```\n"
+        tokens = MarkdownParser().parse(md)
+        assert LATEX_BLOCK in _types(tokens), f"Got types: {_types(tokens)}"
+
+    def test_code_fence_math(self):
+        md = "```math\nx^2 + y^2 = z^2\n```\n"
+        tokens = MarkdownParser().parse(md)
+        assert LATEX_BLOCK in _types(tokens), f"Got types: {_types(tokens)}"
+
+
+class TestMarkdownParserTokenStructure:
+    """Verify the shape of returned token dicts."""
+
+    def test_token_has_required_keys(self):
+        tokens = MarkdownParser().parse("Hello\n")
+        for tok in tokens:
+            assert "type" in tok
+            assert "raw" in tok
+            assert "children" in tok
+            assert "attrs" in tok
+            assert "_node" in tok
+
+    def test_heading_children_contain_inline(self):
+        tokens = MarkdownParser().parse("# My **Bold** Heading\n")
+        heading = next(t for t in tokens if t["type"] == HEADING)
+        child_types = [c["type"] for c in heading["children"]]
+        assert any(ct in child_types for ct in ("Strong", "RawText")), child_types
+
+    def test_paragraph_children(self):
+        tokens = MarkdownParser().parse("Plain text.\n")
+        para = next(t for t in tokens if t["type"] == PARAGRAPH)
+        assert isinstance(para["children"], list)
+
+    def test_code_fence_raw_content(self):
+        md = "```python\nprint('hello')\n```\n"
+        tokens = MarkdownParser().parse(md)
+        fence = next(t for t in tokens if t["type"] == CODE_FENCE)
+        assert "print" in fence["raw"]
+
+    def test_multi_block_document(self):
+        md = "# Title\n\nParagraph text.\n\n- item\n"
+        tokens = MarkdownParser().parse(md)
+        types = _types(tokens)
+        assert HEADING in types
+        assert PARAGRAPH in types
+        assert LIST in types
+
+
+# ---------------------------------------------------------------------------
+# FrontMatterStripper
+# ---------------------------------------------------------------------------
+
+
+class TestFrontMatterStripper:
+    def _strip(self, text: str) -> str:
+        return FrontMatterStripper().process(text)
+
+    def test_strips_yaml_front_matter(self):
+        md = "---\ntitle: Doc\nauthor: Test\n---\n# Body\n"
+        result = self._strip(md)
+        assert "title" not in result
+        assert "# Body" in result
+
+    def test_leaves_body_intact(self):
+        md = "---\nkey: val\n---\nSome paragraph.\n"
+        result = self._strip(md)
+        assert "Some paragraph." in result
+
+    def test_no_front_matter_unchanged(self):
+        md = "# Just a heading\n\nSome text.\n"
+        result = self._strip(md)
+        assert result == md
+
+    def test_front_matter_only(self):
+        md = "---\nkey: val\n---\n"
+        result = self._strip(md)
+        assert result.strip() == ""
+
+    def test_strips_only_once(self):
+        """Should not strip a second --- block in the body."""
+        md = "---\nkey: val\n---\nBody text.\n---\nnot-fm: true\n---\n"
+        result = self._strip(md)
+        assert "not-fm" in result
+
+    def test_multiline_front_matter(self):
+        md = "---\na: 1\nb: 2\nc: 3\n---\nContent.\n"
+        result = self._strip(md)
+        assert "Content." in result
+        assert "a: 1" not in result
+
+
+# ---------------------------------------------------------------------------
+# IncludeResolver (placeholder — should be a no-op)
+# ---------------------------------------------------------------------------
+
+
+class TestIncludeResolver:
+    def test_returns_input_unchanged(self):
+        md = "Some !include path/to/file.md text.\n"
+        result = IncludeResolver().process(md)
+        assert result == md

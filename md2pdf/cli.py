@@ -26,18 +26,18 @@ def _setup_logging(verbose: bool) -> None:
 
 @app.command()
 def convert(
-    input: Path = typer.Argument(..., help="Path to input .md file"),
-    output: Path = typer.Option(
+    input: Path = typer.Argument(..., help="Path to input .md file"),  # noqa: B008
+    output: Path = typer.Option(  # noqa: B008
         Path("output.pdf"), "-o", "--output", help="Output PDF path"
     ),
-    config_file: Path = typer.Option(
+    config_file: Path = typer.Option(  # noqa: B008
         None, "-c", "--config", help="Path to md2pdf.toml"
     ),
-    theme: str = typer.Option("default", "-t", "--theme", help="Theme name"),
-    offline: bool = typer.Option(
+    theme: str = typer.Option("default", "-t", "--theme", help="Theme name"),  # noqa: B008
+    offline: bool = typer.Option(  # noqa: B008
         False, "--offline", help="Skip external API calls; use placeholders instead"
     ),
-    verbose: bool = typer.Option(
+    verbose: bool = typer.Option(  # noqa: B008
         False, "-v", "--verbose", help="Enable debug logging to stderr"
     ),
 ) -> None:
@@ -83,4 +83,4 @@ def convert(
     except Exception as exc:
         logging.exception("Conversion failed")
         typer.echo(f"✗ Conversion failed: {exc}", err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from exc

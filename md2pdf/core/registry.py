@@ -64,8 +64,9 @@ class HandlerRegistry:
     def register(self, handler: ElementHandler) -> None:
         """Register *handler*.  Replaces any existing handler for the same token type."""
         self._handlers[handler.token_type] = handler
-        logger.debug("Registered handler for token type '%s': %s",
-                     handler.token_type, type(handler).__name__)
+        logger.debug(
+            "Registered handler for token type '%s': %s", handler.token_type, type(handler).__name__
+        )
 
     def get(self, token_type: str) -> ElementHandler | None:
         """Return the handler registered for *token_type*, or ``None``."""

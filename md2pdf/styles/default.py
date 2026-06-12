@@ -1,0 +1,138 @@
+"""Default stylesheet builder for md2pdf.
+
+``build_default_stylesheet`` returns a dict that maps style names to
+ReportLab ``ParagraphStyle`` instances (and a few scalar values).
+All colors and font names are read from a ``ThemeConfig`` — no hex
+literals or magic strings appear in this file.
+"""
+
+from __future__ import annotations
+
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+
+from md2pdf.styles.theme import ThemeConfig
+
+
+def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
+    """Build and return the default stylesheet dict.
+
+    Args:
+        theme: A :class:`ThemeConfig` instance.  If ``None``, all defaults
+               from :class:`ThemeConfig` are used (matching the previously
+               hard-coded values).
+
+    Returns:
+        A dict mapping style name strings to ``ParagraphStyle`` instances
+        and a few scalar values consumed by non-Paragraph handlers.
+    """
+    if theme is None:
+        theme = ThemeConfig()
+
+    base = getSampleStyleSheet()
+
+    return {
+        # ---------------------------------------------------------------- #
+        # Heading styles
+        # ---------------------------------------------------------------- #
+        "h1": ParagraphStyle(
+            "h1",
+            parent=base["Heading1"],
+            fontName=theme.font_heading,
+            fontSize=20,
+            spaceAfter=6,
+        ),
+        "h2": ParagraphStyle(
+            "h2",
+            parent=base["Heading2"],
+            fontName=theme.font_heading,
+            fontSize=16,
+            spaceAfter=4,
+        ),
+        "h3": ParagraphStyle(
+            "h3",
+            parent=base["Heading3"],
+            fontName=theme.font_heading,
+            fontSize=13,
+            spaceAfter=3,
+        ),
+        "h4": ParagraphStyle(
+            "h4",
+            parent=base["Heading4"],
+            fontName=theme.font_heading,
+            fontSize=11,
+            spaceAfter=2,
+        ),
+        # ---------------------------------------------------------------- #
+        # Body / prose styles
+        # ---------------------------------------------------------------- #
+        "body": ParagraphStyle(
+            "body",
+            parent=base["Normal"],
+            fontName=theme.font_body,
+            fontSize=theme.font_size_body,
+            leading=14,
+        ),
+        "blockquote": ParagraphStyle(
+            "blockquote",
+            parent=base["Normal"],
+            fontName=theme.font_body,
+            leftIndent=12,
+            textColor=theme.hex("color_blockquote_text"),
+            borderPad=4,
+            fontSize=theme.font_size_body,
+            leading=14,
+        ),
+        "list_item": ParagraphStyle(
+            "list_item",
+            parent=base["Normal"],
+            fontName=theme.font_body,
+            fontSize=theme.font_size_body,
+            leading=13,
+        ),
+        "code_inline": ParagraphStyle(
+            "code_inline",
+            parent=base["Code"],
+            fontName=theme.font_mono,
+            fontSize=theme.font_size_small,
+        ),
+        # ---------------------------------------------------------------- #
+        # Table styles
+        # ---------------------------------------------------------------- #
+        "table_header": ParagraphStyle(
+            "table_header",
+            parent=base["Normal"],
+            fontName=theme.font_heading,
+            fontSize=theme.font_size_small,
+            textColor=theme.hex("color_table_header_text"),
+        ),
+        "table_cell": ParagraphStyle(
+            "table_cell",
+            parent=base["Normal"],
+            fontName=theme.font_body,
+            fontSize=theme.font_size_small,
+            leading=12,
+        ),
+        # Raw TableStyle command list (used by TableHandler).
+        "table_style": [
+            ("BACKGROUND", (0, 0), (-1, 0), theme.hex("color_table_header_bg")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), theme.hex("color_table_header_text")),
+            ("GRID", (0, 0), (-1, -1), 0.5, theme.hex("color_table_grid")),
+            (
+                "ROWBACKGROUNDS",
+                (0, 1),
+                (-1, -1),
+                [theme.hex("color_table_row_odd"), theme.hex("color_table_row_even")],
+            ),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ],
+        # ---------------------------------------------------------------- #
+        # Scalar values consumed by non-Paragraph handlers
+        # ---------------------------------------------------------------- #
+        "color_hr": theme.hex("color_hr"),
+        "color_link": theme.color_link,  # raw str for XML attr
+        "color_blockquote_bar": theme.hex("color_blockquote_bar"),
+    }

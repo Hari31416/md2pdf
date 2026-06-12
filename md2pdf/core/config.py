@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import tomllib
 from dataclasses import dataclass, field, fields
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    pass
 
 
 @dataclass
@@ -15,9 +19,9 @@ class Config:
     so that future fields can be introduced without breaking existing
     config files.
 
-    Note:
-        ``theme_config`` (ThemeConfig dataclass) will be added in Phase 3.
-        ``plugins_dict`` (structured plugin config) will be added in Phase 5.
+    The ``theme_config`` attribute is populated from the optional ``[theme]``
+    section and is **not** a direct TOML field — it is excluded from the
+    known-fields filter in :meth:`from_toml`.
     """
 
     input_file: str = ""
@@ -29,12 +33,15 @@ class Config:
     # Phase 5 will replace this with a structured plugins_dict sourced from [plugins].
     plugins: list[str] = field(default_factory=list)
 
+    # Populated from the [theme] TOML section; None means "use ThemeConfig defaults".
+    theme_config: Any = field(default=None, repr=False)
+
     @classmethod
     def from_toml(cls, path: str) -> Config:
         """Load configuration from a TOML file.
 
-        Only the ``[md2pdf]`` table is read; other tables (e.g. ``[theme]``,
-        ``[plugins]``) are reserved for Phase 3 / Phase 5 and ignored here.
+        Reads the ``[md2pdf]`` table for core settings and the ``[theme]``
+        table (if present) to build a :class:`~md2pdf.styles.theme.ThemeConfig`.
 
         Args:
             path: Filesystem path to the TOML config file.
@@ -50,6 +57,20 @@ class Config:
             data = tomllib.load(fh)
 
         md2pdf_section: dict = data.get("md2pdf", {})
-        known: set[str] = {f.name for f in fields(cls)}
+        # ``theme_config`` is not a TOML field — exclude it from the filter.
+        known: set[str] = {f.name for f in fields(cls)} - {"theme_config"}
         filtered = {k: v for k, v in md2pdf_section.items() if k in known}
-        return cls(**filtered)
+
+        cfg = cls(**filtered)
+
+        # Load [theme] section into a ThemeConfig (import here to avoid
+        # circular imports / hard reportlab dependency at module load time).
+        try:
+            from md2pdf.styles.theme import ThemeConfig  # noqa: PLC0415
+
+            theme_data: dict = data.get("theme", {})
+            cfg.theme_config = ThemeConfig.from_dict(theme_data)
+        except Exception:
+            cfg.theme_config = None
+
+        return cfg
