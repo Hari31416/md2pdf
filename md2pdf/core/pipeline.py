@@ -134,8 +134,9 @@ class Pipeline:
                 logger.warning("No handler registered for token type '%s'", token_type)
                 # Fallback: render the unimplemented component as a code block
                 from reportlab.platypus import Preformatted
+
                 from md2pdf.handlers.code import clean_box_drawing
-                from md2pdf.handlers.inline import inline_render, escape_xml
+                from md2pdf.handlers.inline import escape_xml, inline_render
 
                 raw_content = token.get("raw", "")
                 if not raw_content and token.get("children"):

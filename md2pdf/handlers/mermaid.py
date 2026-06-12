@@ -77,7 +77,9 @@ class MermaidHandler(ElementHandler):
         try:
             with PILImage.open(BytesIO(png)) as pil_img:
                 # Crop transparent/white margins
-                if pil_img.mode in ("RGBA", "LA") or (pil_img.mode == "P" and "transparency" in pil_img.info):
+                if pil_img.mode in ("RGBA", "LA") or (
+                    pil_img.mode == "P" and "transparency" in pil_img.info
+                ):
                     alpha = pil_img.split()[-1]
                     bbox = alpha.getbbox()
                 else:

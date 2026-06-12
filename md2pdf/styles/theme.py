@@ -52,6 +52,7 @@ class ThemeConfig:
 
     # --- Code blocks ---
     color_code_bg: str = "#f5f5f5"
+    syntax_style: str = "default"
 
     # ------------------------------------------------------------------ #
     # Class methods

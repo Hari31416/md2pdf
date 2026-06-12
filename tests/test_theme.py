@@ -20,10 +20,11 @@ class TestThemeConfig:
         assert theme.color_table_header_bg == "#2c3e50"
 
     def test_from_dict_known_keys(self):
-        data = {"color_link": "#e74c3c", "font_body": "Times-Roman"}
+        data = {"color_link": "#e74c3c", "font_body": "Times-Roman", "syntax_style": "monokai"}
         theme = ThemeConfig.from_dict(data)
         assert theme.color_link == "#e74c3c"
         assert theme.font_body == "Times-Roman"
+        assert theme.syntax_style == "monokai"
 
     def test_from_dict_ignores_unknown_keys(self):
         """Unknown keys must be silently ignored (no TypeError)."""
@@ -107,6 +108,8 @@ class TestBuildDefaultStylesheet:
         assert "color_hr" in ss
         assert "color_link" in ss
         assert "color_blockquote_bar" in ss
+        assert "syntax_style" in ss
+        assert ss["syntax_style"] == "default"
 
     def test_color_link_is_raw_string(self):
         """color_link must be a plain string (used in ReportLab XML markup)."""

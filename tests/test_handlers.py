@@ -332,8 +332,9 @@ class TestBlockQuoteHandler:
 
 class TestCodeFenceHandler:
     def test_returns_preformatted_flowable(self, styles):
+        from reportlab.platypus import XPreformatted
+
         from md2pdf.handlers.code import CodeFenceHandler
-        from reportlab.platypus import Preformatted
 
         token = {
             "type": "CodeFence",
@@ -344,8 +345,26 @@ class TestCodeFenceHandler:
         }
         flowables = CodeFenceHandler().render(token, styles)
         assert len(flowables) == 1
-        assert isinstance(flowables[0], Preformatted)
+        assert isinstance(flowables[0], XPreformatted)
         assert flowables[0].style.name == "code_block"
+        assert '<font color="#008000">print</font>' in flowables[0].text
+
+    def test_no_language_fallback(self, styles):
+        from reportlab.platypus import XPreformatted
+
+        from md2pdf.handlers.code import CodeFenceHandler
+
+        token = {
+            "type": "CodeFence",
+            "raw": "some raw text",
+            "attrs": {},
+            "children": [],
+            "_node": None,
+        }
+        flowables = CodeFenceHandler().render(token, styles)
+        assert len(flowables) == 1
+        assert isinstance(flowables[0], XPreformatted)
+        assert flowables[0].text == "some raw text"
 
     def test_clean_box_drawing(self, styles):
         from md2pdf.handlers.code import clean_box_drawing
