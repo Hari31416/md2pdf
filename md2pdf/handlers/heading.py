@@ -2,14 +2,27 @@
 
 from __future__ import annotations
 
+import re
+
 from reportlab.platypus import Paragraph
 
+from md2pdf.core.flowables import BookmarkFlowable
 from md2pdf.core.registry import ElementHandler
 from md2pdf.handlers.inline import inline_render
 
 
+def slugify(text: str) -> str:
+    """Convert text to a URL/bookmark-friendly slug."""
+    # Strip HTML tags
+    clean = re.sub(r"<[^>]+>", "", text)
+    clean = clean.lower()
+    clean = re.sub(r"[^\w\s-]", "", clean)
+    clean = re.sub(r"[-\s]+", "-", clean)
+    return clean.strip("-")
+
+
 class HeadingHandler(ElementHandler):
-    """Render ``Heading`` tokens as styled ``Paragraph`` flowables.
+    """Render ``Heading`` tokens as styled ``Paragraph`` flowables with bookmark anchors.
 
     Heading levels above 4 fall back to the ``h4`` style since ReportLab's
     default stylesheet does not define H5/H6.
@@ -21,4 +34,11 @@ class HeadingHandler(ElementHandler):
         level: int = token.get("attrs", {}).get("level", 1)
         style_key = f"h{min(level, 4)}"
         text = inline_render(token.get("children", []), styles)
-        return [Paragraph(text, styles[style_key])]
+
+        slug = slugify(text)
+        if not slug:
+            import uuid
+
+            slug = f"heading-{uuid.uuid4().hex[:8]}"
+
+        return [BookmarkFlowable(slug), Paragraph(text, styles[style_key])]

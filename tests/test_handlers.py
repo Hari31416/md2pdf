@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from reportlab.platypus import HRFlowable, ListFlowable, Paragraph, Table
 
+from md2pdf.core.flowables import BlockQuoteBar, BookmarkFlowable
 from md2pdf.handlers.blockquote import BlockQuoteHandler
 from md2pdf.handlers.heading import HeadingHandler
 from md2pdf.handlers.inline import escape_xml, inline_render
@@ -118,25 +119,29 @@ class TestHeadingHandler:
     def test_returns_paragraph_flowable(self, styles):
         handler = HeadingHandler()
         flowables = handler.render(self._token(1, "Title"), styles)
-        assert len(flowables) == 1
-        assert isinstance(flowables[0], Paragraph)
+        assert len(flowables) == 2
+        assert isinstance(flowables[0], BookmarkFlowable)
+        assert isinstance(flowables[1], Paragraph)
 
     @pytest.mark.parametrize("level", [1, 2, 3, 4])
     def test_all_heading_levels(self, styles, level):
         handler = HeadingHandler()
         flowables = handler.render(self._token(level, f"H{level}"), styles)
-        assert isinstance(flowables[0], Paragraph)
+        assert isinstance(flowables[0], BookmarkFlowable)
+        assert isinstance(flowables[1], Paragraph)
 
     def test_h5_falls_back_to_h4(self, styles):
         """Headings beyond H4 should use the h4 style (not raise KeyError)."""
         handler = HeadingHandler()
         flowables = handler.render(self._token(5, "H5"), styles)
-        assert isinstance(flowables[0], Paragraph)
+        assert isinstance(flowables[0], BookmarkFlowable)
+        assert isinstance(flowables[1], Paragraph)
 
     def test_h6_falls_back_to_h4(self, styles):
         handler = HeadingHandler()
         flowables = handler.render(self._token(6, "H6"), styles)
-        assert isinstance(flowables[0], Paragraph)
+        assert isinstance(flowables[0], BookmarkFlowable)
+        assert isinstance(flowables[1], Paragraph)
 
 
 # ---------------------------------------------------------------------------
@@ -306,10 +311,13 @@ class TestBlockQuoteHandler:
     def test_returns_flowables(self, styles):
         flowables = BlockQuoteHandler().render(_bq_token("A quote."), styles)
         assert len(flowables) >= 1
+        assert isinstance(flowables[0], BlockQuoteBar)
 
     def test_contains_paragraph(self, styles):
         flowables = BlockQuoteHandler().render(_bq_token("Quote text"), styles)
-        assert any(isinstance(f, Paragraph) for f in flowables)
+        assert any(
+            isinstance(f, BlockQuoteBar) and isinstance(f.inner, Paragraph) for f in flowables
+        )
 
     def test_empty_blockquote(self, styles):
         token = {"type": "BlockQuote", "raw": "", "attrs": {}, "children": [], "_node": None}

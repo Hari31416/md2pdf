@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from md2pdf.core.config import Config
+from md2pdf.core.errors import ValidationIssue
 from md2pdf.core.parser import MarkdownParser
 from md2pdf.core.plugin_loader import PluginLoader
 from md2pdf.core.postprocessors import PostProcessorRegistry
@@ -48,9 +49,6 @@ class Pipeline:
         self._style_registry = StyleRegistry()
         self._style_registry.add_layer(self._build_base_styles())
 
-        # Register asset handlers (need KrokiClient + AssetCache).
-        self._register_asset_handlers()
-
         # Plugin discovery — entry points + config-file declared plugins.
         loader = PluginLoader(
             handler_registry=self.registry,
@@ -61,12 +59,33 @@ class Pipeline:
         loader.load_entry_points()
         loader.load_from_config(config.plugins_dict)
 
+        # Register asset handlers (need KrokiClient + AssetCache).
+        # This is done last so that the pipeline's configured asset handlers
+        # take precedence and override default handlers loaded from entry points.
+        self._register_asset_handlers()
+
         # Build the final merged stylesheet after all plugin layers are in.
         self._styles: dict = self._style_registry.build()
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
+
+    def validate(self, raw_md: str) -> list[ValidationIssue]:
+        """Stage 1.5 — pre-render validation gate.
+
+        Args:
+            raw_md: Raw markdown text.
+
+        Returns:
+            A list of ValidationIssue instances.
+        """
+        from md2pdf.core.validator import DocumentValidator
+
+        md = self._pre_process(raw_md)
+        tokens = self._parse(md)
+        validator = DocumentValidator()
+        return validator.validate(tokens)
 
     def run(self, raw_md: str) -> None:
         """Execute the full conversion pipeline end-to-end.
@@ -75,6 +94,15 @@ class Pipeline:
             raw_md: Raw markdown string read from the source file.
         """
         logger.debug("Pipeline.run: starting")
+        issues = self.validate(raw_md)
+        errors = [i for i in issues if i.severity == "error"]
+        warnings = [i for i in issues if i.severity == "warning"]
+
+        for w in warnings:
+            logger.warning("[%s] Line %s: %s", w.code, w.line, w.message)
+        for e in errors:
+            logger.error("[%s] Line %s: %s", e.code, e.line, e.message)
+
         md = self._pre_process(raw_md)
         tokens = self._parse(md)
         flowables = self._map(tokens)
@@ -106,25 +134,34 @@ class Pipeline:
         return flowables
 
     def _render(self, flowables: list) -> None:
-        """Stage 4 — run post-processors then build PDF (PDF build in Phase 6)."""
-        # Post-processors run even though the actual PDF build is a Phase 6 stub.
-        # They are called here so plugins can be wired up end-to-end before Phase 6.
-        try:
-            from reportlab.platypus import SimpleDocTemplate  # noqa: PLC0415
+        """Stage 4 — run post-processors then build the PDF with layout safeguards."""
+        from md2pdf.core.layout import LayoutComposer
 
-            doc = SimpleDocTemplate(self.config.output_file)
-            flowables = self._post_registry.run_all(doc, flowables)
-            if flowables:
-                logger.debug(
-                    "_render: %d flowables after post-processing (PDF build not yet implemented)",
-                    len(flowables),
-                )
-        except Exception:
-            logger.debug("_render: post-processing skipped (reportlab unavailable)", exc_info=True)
-            if flowables:
-                logger.debug(
-                    "_render: %d flowables (PDF build not yet implemented)", len(flowables)
-                )
+        composer = LayoutComposer()
+        safe_flowables = composer.compose(flowables)
+
+        doc = self._build_doc()
+        safe_flowables = self._post_registry.run_all(doc, safe_flowables)
+
+        doc.build(
+            safe_flowables,
+            onFirstPage=draw_page_number,
+            onLaterPages=draw_page_number,
+        )
+
+    def _build_doc(self):
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import mm
+        from reportlab.platypus import SimpleDocTemplate
+
+        return SimpleDocTemplate(
+            self.config.output_file,
+            pagesize=A4,
+            leftMargin=20 * mm,
+            rightMargin=20 * mm,
+            topMargin=22 * mm,
+            bottomMargin=22 * mm,
+        )
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -157,3 +194,16 @@ class Pipeline:
             self.registry.register(LatexHandler(client, cache, offline))
         except Exception:
             logger.debug("Could not register asset handlers", exc_info=True)
+
+
+def draw_page_number(canvas, doc) -> None:
+    """Draw the 'Page X' footer centered/aligned on each page."""
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+
+    canvas.saveState()
+    canvas.setFont("Helvetica", 8)
+    canvas.setFillColor(colors.HexColor("#888888"))
+    page_text = f"Page {canvas.getPageNumber()}"
+    canvas.drawRightString(doc.pagesize[0] - 20 * mm, 15, page_text)
+    canvas.restoreState()

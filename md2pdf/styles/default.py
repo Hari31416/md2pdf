@@ -40,6 +40,8 @@ def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
             fontName=theme.font_heading,
             fontSize=20,
             spaceAfter=6,
+            allowWidows=0,
+            allowOrphans=0,
         ),
         "h2": ParagraphStyle(
             "h2",
@@ -47,6 +49,8 @@ def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
             fontName=theme.font_heading,
             fontSize=16,
             spaceAfter=4,
+            allowWidows=0,
+            allowOrphans=0,
         ),
         "h3": ParagraphStyle(
             "h3",
@@ -54,6 +58,8 @@ def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
             fontName=theme.font_heading,
             fontSize=13,
             spaceAfter=3,
+            allowWidows=0,
+            allowOrphans=0,
         ),
         "h4": ParagraphStyle(
             "h4",
@@ -61,6 +67,8 @@ def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
             fontName=theme.font_heading,
             fontSize=11,
             spaceAfter=2,
+            allowWidows=0,
+            allowOrphans=0,
         ),
         # ---------------------------------------------------------------- #
         # Body / prose styles
@@ -71,6 +79,8 @@ def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
             fontName=theme.font_body,
             fontSize=theme.font_size_body,
             leading=14,
+            allowWidows=0,
+            allowOrphans=0,
         ),
         "blockquote": ParagraphStyle(
             "blockquote",
@@ -81,6 +91,8 @@ def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
             borderPad=4,
             fontSize=theme.font_size_body,
             leading=14,
+            allowWidows=0,
+            allowOrphans=0,
         ),
         "list_item": ParagraphStyle(
             "list_item",
@@ -88,12 +100,16 @@ def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
             fontName=theme.font_body,
             fontSize=theme.font_size_body,
             leading=13,
+            allowWidows=0,
+            allowOrphans=0,
         ),
         "code_inline": ParagraphStyle(
             "code_inline",
             parent=base["Code"],
             fontName=theme.font_mono,
             fontSize=theme.font_size_small,
+            allowWidows=0,
+            allowOrphans=0,
         ),
         # ---------------------------------------------------------------- #
         # Table styles
@@ -104,6 +120,8 @@ def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
             fontName=theme.font_heading,
             fontSize=theme.font_size_small,
             textColor=theme.hex("color_table_header_text"),
+            allowWidows=0,
+            allowOrphans=0,
         ),
         "table_cell": ParagraphStyle(
             "table_cell",
@@ -111,6 +129,8 @@ def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
             fontName=theme.font_body,
             fontSize=theme.font_size_small,
             leading=12,
+            allowWidows=0,
+            allowOrphans=0,
         ),
         # Raw TableStyle command list (used by TableHandler).
         "table_style": [

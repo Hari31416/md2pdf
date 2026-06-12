@@ -203,11 +203,16 @@ class TestLatexHandler:
 
     def test_wrap_latex_produces_document(self) -> None:
         wrapped = _wrap_latex("x^2")
-        assert r"\documentclass{standalone}" in wrapped
+        assert r"\documentclass[preview,varwidth]{standalone}" in wrapped
         assert r"\usepackage{amsmath}" in wrapped
         assert r"\begin{document}" in wrapped
         assert "$x^2$" in wrapped
         assert r"\end{document}" in wrapped
+
+    def test_wrap_latex_with_begin_environment_omits_inline_delimiters(self) -> None:
+        wrapped = _wrap_latex(r"\begin{align*}x=1\end{align*}")
+        assert "$" not in wrapped
+        assert r"\begin{align*}" in wrapped
 
     def test_http_error_returns_placeholder(self, tmp_path: Path) -> None:
         import requests

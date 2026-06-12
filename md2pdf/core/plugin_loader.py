@@ -54,6 +54,34 @@ class PluginLoader:
     # Public API
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def register_builtins(registry: HandlerRegistry) -> None:
+        """Register all built-in handlers directly into a HandlerRegistry.
+
+        This is useful for tests or standalone usage where setup.py / pyproject.toml
+        entry points are not installed in the current environment.
+        """
+        from md2pdf.assets.cache import AssetCache
+        from md2pdf.assets.kroki import KrokiClient
+        from md2pdf.handlers.blockquote import BlockQuoteHandler
+        from md2pdf.handlers.heading import HeadingHandler
+        from md2pdf.handlers.latex import LatexHandler
+        from md2pdf.handlers.list_ import ListHandler
+        from md2pdf.handlers.mermaid import MermaidHandler
+        from md2pdf.handlers.paragraph import ParagraphHandler
+        from md2pdf.handlers.table import TableHandler
+        from md2pdf.handlers.thematic_break import ThematicBreakHandler
+
+        registry.register(HeadingHandler())
+        registry.register(ParagraphHandler())
+        registry.register(ListHandler())
+        registry.register(BlockQuoteHandler())
+        registry.register(TableHandler())
+        registry.register(ThematicBreakHandler())
+        # Register Mermaid and Latex handlers in offline mode by default
+        registry.register(MermaidHandler(KrokiClient(), AssetCache(".md2pdf_cache"), True))
+        registry.register(LatexHandler(KrokiClient(), AssetCache(".md2pdf_cache"), True))
+
     def load_entry_points(self) -> None:
         """Auto-discover installed packages that declare ``md2pdf.*`` entry points.
 

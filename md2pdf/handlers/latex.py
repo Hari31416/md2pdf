@@ -36,11 +36,21 @@ def _wrap_latex(source: str) -> str:
     Returns:
         A complete, self-contained LaTeX document string.
     """
+    if r"\documentclass" in source:
+        return source
+
+    # If the source already contains a block math environment (like align*),
+    # do not wrap it in inline math delimiters ($...$) which causes compile errors.
+    if r"\begin{" in source:
+        math_content = source
+    else:
+        math_content = f"${source}$"
+
     return (
-        r"\documentclass{standalone}"
-        r"\usepackage{amsmath}"
-        r"\begin{document}"
-        f"${source}$"
+        r"\documentclass[preview,varwidth]{standalone}" + "\n"
+        r"\usepackage{amsmath}" + "\n"
+        r"\begin{document}" + "\n"
+        f"{math_content}" + "\n"
         r"\end{document}"
     )
 
@@ -63,26 +73,28 @@ class LatexHandler(ElementHandler):
 
     def __init__(
         self,
-        client: KrokiClient,
-        cache: AssetCache,
+        client: KrokiClient | None = None,
+        cache: AssetCache | None = None,
         offline: bool = False,
     ) -> None:
-        self.client = client
-        self.cache = cache
+        from md2pdf.assets.cache import AssetCache
+        from md2pdf.assets.kroki import KrokiClient
+
+        self.client = client or KrokiClient()
+        self.cache = cache or AssetCache(".md2pdf_cache")
         self.offline = offline
 
     def render(self, token: dict, styles: dict) -> list[Flowable]:  # noqa: ARG002
         source: str = token.get("raw", "")
         wrapped = _wrap_latex(source)
 
-        if self.offline:
-            logger.debug("LatexHandler: offline mode — returning placeholder")
-            return [PlaceholderBox(_DIAGRAM_TYPE, source)]
-
         # Cache key uses the wrapped source so changes to the wrapper also
         # invalidate old cache entries.
         png = self.cache.get(_DIAGRAM_TYPE, wrapped)
         if png is None:
+            if self.offline:
+                logger.debug("LatexHandler: offline mode (cache miss) — returning placeholder")
+                return [PlaceholderBox(_DIAGRAM_TYPE, source)]
             try:
                 png = self.client.render(_DIAGRAM_TYPE, wrapped)
                 self.cache.put(_DIAGRAM_TYPE, wrapped, png)
@@ -90,6 +102,35 @@ class LatexHandler(ElementHandler):
                 logger.warning("Kroki render failed (%s): %s", _DIAGRAM_TYPE, exc)
                 return [PlaceholderBox(_DIAGRAM_TYPE, source)]
 
-        img = Image(BytesIO(png), width=_DEFAULT_WIDTH, height=None)
+        # Open the image using PIL to read its pixel dimensions and crop margins
+        from PIL import Image as PILImage
+        from PIL import ImageChops
+
+        try:
+            with PILImage.open(BytesIO(png)) as pil_img:
+                # Crop white margins
+                gray = pil_img.convert("L")
+                inverted = ImageChops.invert(gray)
+                bbox = inverted.getbbox()
+                if bbox:
+                    pil_img = pil_img.crop(bbox)
+                    cropped_io = BytesIO()
+                    pil_img.save(cropped_io, format="PNG")
+                    png = cropped_io.getvalue()
+                width_px, height_px = pil_img.size
+        except Exception as exc:
+            logger.warning("Failed to crop/process LaTeX diagram image: %s", exc)
+            try:
+                with PILImage.open(BytesIO(png)) as pil_img:
+                    width_px, height_px = pil_img.size
+            except Exception:
+                width_px, height_px = _DEFAULT_WIDTH, _DEFAULT_WIDTH
+
+        # Map 1 pixel to 0.75 points (for 96 DPI equivalent layout rendering)
+        display_width = min(400.0, width_px * 0.75)
+        scale_ratio = display_width / (width_px * 0.75)
+        display_height = (height_px * 0.75) * scale_ratio
+
+        img = Image(BytesIO(png), width=display_width, height=display_height)
         img.hAlign = "CENTER"
         return [img]

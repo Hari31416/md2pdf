@@ -17,11 +17,20 @@ app = typer.Typer(
 
 def _setup_logging(verbose: bool) -> None:
     level = logging.DEBUG if verbose else logging.WARNING
+    # Clean standard logging configuration directed to stderr
     logging.basicConfig(
         level=level,
         format="%(levelname)s  %(name)s: %(message)s",
         stream=sys.stderr,
+        force=True,  # Override any existing configuration
     )
+
+
+def _report_issues(issues: list) -> None:
+    for issue in issues:
+        icon = "✗" if issue.severity == "error" else "⚠"
+        line_str = f"Line {issue.line}" if issue.line is not None else "Line ?"
+        typer.echo(f"{icon} {line_str}: [{issue.code}] {issue.message}")
 
 
 @app.command()
@@ -39,6 +48,9 @@ def convert(
     ),
     verbose: bool = typer.Option(  # noqa: B008
         False, "-v", "--verbose", help="Enable debug logging to stderr"
+    ),
+    validate_only: bool = typer.Option(  # noqa: B008
+        False, "--validate-only", help="Run validation but do not render"
     ),
 ) -> None:
     """Convert a Markdown file to a print-ready PDF."""
@@ -68,14 +80,21 @@ def convert(
         # CLI arguments take precedence over config file values.
         cfg.input_file = str(input)
         cfg.output_file = str(output)
+        if theme != "default":
+            cfg.theme = theme
+        if offline:
+            cfg.offline = True
 
     registry = HandlerRegistry()
-    registry.load_entry_points()
-    registry.load_from_config(cfg.plugins)
-
     pipeline = Pipeline(cfg, registry)
 
     raw_md = input.read_text(encoding="utf-8")
+
+    if validate_only:
+        issues = pipeline.validate(raw_md)
+        _report_issues(issues)
+        has_errors = any(i.severity == "error" for i in issues)
+        raise typer.Exit(code=1 if has_errors else 0)
 
     try:
         pipeline.run(raw_md)
