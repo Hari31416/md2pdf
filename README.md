@@ -114,12 +114,12 @@ sequenceDiagram
 
 Using `uv` (recommended):
 ```bash
-uv tool install md2pdf
+uv tool install pymd2pdf
 ```
 
 Or via standard `pip`:
 ```bash
-pip install md2pdf
+pip install pymd2pdf
 ```
 
 To initialize the project for local development:
@@ -169,18 +169,24 @@ md2pdf input.md -o output.pdf --offline
 ### Programmatic Python Usage
 
 ```python
-from md2pdf.pipeline import Pipeline
+from md2pdf import convert, Config, Pipeline
 
-pipeline = Pipeline(offline=False, cache_dir=".md2pdf_cache")
+# Option 1: Simple conversion
+convert("input.md", "output.pdf")
 
-# Option 1: Validate markdown document
+# Option 2: Advanced programmatic pipeline usage
+config = Config(
+    offline=False, 
+    cache_dir=".md2pdf_cache", 
+    output_file="my_document.pdf"
+)
+pipeline = Pipeline(config)
+
+# Validate markdown document
 issues = pipeline.validate("# Hello World")
 for issue in issues:
     print(f"[{issue.severity}] {issue.code}: {issue.message}")
 
-# Option 2: Render markdown directly to a PDF
-pipeline.run(
-    raw_md="# Document Title\n\nSome body text.",
-    output_path="my_document.pdf"
-)
+# Render markdown
+pipeline.run(raw_md="# Document Title\n\nSome body text.")
 ```

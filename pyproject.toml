@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "md2pdf"
+name = "pymd2pdf"
 version = "0.1.0"
 description = "Automated programmatic Markdown-to-PDF typesetting engine"
 readme = "README.md"
