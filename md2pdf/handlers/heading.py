@@ -41,4 +41,7 @@ class HeadingHandler(ElementHandler):
 
             slug = f"heading-{uuid.uuid4().hex[:8]}"
 
-        return [BookmarkFlowable(slug), Paragraph(text, styles[style_key])]
+        # Strip HTML tags for the plain-text outline title shown in PDF viewers.
+        plain_title = re.sub(r"<[^>]+>", "", text)
+        # Outline level is 0-indexed (H1 → 0, H2 → 1, …).
+        return [BookmarkFlowable(slug, title=plain_title, level=level - 1), Paragraph(text, styles[style_key])]

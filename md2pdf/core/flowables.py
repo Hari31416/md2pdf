@@ -73,17 +73,34 @@ class BookmarkFlowable(Flowable):
 
     This is an invisible, zero-size flowable inserted just before heading flowables
     to serve as anchor destinations for Table of Contents links.
+
+    When *title* and *level* are provided the flowable also calls
+    ``canvas.addOutlineEntry`` so that the bookmark appears in the PDF viewer's
+    navigation / bookmarks panel.
     """
 
-    def __init__(self, key: str) -> None:
+    def __init__(self, key: str, title: str = "", level: int = 0) -> None:
         super().__init__()
         self.key = key
+        self.title = title
+        # PDF outline levels are 0-indexed; clamp to [0, 5].
+        self.level = max(0, min(level, 5))
 
     def wrap(self, availWidth: float, availHeight: float) -> tuple[float, float]:
         return 0.0, 0.0
 
     def draw(self) -> None:
         self.canv.bookmarkPage(self.key)
+        if self.title:
+            try:
+                self.canv.addOutlineEntry(
+                    self.title,
+                    self.key,
+                    level=self.level,
+                    closed=False,
+                )
+            except Exception:
+                logger.debug("addOutlineEntry failed for key=%r", self.key, exc_info=True)
 
 
 class ResizableImage(Image):

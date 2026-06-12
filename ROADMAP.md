@@ -4,6 +4,16 @@ Planned features and known limitations for future releases. Items are loosely or
 
 ---
 
+## PDF Bookmark / Outline Panel ✅
+
+**Status:** Implemented in v0.1.4.
+
+`BookmarkFlowable` now calls both `canvas.bookmarkPage` (internal anchor) **and**
+`canvas.addOutlineEntry` (outline entry visible in the PDF viewer's bookmarks/navigation
+panel). Every heading (H1–H6) becomes a clickable entry at the correct nesting depth.
+
+---
+
 ## Colour Emoji Support
 
 **Status:** Research complete — not yet implemented.
@@ -43,8 +53,58 @@ on subset size), but zero runtime network dependency.
 
 ## Additional Planned Items
 
-- **Table of Contents generation** — auto-generate a linked TOC from heading tokens.
-- **Page headers** — configurable running headers with document title / section name.
+### Near-term (fits current architecture)
+
+- **Table of Contents generation** — walk collected `BookmarkFlowable` anchors after Stage 3
+  and prepend a linked TOC page. Implementable as a `PostProcessor` that inspects flowables
+  for `BookmarkFlowable` instances and emits `Paragraph` entries with `<link>` XML tags.
+
+- **YAML front-matter → PDF metadata** — `FrontMatterStripper` already strips the block;
+  extend it to parse and expose `title`, `author`, `subject`, `keywords` so a `PostProcessor`
+  can set `doc.title`, `doc.author`, etc., making the fields appear in "File → Properties".
+
+- **Footnotes** — `[^1]` footnote syntax collected during Stage 3 and rendered at the bottom
+  of each page via a custom `Flowable` that draws a separator rule + footnote text.
+
+- **Page headers / running titles** — extend `draw_page_number` in `pipeline.py` to also
+  draw a configurable header string (e.g., document title or current section name).
+  Requires passing state through the `onFirstPage` / `onLaterPages` callbacks.
+
+- **`<!-- pagebreak -->` directive** — a `PreProcessor` that converts the HTML comment
+  (or a custom `\pagebreak` syntax) into a `PageBreak` flowable token, giving authors
+  explicit control over pagination without editing the pipeline.
+
+- **Admonition / callout blocks** — `:::note`, `:::warning`, `:::tip` fenced containers
+  (standard in MkDocs/Obsidian). Implementable as a `PreProcessor` that rewrites them
+  to HTML `<div class="admonition …">` before parsing, then a matching `ElementHandler`.
+
+### Medium-term (needs design work)
+
+- **Hyperlink pass-through** — `[text](https://…)` links currently render as styled text.
+  Emit `<link href="…">` XML in `inline_render` so ReportLab writes a real clickable
+  URI annotation into the PDF.
+
 - **Multi-column layouts** — two- or three-column text flow for newsletter-style documents.
-- **Footnotes** — `[^1]` footnote syntax rendered at the bottom of each page.
-- **Right-to-left text** — Arabic, Hebrew, and other RTL scripts via a BiDi pre-processor.
+  ReportLab supports multi-frame layouts via `BaseDocTemplate` + `PageTemplate`; this
+  would require replacing `SimpleDocTemplate` with a more configurable template class.
+
+- **Right-to-left text** — Arabic, Hebrew, and other RTL scripts via a BiDi pre-processor
+  (using `python-bidi`) that reorders paragraphs before they reach the ReportLab pipeline.
+
+- **Strikethrough & highlight** — `~~strikethrough~~` and `==highlight==` inline spans.
+  Strikethrough can be simulated by drawing a line over the text in a custom `Paragraph`
+  subclass; highlight requires a filled background rectangle behind the glyph runs.
+
+### Longer-term / exploratory
+
+- **Watch mode** — `md2pdf --watch input.md` that re-renders on file change using
+  `watchfiles` or `watchdog`, useful for live-preview workflows.
+
+- **HTML snapshot output** — a second output target (`--format html`) that reuses the
+  same pipeline but emits styled HTML instead of a PDF, useful for CI preview artefacts.
+
+- **Page-size / orientation config** — expose `pagesize` (A4, Letter, A3, …) and
+  `landscape` as `[md2pdf]` TOML options and CLI flags.
+
+- **Image captions** — render `![caption](url)` caption text below figures using a
+  small italic `Paragraph` with a configurable style, matching academic document conventions.

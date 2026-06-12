@@ -5,6 +5,19 @@ All notable changes to the `md2pdf` project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-06-12
+
+### Fixed
+- **PDF bookmark / outline panel** — `BookmarkFlowable` now calls `canvas.addOutlineEntry`
+  in addition to `canvas.bookmarkPage`, so all headings (H1–H6) appear as clickable,
+  correctly nested entries in the PDF viewer's bookmarks/navigation panel.
+
+### Changed
+- `HeadingHandler` passes the plain-text heading title (HTML tags stripped) and the
+  0-indexed heading level to `BookmarkFlowable` so the outline nesting depth is correct.
+- Expanded `ROADMAP.md` with near-term, medium-term, and longer-term feature plans,
+  all grounded in the current pipeline architecture.
+
 ## [0.1.3] - 2026-06-12
 
 ### Added
