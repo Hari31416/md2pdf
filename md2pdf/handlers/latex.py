@@ -76,11 +76,14 @@ class LatexHandler(ElementHandler):
         cache: AssetCache | None = None,
         offline: bool = False,
     ) -> None:
+        import os
+
         from md2pdf.assets.cache import AssetCache
         from md2pdf.assets.kroki import KrokiClient
 
         self.client = client or KrokiClient()
-        self.cache = cache or AssetCache(".md2pdf_cache")
+        default_cache = os.path.expanduser("~/.cache/pymd2pdf")
+        self.cache = cache or AssetCache(default_cache)
         self.offline = offline
 
     def render(self, token: dict, styles: dict) -> list[Flowable]:  # noqa: ARG002
