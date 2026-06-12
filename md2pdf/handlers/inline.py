@@ -68,6 +68,16 @@ def inline_render(children: list[dict], styles: dict | None = None) -> str:
             inner = inline_render(child.get("children", []), styles) or escape_xml(raw)
             parts.append(f"<font name='Courier'>{inner}</font>")
 
+        elif t == "Math":
+            config = styles.get("_config") if styles else None
+            from md2pdf.handlers.latex import get_latex_image
+
+            path, w, h = get_latex_image(raw, config)
+            if path:
+                parts.append(f'<img src="{path}" width="{w}" height="{h}" valign="middle"/>')
+            else:
+                parts.append(escape_xml(raw))
+
         elif t == "Link":
             href = child.get("attrs", {}).get("target", "")
             label = inline_render(child.get("children", []), styles)

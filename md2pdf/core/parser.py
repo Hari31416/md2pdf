@@ -21,8 +21,11 @@ Specialisation rules
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from mistletoe import Document
+from mistletoe.base_renderer import BaseRenderer
+from mistletoe.latex_token import Math
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +39,21 @@ _LATEX_LANGS: frozenset[str] = frozenset({"latex", "math"})
 _CLASS_NAME_REMAP: dict[str, str] = {
     "Quote": "BlockQuote",
 }
+
+
+class _MathRegistrationRenderer(BaseRenderer):
+    """Dummy renderer used solely as a context manager to register the Math span token.
+
+    Because mistletoe registers span tokens dynamically when entering the renderer
+    context, using this context manager enables mistletoe to parse '$math$' and '$$math$$'.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(Math, *args, **kwargs)
+
+    def render_math(self, token: Any) -> str:
+        return ""
+
 
 # Attributes we extract from mistletoe nodes into the ``attrs`` dict
 _ATTRS_TO_EXTRACT: tuple[str, ...] = ("level", "language", "start", "loose", "target", "title")
@@ -64,8 +82,9 @@ class MarkdownParser:
         Returns:
             A list of token dicts, one per top-level block element.
         """
-        doc = Document(raw_md)
-        tokens = self._flatten(doc.children)
+        with _MathRegistrationRenderer():
+            doc = Document(raw_md)
+            tokens = self._flatten(doc.children)
         logger.debug("MarkdownParser.parse: produced %d top-level tokens", len(tokens))
         return tokens
 
@@ -92,13 +111,33 @@ class MarkdownParser:
             elif lang in _LATEX_LANGS:
                 token_type = "LatexBlock"
 
-        return {
+        token = {
             "type": token_type,
             "raw": getattr(node, "content", "") or "",
             "children": self._extract_children(node),
             "attrs": self._extract_attrs(node),
             "_node": node,
         }
+
+        # Promote paragraph containing only block math to a LatexBlock
+        if token["type"] == "Paragraph":
+            non_empty = []
+            for c in token.get("children", []):
+                if c.get("type") == "RawText" and not (c.get("raw") or "").strip():
+                    continue
+                non_empty.append(c)
+            if len(non_empty) == 1 and non_empty[0].get("type") == "Math":
+                math_raw = non_empty[0].get("raw") or ""
+                if math_raw.startswith("$$") and math_raw.endswith("$$"):
+                    return {
+                        "type": "LatexBlock",
+                        "raw": math_raw,
+                        "children": [],
+                        "attrs": {},
+                        "_node": node,
+                    }
+
+        return token
 
     def _extract_children(self, node: object) -> list[dict]:
         """Recursively normalise child nodes."""

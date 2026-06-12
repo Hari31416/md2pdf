@@ -183,3 +183,29 @@ class TestIncludeResolver:
         md = "Some !include path/to/file.md text.\n"
         result = IncludeResolver().process(md)
         assert result == md
+
+
+# ---------------------------------------------------------------------------
+# Math Parsing Tests
+# ---------------------------------------------------------------------------
+
+
+class TestMarkdownParserMath:
+    def test_block_math_promoted_to_latex_block(self):
+        md = "$$\nf(x) = x^2\n$$\n"
+        tokens = MarkdownParser().parse(md)
+        assert len(tokens) == 1
+        assert tokens[0]["type"] == LATEX_BLOCK
+        assert "f(x) = x^2" in tokens[0]["raw"]
+
+    def test_inline_math_remains_span(self):
+        md = "Hello $x^2$ world.\n"
+        tokens = MarkdownParser().parse(md)
+        assert len(tokens) == 1
+        assert tokens[0]["type"] == PARAGRAPH
+        children = tokens[0]["children"]
+        assert len(children) == 3
+        assert children[0]["type"] == "RawText"
+        assert children[1]["type"] == "Math"
+        assert children[1]["raw"] == "$x^2$"
+        assert children[2]["type"] == "RawText"

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 from reportlab.platypus import HRFlowable, ListFlowable, Paragraph, Table
 
@@ -401,6 +403,7 @@ class TestSpacingProperties:
 
     def test_table_spacing(self, styles):
         from md2pdf.core.parser import MarkdownParser
+
         md = "| Name |\n|------|\n| Alice |\n"
         tokens = MarkdownParser().parse(md)
         table_token = next(t for t in tokens if t["type"] == "Table")
@@ -419,8 +422,10 @@ class TestSpacingProperties:
         assert flowables[0].spaceAfter == 8
 
     def test_resizable_image_spacing(self):
-        from md2pdf.core.flowables import ResizableImage
         from io import BytesIO
+
+        from md2pdf.core.flowables import ResizableImage
+
         # Create a tiny 1x1 GIF in memory for Image loading compatibility
         gif_data = b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x01\x04\x00;"
         img = ResizableImage(BytesIO(gif_data), width=10, height=10)
@@ -429,6 +434,23 @@ class TestSpacingProperties:
 
     def test_placeholder_box_spacing(self):
         from md2pdf.assets.fallback import PlaceholderBox
+
         box = PlaceholderBox("mermaid", "graph TD")
         assert box.spaceBefore == 0
         assert box.spaceAfter == 8
+
+
+class TestInlineMathRender:
+    @patch("md2pdf.handlers.latex.get_latex_image")
+    def test_math_inline_render_success(self, mock_get, styles):
+        mock_get.return_value = ("/path/to/img.png", 20.0, 10.0)
+        tokens = [{"type": "Math", "raw": "$x^2$", "children": [], "attrs": {}}]
+        result = inline_render(tokens, styles)
+        assert '<img src="/path/to/img.png" width="20.0" height="10.0" valign="middle"/>' in result
+
+    @patch("md2pdf.handlers.latex.get_latex_image")
+    def test_math_inline_render_fallback(self, mock_get, styles):
+        mock_get.return_value = (None, 0.0, 0.0)
+        tokens = [{"type": "Math", "raw": "$x^2$", "children": [], "attrs": {}}]
+        result = inline_render(tokens, styles)
+        assert result == "$x^2$"
