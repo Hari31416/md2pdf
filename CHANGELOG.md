@@ -5,6 +5,20 @@ All notable changes to the `md2pdf` project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-06-12
+
+### Added
+- Support for inline (`$formula$`) and block (`$$formula$$`) LaTeX equations via Kroki tikz endpoint.
+- Recursive file inclusion (`!include path/to/file.md`) with relative path resolution and cycle/loop detection.
+- Spacing configuration options and uniform margins for layout elements.
+
+### Changed
+- Relocated default cache directory to standard user cache `~/.cache/pymd2pdf`.
+
+### Fixed
+- Fixed Markdown image path resolution: mapped the `src` attribute to `target` during parser normalization to prevent local images from failing loading checks.
+- Fixed list indentation alignment.
+
 ## [0.1.1] - 2026-06-12
 
 ### Added
