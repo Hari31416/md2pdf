@@ -1,0 +1,47 @@
+# md2pdf configuration example
+# Copy to md2pdf.toml and customise as needed.
+# All fields are optional — defaults are shown below.
+
+[md2pdf]
+output_file = "output.pdf"
+theme       = "default"
+offline     = false          # true = skip Kroki API calls, render placeholders instead
+cache_dir   = ".md2pdf_cache"
+
+# Dotted class paths for handler plugins (Phase 1 / Phase 5).
+# Entry-point-based plugins are auto-discovered — no config needed.
+plugins = []
+
+# ---------------------------------------------------------------------------
+# Theme / colour palette
+# All fields are optional; omitting this section uses the built-in defaults.
+# ---------------------------------------------------------------------------
+[theme]
+# Typography
+font_body    = "Helvetica"
+font_heading = "Helvetica-Bold"
+font_mono    = "Courier"
+
+# Body colours
+color_body_text       = "#000000"
+color_blockquote_text = "#555555"
+color_link            = "#0366d6"
+color_hr              = "#cccccc"
+
+# Table colours
+color_table_header_bg   = "#2c3e50"
+color_table_header_text = "#ffffff"
+color_table_grid        = "#cccccc"
+color_table_row_odd     = "#ffffff"
+color_table_row_even    = "#f5f5f5"
+
+# Blockquote left bar
+color_blockquote_bar = "#cccccc"
+
+# ---------------------------------------------------------------------------
+# Plugins (Phase 5)
+# ---------------------------------------------------------------------------
+[plugins]
+handlers      = []   # e.g. "my_package.handlers:CalloutHandler"
+preprocessors = []
+postprocessors = []

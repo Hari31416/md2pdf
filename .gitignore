@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+
+# md2pdf runtime artifacts
+.md2pdf_cache/
+*.pdf
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editors
+.DS_Store
+.idea/
+.vscode/
