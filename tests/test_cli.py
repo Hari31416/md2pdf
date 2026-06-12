@@ -21,6 +21,7 @@ def test_help() -> None:
     assert "--theme" in result.output
     assert "--offline" in result.output
     assert "--validate-only" in result.output
+    assert "--min-image-scale" in result.output
 
 
 def test_missing_file() -> None:
@@ -56,6 +57,22 @@ def test_convert(tmp_path: Path, simple_md: str) -> None:
     dest = tmp_path / "output.pdf"
 
     result = runner.invoke(app, [str(src), "-o", str(dest), "--offline"])
+
+    assert result.exit_code == 0
+    assert dest.exists()
+    assert dest.stat().st_size > 1000
+    assert "✓ PDF written to:" in result.output
+
+
+def test_convert_with_min_scale(tmp_path: Path, simple_md: str) -> None:
+    """Verify end-to-end file generation with custom --min-image-scale option."""
+    src = tmp_path / "test.md"
+    src.write_text(simple_md, encoding="utf-8")
+    dest = tmp_path / "output.pdf"
+
+    result = runner.invoke(
+        app, [str(src), "-o", str(dest), "--offline", "--min-image-scale", "0.75"]
+    )
 
     assert result.exit_code == 0
     assert dest.exists()

@@ -15,6 +15,7 @@ def test_defaults() -> None:
     assert cfg.theme == "default"
     assert cfg.offline is False
     assert cfg.cache_dir == ".md2pdf_cache"
+    assert cfg.min_image_scale == 0.8
     assert cfg.plugins_dict == {}
 
 
@@ -24,6 +25,7 @@ def test_from_toml_basic(tmp_path) -> None:
         output_file = "report.pdf"
         theme = "legal"
         offline = true
+        min_image_scale = 0.65
     """)
     cfg_file = tmp_path / "md2pdf.toml"
     cfg_file.write_text(toml_content, encoding="utf-8")
@@ -33,6 +35,7 @@ def test_from_toml_basic(tmp_path) -> None:
     assert cfg.output_file == "report.pdf"
     assert cfg.theme == "legal"
     assert cfg.offline is True
+    assert cfg.min_image_scale == 0.65
 
 
 def test_from_toml_ignores_unknown_keys(tmp_path) -> None:

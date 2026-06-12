@@ -6,7 +6,7 @@ import logging
 from io import BytesIO
 from typing import TYPE_CHECKING
 
-from reportlab.platypus import Image
+from md2pdf.core.flowables import ResizableImage
 
 from md2pdf.assets.cache import AssetCache
 from md2pdf.assets.fallback import PlaceholderBox
@@ -113,6 +113,6 @@ class MermaidHandler(ElementHandler):
             display_height = max_height
             display_width = display_width * height_scale
 
-        img = Image(BytesIO(png), width=display_width, height=display_height)
+        img = ResizableImage(BytesIO(png), width=display_width, height=display_height)
         img.hAlign = "CENTER"
         return [img]

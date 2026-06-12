@@ -33,6 +33,7 @@ class Config:
     theme: str = "default"
     offline: bool = False
     cache_dir: str = ".md2pdf_cache"
+    min_image_scale: float = 0.8
 
     # Structured plugin config from [plugins] TOML section.
     # Keys: "handlers", "preprocessors", "postprocessors" → list[str]

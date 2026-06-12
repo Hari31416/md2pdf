@@ -52,6 +52,11 @@ def convert(
     validate_only: bool = typer.Option(  # noqa: B008
         False, "--validate-only", help="Run validation but do not render"
     ),
+    min_image_scale: float = typer.Option(  # noqa: B008
+        None,
+        "--min-image-scale",
+        help="Minimum scale factor for resizing images before deferring to a new page (e.g. 0.8)",
+    ),
 ) -> None:
     """Convert a Markdown file to a print-ready PDF."""
     _setup_logging(verbose)
@@ -71,6 +76,8 @@ def convert(
         theme=theme,
         offline=offline,
     )
+    if min_image_scale is not None:
+        cfg.min_image_scale = min_image_scale
 
     if config_file is not None:
         if not config_file.exists():
@@ -84,6 +91,8 @@ def convert(
             cfg.theme = theme
         if offline:
             cfg.offline = True
+        if min_image_scale is not None:
+            cfg.min_image_scale = min_image_scale
 
     registry = HandlerRegistry()
     pipeline = Pipeline(cfg, registry)

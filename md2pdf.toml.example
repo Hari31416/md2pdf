@@ -7,6 +7,8 @@ output_file = "output.pdf"
 theme       = "default"
 offline     = false          # true = skip Kroki API calls, render placeholders instead
 cache_dir   = ".md2pdf_cache"
+# min_image_scale = 0.8       # minimum image scale factor before deferring to a new page (e.g. 0.8)
+
 
 
 # ---------------------------------------------------------------------------

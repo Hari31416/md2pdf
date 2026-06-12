@@ -155,6 +155,12 @@ class Pipeline:
 
     def _render(self, flowables: list) -> None:
         """Stage 4 — run post-processors then build the PDF with layout safeguards."""
+        from md2pdf.core.flowables import ResizableImage
+
+        # Reset max available height for the current rendering pass
+        ResizableImage.max_avail_height = 0.0
+        ResizableImage.min_scale = self.config.min_image_scale
+
         from md2pdf.core.layout import LayoutComposer
 
         composer = LayoutComposer()
