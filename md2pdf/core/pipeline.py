@@ -144,15 +144,11 @@ class Pipeline:
                 # Fallback: render the unimplemented component as a code block
                 from reportlab.platypus import Preformatted
 
-                from md2pdf.handlers.code import clean_box_drawing
                 from md2pdf.handlers.inline import escape_xml, inline_render
 
                 raw_content = token.get("raw", "")
                 if not raw_content and token.get("children"):
                     raw_content = inline_render(token["children"], self._styles)
-
-                # Clean box drawing characters for compatibility
-                raw_content = clean_box_drawing(raw_content)
 
                 repr_str = f"[{token_type} block — not implemented]"
                 if raw_content:
@@ -203,11 +199,22 @@ class Pipeline:
     # ------------------------------------------------------------------
 
     def _build_base_styles(self) -> dict:
-        """Build the base stylesheet from the active theme config."""
+        """Build the base stylesheet from the active theme config.
+
+        Font registration is performed first so that DejaVu (or any other
+        bundled font) is available to ReportLab before the stylesheet
+        references it by name.
+        """
         try:
+            from md2pdf.assets._font_registry import (  # noqa: PLC0415
+                register_fonts,
+                register_theme_fonts,
+            )
             from md2pdf.styles.default import build_default_stylesheet  # noqa: PLC0415
 
+            register_fonts()
             theme = getattr(self.config, "theme_config", None)
+            register_theme_fonts(theme)
             return build_default_stylesheet(theme)
         except Exception:
             logger.debug("Could not build stylesheet; using empty styles dict", exc_info=True)

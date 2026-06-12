@@ -16,7 +16,9 @@ from md2pdf.styles.theme import ThemeConfig
 class TestThemeConfig:
     def test_default_instantiation(self):
         theme = ThemeConfig()
-        assert theme.font_body == "Helvetica"
+        assert theme.font_body == "DejaVuSans"
+        assert theme.font_heading == "DejaVuSans-Bold"
+        assert theme.font_mono == "DejaVuSansMono"
         assert theme.color_table_header_bg == "#2c3e50"
         assert theme.spacing_base == 8
 

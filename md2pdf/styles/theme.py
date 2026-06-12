@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, fields
 
+from md2pdf.assets._font_registry import FONT_MONO, FONT_MONO_BOLD, FONT_SANS, FONT_SANS_BOLD
+
 
 @dataclass
 class ThemeConfig:
@@ -20,19 +22,41 @@ class ThemeConfig:
     Example ``md2pdf.toml`` section::
 
         [theme]
-        font_body            = "Helvetica"
+        font_body            = "DejaVuSans"
         color_table_header_bg = "#2c3e50"
+
+    To use a **custom TTF font**, supply both the logical name and the path::
+
+        [theme]
+        font_body      = "MyCustomFont"
+        font_file_body = "/path/to/MyCustomFont.ttf"
+
+    The logical name is the string ReportLab uses in the PDF; the path tells
+    the engine where to find the ``.ttf`` file on disk.  If a ``font_file_*``
+    is provided, it is registered automatically — no plugin needed.
 
     All fields have sensible defaults so the ``[theme]`` section is
     entirely optional.
     """
 
     # --- Typography ---
-    font_body: str = "Helvetica"
-    font_heading: str = "Helvetica-Bold"
-    font_mono: str = "Courier"
+    # Defaults use DejaVu Sans, which is bundled with md2pdf and provides
+    # broad Unicode coverage (Latin Extended, Greek, Cyrillic, math symbols,
+    # arrows, box-drawing, currency, etc.).  Users may override these with
+    # any ReportLab-registered font name via the [theme] section of md2pdf.toml.
+    font_body: str = FONT_SANS
+    font_heading: str = FONT_SANS_BOLD
+    font_mono: str = FONT_MONO
     font_size_body: int = 10
     font_size_small: int = 9
+
+    # Optional TTF file paths for custom fonts.
+    # When set, the engine registers the font under the corresponding
+    # ``font_body`` / ``font_heading`` / ``font_mono`` name automatically.
+    # Leave empty (the default) to use the bundled DejaVu fonts.
+    font_file_body: str = ""
+    font_file_heading: str = ""
+    font_file_mono: str = ""
 
     # --- Spacing ---
     spacing_base: int = 8

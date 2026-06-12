@@ -66,7 +66,7 @@ This section tests inline layout and inline style parsing:
 - *Emphasis/Italic*: This is an *emphasized text block* using single asterisks.
 - **Nested Styles**: You can combine styles like ***bold-italic nested runs***.
 - `Code Inline`: Use backticks for monospace symbols like `Pipeline`, `ThemeConfig`, or `build_default_stylesheet()`.
-- Hyperlinks: Clickable links like the [md2pdf GitHub page](https://github.com/user/md2pdf) are automatically colored.
+- Hyperlinks: Clickable links like the [md2pdf GitHub page](https://github.com/hari31416/md2pdf) are automatically colored.
 
 ---
 
@@ -124,12 +124,12 @@ def hello_world(name: str) -> None:
 
 Tables split cleanly across page boundaries. Table columns automatically distribute width evenly across the printable area, and the header repeats at the top of every page.
 
-| Parameter      | Type  | Default            | Description                   |
-| :------------- | :---- | :----------------- | :---------------------------- |
-| `font_body`    | `str` | `"Helvetica"`      | Body typeface.                |
-| `font_heading` | `str` | `"Helvetica-Bold"` | Heading typeface.             |
-| `spacing_base` | `int` | `8`                | Base vertical spacing metric. |
-| `color_link`   | `str` | `"#0366d6"`        | Hex color string for links.   |
+| Parameter      | Type  | Default             | Description                   |
+| :------------- | :---- | :------------------ | :---------------------------- |
+| `font_body`    | `str` | `"DejaVuSans"`      | Body typeface.                |
+| `font_heading` | `str` | `"DejaVuSans-Bold"` | Heading typeface.             |
+| `spacing_base` | `int` | `8`                 | Base vertical spacing metric. |
+| `color_link`   | `str` | `"#0366d6"`         | Hex color string for links.   |
 
 ---
 
@@ -178,3 +178,94 @@ Successful image references are dynamically loaded, scaled, and centered:
 You can split documents into multiple reusable files and combine them at compile-time:
 
 !include included_feature.md
+
+---
+
+## 12. Unicode & Special Characters
+
+`md2pdf` uses **DejaVu Sans** as its default font family, bundled directly with the package. DejaVu provides broad Unicode coverage so that special characters render correctly out-of-the-box — no configuration required.
+
+### Latin Extended
+
+Accented characters and diacritics appear natively without escaping:
+
+café, naïve, résumé, Ångström, Zürich, façade, Ñoño, fiançailles, jalapeño, Łódź
+
+### Greek Alphabet
+
+Full Greek alphabet support for scientific and mathematical documents:
+
+α β γ δ ε ζ η θ ι κ λ μ ν ξ ο π ρ σ τ υ φ χ ψ ω
+
+Α Β Γ Δ Ε Ζ Η Θ Ι Κ Λ Μ Ν Ξ Ο Π Ρ Σ Τ Υ Φ Χ Ψ Ω
+
+### Cyrillic
+
+Russian and other Cyrillic scripts are fully supported:
+
+Привет мир — Москва, Санкт-Петербург, Екатеринбург
+
+Україна, Беларусь, Србија, България
+
+### Mathematical Operators & Symbols
+
+Common math notation renders without needing LaTeX blocks:
+
+∑ ∏ ∫ ∂ √ ∛ ∞ ∅ ∈ ∉ ∩ ∪ ⊂ ⊃ ⊆ ⊇
+
+≤ ≥ ≠ ≈ ≡ ≪ ≫ ± × ÷ · ∓ ∝ ∼
+
+### Arrows
+
+← → ↑ ↓ ↔ ↕ ↖ ↗ ↘ ↙
+
+⇐ ⇒ ⇑ ⇓ ⇔ ⇕ ⟵ ⟶ ⟷
+
+### Box Drawing
+
+Useful for ASCII-art tables and tree structures embedded in plain text:
+
+```
+┌─────────────┬─────────────┐
+│  Cell A     │  Cell B     │
+├─────────────┼─────────────┤
+│  Cell C     │  Cell D     │
+└─────────────┴─────────────┘
+```
+
+### Currency Symbols
+
+$ € £ ¥ ₹ ₽ ₩ ₺ ₿ ¢ ₣ ₦ ₴ ₪
+
+### Typographic Punctuation
+
+Em dash —, en dash –, ellipsis …, curly quotes " " ' ', guillemets « »,
+bullet •, section §, pilcrow ¶, dagger †, double dagger ‡,
+trademark ™, copyright ©, registered ®, degree °
+
+### Superscript & Subscript Lookalikes
+
+H₂O, CO₂, E = mc², x² + y² = r², Aₙ → Bₙ
+
+### Custom Font via `md2pdf.toml`
+
+To use a different font, add the following to your `md2pdf.toml`. The engine
+registers the TTF file automatically — no plugin or Python code required:
+
+```toml
+[theme]
+font_body      = "NotoSans"
+font_file_body = "/path/to/NotoSans-Regular.ttf"
+
+font_heading      = "NotoSans-Bold"
+font_file_heading = "/path/to/NotoSans-Bold.ttf"
+
+font_mono      = "NotoSansMono"
+font_file_mono = "/path/to/NotoSansMono-Regular.ttf"
+```
+
+Tilde expansion (`~/fonts/MyFont.ttf`) is supported.
+
+### Emojis are Still Not Fully Supported
+
+🤨 😥 😫 😞 😔 😕 🙁 ☹️ 🙁 🙁 ☹️ ☹️ 

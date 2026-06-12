@@ -368,17 +368,6 @@ class TestCodeFenceHandler:
         assert isinstance(flowables[0], XPreformatted)
         assert flowables[0].text == "some raw text"
 
-    def test_clean_box_drawing(self, styles):
-        from md2pdf.handlers.code import clean_box_drawing
-
-        text = "├── docs/\n└── md2pdf/"
-        cleaned = clean_box_drawing(text)
-        assert "├" not in cleaned
-        assert "└" not in cleaned
-        assert "─" not in cleaned
-        assert "+-- docs/" in cleaned
-        assert "+-- md2pdf/" in cleaned
-
 
 # ---------------------------------------------------------------------------
 # Spacing Properties

@@ -17,9 +17,31 @@ cache_dir   = ".md2pdf_cache"
 # ---------------------------------------------------------------------------
 [theme]
 # Typography
-font_body    = "Helvetica"
-font_heading = "Helvetica-Bold"
-font_mono    = "Courier"
+# The default fonts are DejaVu Sans (bundled), which cover a wide range of
+# Unicode characters: Latin Extended, Greek, Cyrillic, math symbols, arrows,
+# box-drawing characters, currency symbols, and more.
+font_body    = "DejaVuSans"
+font_heading = "DejaVuSans-Bold"
+font_mono    = "DejaVuSansMono"
+
+# Custom TTF fonts
+# To use your own font, set BOTH the logical name AND the path to the .ttf file.
+# The logical name is what appears in the PDF; the path tells md2pdf where to
+# find the file. Example:
+#
+#   font_body      = "NotoSans"
+#   font_file_body = "/path/to/NotoSans-Regular.ttf"
+#
+#   font_heading      = "NotoSans-Bold"
+#   font_file_heading = "/path/to/NotoSans-Bold.ttf"
+#
+#   font_mono      = "NotoSansMono"
+#   font_file_mono = "/path/to/NotoSansMono-Regular.ttf"
+#
+# Tilde expansion is supported: font_file_body = "~/fonts/MyFont.ttf"
+font_file_body    = ""
+font_file_heading = ""
+font_file_mono    = ""
 
 # Body colours
 color_body_text       = "#000000"

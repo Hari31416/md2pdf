@@ -5,6 +5,22 @@ All notable changes to the `md2pdf` project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-06-12
+
+### Added
+- Bundled **DejaVu Sans** TrueType fonts (`DejaVuSans`, `DejaVuSans-Bold`, `DejaVuSansMono`, `DejaVuSansMono-Bold`) inside the package for broad Unicode coverage out-of-the-box — no system font dependency required.
+- Unicode characters now render natively: Latin Extended, Greek, Cyrillic, mathematical operators, arrows, box-drawing characters, currency symbols, and typographic punctuation.
+- New `font_file_body`, `font_file_heading`, and `font_file_mono` fields in `ThemeConfig` and `md2pdf.toml` let users supply custom TTF fonts by file path. The engine registers them automatically — no plugin or Python code required.
+- Updated `docs/showcase.md` with a new **Section 12: Unicode & Special Characters** showcasing all supported character classes and the custom font configuration pattern.
+
+### Changed
+- Default fonts changed from `Helvetica` / `Helvetica-Bold` / `Courier` (PDF core fonts, Latin-1 only) to `DejaVuSans` / `DejaVuSans-Bold` / `DejaVuSansMono` (bundled, broad Unicode coverage).
+- `md2pdf.toml.example` updated to reflect new font defaults and document the `font_file_*` fields.
+
+### Removed
+- `clean_box_drawing()` function and `_BOX_DRAWING_MAP` translation table from `md2pdf/handlers/code.py` — previously worked around Courier's missing box-drawing glyphs; no longer needed with DejaVuSansMono as the default mono font.
+- Corresponding `clean_box_drawing` calls removed from `CodeFenceHandler.render()` and the pipeline fallback renderer.
+
 ## [0.1.2] - 2026-06-12
 
 ### Added
