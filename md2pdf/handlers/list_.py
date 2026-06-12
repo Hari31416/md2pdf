@@ -48,7 +48,7 @@ class ListHandler(ElementHandler):
             ListFlowable(
                 items,
                 bulletType=bullet_type,
-                leftIndent=_INDENT_PER_LEVEL * (_depth + 1),
+                leftIndent=_INDENT_PER_LEVEL,
                 bulletFontSize=styles.get("list_item", styles.get("body")).fontSize,
                 spaceBefore=0,
                 spaceAfter=styles.get("spacing_base", 8) if _depth == 0 else 0,
