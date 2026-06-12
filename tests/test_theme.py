@@ -18,13 +18,20 @@ class TestThemeConfig:
         theme = ThemeConfig()
         assert theme.font_body == "Helvetica"
         assert theme.color_table_header_bg == "#2c3e50"
+        assert theme.spacing_base == 8
 
     def test_from_dict_known_keys(self):
-        data = {"color_link": "#e74c3c", "font_body": "Times-Roman", "syntax_style": "monokai"}
+        data = {
+            "color_link": "#e74c3c",
+            "font_body": "Times-Roman",
+            "syntax_style": "monokai",
+            "spacing_base": 12,
+        }
         theme = ThemeConfig.from_dict(data)
         assert theme.color_link == "#e74c3c"
         assert theme.font_body == "Times-Roman"
         assert theme.syntax_style == "monokai"
+        assert theme.spacing_base == 12
 
     def test_from_dict_ignores_unknown_keys(self):
         """Unknown keys must be silently ignored (no TypeError)."""
@@ -96,6 +103,51 @@ class TestBuildDefaultStylesheet:
         ):
             assert key in ss, f"Missing style key: {key!r}"
             assert isinstance(ss[key], ParagraphStyle), f"{key!r} is not a ParagraphStyle"
+
+    def test_paragraph_styles_spacing_and_leading(self):
+        # Default spacing_base = 8
+        ss = build_default_stylesheet()
+        # Headings
+        assert ss["h1"].leading == 24
+        assert ss["h1"].spaceBefore == 16
+        assert ss["h1"].spaceAfter == 8
+
+        assert ss["h2"].leading == 20
+        assert ss["h2"].spaceBefore == 12
+        assert ss["h2"].spaceAfter == 8
+
+        assert ss["h3"].leading == 16
+        assert ss["h3"].spaceBefore == 9
+        assert ss["h3"].spaceAfter == 8
+
+        assert ss["h4"].leading == 14
+        assert ss["h4"].spaceBefore == 8
+        assert ss["h4"].spaceAfter == 8
+
+        # Body / blockquote / list_item / code_block
+        assert ss["body"].spaceBefore == 0
+        assert ss["body"].spaceAfter == 8
+        assert ss["body"].leading == 14
+
+        assert ss["blockquote"].spaceBefore == 0
+        assert ss["blockquote"].spaceAfter == 8
+        assert ss["blockquote"].leading == 14
+
+        assert ss["list_item"].spaceBefore == 0
+        assert ss["list_item"].spaceAfter == 4
+        assert ss["list_item"].leading == 13
+
+        assert ss["code_block"].spaceBefore == 0
+        assert ss["code_block"].spaceAfter == 8
+
+        # Custom spacing_base = 12
+        theme = ThemeConfig(spacing_base=12)
+        ss_custom = build_default_stylesheet(theme)
+        assert ss_custom["h1"].spaceBefore == 24
+        assert ss_custom["h1"].spaceAfter == 12
+        assert ss_custom["body"].spaceAfter == 12
+        assert ss_custom["list_item"].spaceAfter == 6
+        assert ss_custom["code_block"].spaceAfter == 12
 
     def test_has_table_style_list(self):
         ss = build_default_stylesheet()

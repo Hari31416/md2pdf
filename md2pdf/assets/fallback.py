@@ -52,6 +52,8 @@ class PlaceholderBox(Flowable):
         )
         self.width = width
         self.height = height
+        self.spaceBefore = 0
+        self.spaceAfter = 8
 
     # ReportLab calls wrap() to query our dimensions before draw().
     def wrap(

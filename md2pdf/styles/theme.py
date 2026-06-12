@@ -34,6 +34,9 @@ class ThemeConfig:
     font_size_body: int = 10
     font_size_small: int = 9
 
+    # --- Spacing ---
+    spacing_base: int = 8
+
     # --- Body colors ---
     color_body_text: str = "#000000"
     color_blockquote_text: str = "#555555"

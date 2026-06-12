@@ -96,13 +96,19 @@ class LatexHandler(ElementHandler):
         if png is None:
             if self.offline:
                 logger.debug("LatexHandler: offline mode (cache miss) — returning placeholder")
-                return [PlaceholderBox(_DIAGRAM_TYPE, source)]
+                box = PlaceholderBox(_DIAGRAM_TYPE, source)
+                box.spaceBefore = 0
+                box.spaceAfter = styles.get("spacing_base", 8)
+                return [box]
             try:
                 png = self.client.render(_DIAGRAM_TYPE, wrapped)
                 self.cache.put(_DIAGRAM_TYPE, wrapped, png)
             except Exception as exc:
                 logger.warning("Kroki render failed (%s): %s", _DIAGRAM_TYPE, exc)
-                return [PlaceholderBox(_DIAGRAM_TYPE, source)]
+                box = PlaceholderBox(_DIAGRAM_TYPE, source)
+                box.spaceBefore = 0
+                box.spaceAfter = styles.get("spacing_base", 8)
+                return [box]
 
         # Open the image using PIL to read its pixel dimensions and crop margins
         from PIL import Image as PILImage
@@ -142,4 +148,6 @@ class LatexHandler(ElementHandler):
 
         img = ResizableImage(BytesIO(png), width=display_width, height=display_height)
         img.hAlign = "CENTER"
+        img.spaceBefore = 0
+        img.spaceAfter = styles.get("spacing_base", 8)
         return [img]

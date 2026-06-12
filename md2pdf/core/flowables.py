@@ -113,6 +113,8 @@ class ResizableImage(Image):
         # ReportLab's Image stores these in self.drawWidth and self.drawHeight.
         self.orig_width: float = float(self.drawWidth)
         self.orig_height: float = float(self.drawHeight)
+        self.spaceBefore = 0
+        self.spaceAfter = 8
 
     def wrap(self, availWidth: float, availHeight: float) -> tuple[float, float]:
         # Update the class-level maximum seen height

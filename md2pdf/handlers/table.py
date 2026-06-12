@@ -62,6 +62,8 @@ class TableHandler(ElementHandler):
             repeatRows=1,
             splitByRow=True,
         )
+        tbl.spaceBefore = 0
+        tbl.spaceAfter = styles.get("spacing_base", 8)
         tbl.setStyle(TableStyle(styles["table_style"]))
         return [tbl]
 

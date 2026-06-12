@@ -18,6 +18,7 @@ font_heading          = "Helvetica-Bold"
 font_mono             = "Courier"
 font_size_body        = 10
 font_size_small       = 9
+spacing_base          = 8
 
 # --- Prose Colors ---
 color_body_text       = "#000000"

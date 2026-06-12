@@ -20,7 +20,7 @@ class ThematicBreakHandler(ElementHandler):
                 width="100%",
                 thickness=0.5,
                 color=color,
-                spaceAfter=6,
-                spaceBefore=6,
+                spaceBefore=styles.get("spacing_base", 8),
+                spaceAfter=styles.get("spacing_base", 8),
             )
         ]

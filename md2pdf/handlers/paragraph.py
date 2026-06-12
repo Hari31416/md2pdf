@@ -91,6 +91,8 @@ class ParagraphHandler(ElementHandler):
 
                     box = PlaceholderBox("image", f"Missing: {target}", width=400, height=80)
                     box.hAlign = "CENTER"
+                    box.spaceBefore = 0
+                    box.spaceAfter = styles.get("spacing_base", 8)
                     flowables.append(box)
                     continue
 
@@ -107,6 +109,8 @@ class ParagraphHandler(ElementHandler):
 
                     box = PlaceholderBox("image", f"Corrupt: {target}", width=400, height=80)
                     box.hAlign = "CENTER"
+                    box.spaceBefore = 0
+                    box.spaceAfter = styles.get("spacing_base", 8)
                     flowables.append(box)
                     continue
 
@@ -167,6 +171,8 @@ class ParagraphHandler(ElementHandler):
 
                 img = ResizableImage(resolved_path, width=display_width, height=display_height)
                 img.hAlign = "CENTER"
+                img.spaceBefore = 0
+                img.spaceAfter = styles.get("spacing_base", 8)
                 flowables.append(img)
             else:
                 current_text_run.append(child)

@@ -376,3 +376,59 @@ class TestCodeFenceHandler:
         assert "─" not in cleaned
         assert "+-- docs/" in cleaned
         assert "+-- md2pdf/" in cleaned
+
+
+# ---------------------------------------------------------------------------
+# Spacing Properties
+# ---------------------------------------------------------------------------
+
+
+class TestSpacingProperties:
+    def test_list_spacing(self, styles):
+        token = _make_list_token(["a"])
+        flowables = ListHandler().render(token, styles)
+        assert len(flowables) == 1
+        assert isinstance(flowables[0], ListFlowable)
+        assert flowables[0].spaceBefore == 0
+        assert flowables[0].spaceAfter == 8
+
+        # Nested list
+        nested_flowables = ListHandler().render(token, styles, _depth=1)
+        assert len(nested_flowables) == 1
+        assert isinstance(nested_flowables[0], ListFlowable)
+        assert nested_flowables[0].spaceBefore == 0
+        assert nested_flowables[0].spaceAfter == 0
+
+    def test_table_spacing(self, styles):
+        from md2pdf.core.parser import MarkdownParser
+        md = "| Name |\n|------|\n| Alice |\n"
+        tokens = MarkdownParser().parse(md)
+        table_token = next(t for t in tokens if t["type"] == "Table")
+        flowables = TableHandler().render(table_token, styles)
+        assert len(flowables) == 1
+        assert isinstance(flowables[0], Table)
+        assert flowables[0].spaceBefore == 0
+        assert flowables[0].spaceAfter == 8
+
+    def test_thematic_break_spacing(self, styles):
+        token = {"type": "ThematicBreak", "raw": "", "attrs": {}, "children": [], "_node": None}
+        flowables = ThematicBreakHandler().render(token, styles)
+        assert len(flowables) == 1
+        assert isinstance(flowables[0], HRFlowable)
+        assert flowables[0].spaceBefore == 8
+        assert flowables[0].spaceAfter == 8
+
+    def test_resizable_image_spacing(self):
+        from md2pdf.core.flowables import ResizableImage
+        from io import BytesIO
+        # Create a tiny 1x1 GIF in memory for Image loading compatibility
+        gif_data = b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x01\x04\x00;"
+        img = ResizableImage(BytesIO(gif_data), width=10, height=10)
+        assert img.spaceBefore == 0
+        assert img.spaceAfter == 8
+
+    def test_placeholder_box_spacing(self):
+        from md2pdf.assets.fallback import PlaceholderBox
+        box = PlaceholderBox("mermaid", "graph TD")
+        assert box.spaceBefore == 0
+        assert box.spaceAfter == 8
