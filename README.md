@@ -31,6 +31,8 @@ graph TD
 - **Standard Elements**: Headings (H1–H6), paragraphs, lists, blockquotes, horizontal rules, and hyperlinks.
 - **Multi-page Tables**: Tables split cleanly across page boundaries. Headers repeat at the top of every page.
 - **Diagrams & Math Blocks**: Renders Mermaid diagrams and LaTeX math blocks via the Kroki API, with automatic transparent/white margin cropping, offline fallbacks, and SHA-256 disk caching.
+- **PDF Bookmarks & Outline Panel**: Every heading (H1–H6) is registered as a clickable, correctly nested entry in the PDF viewer's bookmarks/navigation panel.
+- **Broad Unicode Support**: Bundled DejaVu Sans fonts cover Latin Extended, Greek, Cyrillic, mathematical operators, arrows, box-drawing characters, and more — no system font dependency required.
 - **Extensible Plugin System**: Load custom element handlers, text-level preprocessors, post-processors, and stylesheet/theme layers.
 - **Typesetting Safeguards**: Implements strict "anti-fail" layout rules including orphaned heading protection, ghost page elimination, and widow/orphan line settings.
 - **DX-First Validation**: Pre-render validation runs to identify nested tables, empty diagrams, or unsupported elements before rendering.
@@ -62,8 +64,7 @@ md2pdf/
 │   ├── core/               # Engine pipeline, parser, validator, layout, registry
 │   ├── handlers/           # Element-specific flowable generators (headings, tables, etc.)
 │   ├── styles/             # Default stylesheet and theme configs
-│   ├── cli.py              # CLI entry point
-│   └── pipeline.py         # Main execution coordinator
+│   └── cli.py              # CLI entry point
 ├── tests/                  # Automated test suite
 │   ├── fixtures/           # Markdown and configuration test files
 │   ├── test_cli.py         # CLI integration tests
@@ -128,10 +129,9 @@ To initialize the project for local development:
 git clone https://github.com/user/md2pdf.git
 cd md2pdf
 
-# Create virtual environment and install dependencies
-uv venv
+# Create virtual environment and install all dependencies (including dev)
+uv sync
 source .venv/bin/activate
-uv pip install -e ".[dev]"
 ```
 
 ---
