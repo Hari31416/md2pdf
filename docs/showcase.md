@@ -166,6 +166,11 @@ If an image file is missing or corrupt, a placeholder box is rendered instead of
 
 ![Missing Image Example](missing_image.png)
 
+### Working Image Example
+Successful image references are dynamically loaded, scaled, and centered:
+
+![Sample Document Translation Graphic](sample_image.png)
+
 ---
 
 ## 11. File Inclusion (!include)
