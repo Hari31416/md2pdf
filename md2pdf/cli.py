@@ -37,7 +37,7 @@ def _report_issues(issues: list) -> None:
 def convert(
     input: Path = typer.Argument(..., help="Path to input .md file"),  # noqa: B008
     output: Path = typer.Option(  # noqa: B008
-        Path("output.pdf"), "-o", "--output", help="Output PDF path"
+        None, "-o", "--output", help="Output PDF path. If not specified, defaults to the input filename with a .pdf extension."
     ),
     config_file: Path = typer.Option(  # noqa: B008
         None, "-c", "--config", help="Path to md2pdf.toml"
@@ -95,7 +95,26 @@ def convert(
         cfg = Config.from_toml(active_config_file)
         # CLI arguments take precedence over config file values.
         cfg.input_file = str(input)
-        cfg.output_file = str(output)
+        if output is not None:
+            cfg.output_file = str(output)
+        else:
+            # Check if TOML file explicitly configured output_file
+            import tomllib
+            toml_has_output = False
+            try:
+                with open(active_config_file, "rb") as fh:
+                    data = tomllib.load(fh)
+                    if "output_file" in data.get("md2pdf", {}):
+                        toml_has_output = True
+            except Exception:
+                pass
+
+            if toml_has_output:
+                if not cfg.output_file:
+                    cfg.output_file = str(input.with_suffix(".pdf"))
+            else:
+                cfg.output_file = str(input.with_suffix(".pdf"))
+
         if theme != "default":
             cfg.theme = theme
         if offline:
@@ -103,9 +122,10 @@ def convert(
         if min_image_scale is not None:
             cfg.min_image_scale = min_image_scale
     else:
+        resolved_output = output if output is not None else input.with_suffix(".pdf")
         cfg = Config(
             input_file=str(input),
-            output_file=str(output),
+            output_file=str(resolved_output),
             theme=theme,
             offline=offline,
         )
@@ -125,7 +145,7 @@ def convert(
 
     try:
         pipeline.run(raw_md)
-        typer.echo(f"✓ PDF written to: {output}")
+        typer.echo(f"✓ PDF written to: {cfg.output_file}")
     except Exception as exc:
         logging.exception("Conversion failed")
         typer.echo(f"✗ Conversion failed: {exc}", err=True)

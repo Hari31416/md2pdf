@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 import tomllib
 from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Any
@@ -30,7 +31,7 @@ class Config:
     """
 
     input_file: str = ""
-    output_file: str = "output.pdf"
+    output_file: str = ""
     theme: str = "default"
     offline: bool = False
     cache_dir: str = os.path.expanduser("~/.cache/pymd2pdf")
@@ -42,6 +43,14 @@ class Config:
 
     # Populated from the [theme] TOML section; None means "use ThemeConfig defaults".
     theme_config: Any = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        """Resolve dynamic default for output_file if not specified."""
+        if not self.output_file:
+            if self.input_file:
+                self.output_file = str(Path(self.input_file).with_suffix(".pdf"))
+            else:
+                self.output_file = "output.pdf"
 
     @classmethod
     def from_toml(cls, path: str) -> Config:

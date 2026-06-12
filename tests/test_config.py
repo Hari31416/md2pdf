@@ -20,6 +20,11 @@ def test_defaults() -> None:
     assert cfg.plugins_dict == {}
 
 
+def test_defaults_with_input() -> None:
+    cfg = Config(input_file="readme.md")
+    assert cfg.output_file == "readme.pdf"
+
+
 def test_from_toml_basic(tmp_path) -> None:
     toml_content = textwrap.dedent("""\
         [md2pdf]

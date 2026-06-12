@@ -61,7 +61,7 @@ def test_convert(tmp_path: Path, simple_md: str) -> None:
     assert result.exit_code == 0
     assert dest.exists()
     assert dest.stat().st_size > 1000
-    assert "✓ PDF written to:" in result.output
+    assert f"✓ PDF written to: {dest}" in result.output
 
 
 def test_convert_with_min_scale(tmp_path: Path, simple_md: str) -> None:
@@ -77,4 +77,19 @@ def test_convert_with_min_scale(tmp_path: Path, simple_md: str) -> None:
     assert result.exit_code == 0
     assert dest.exists()
     assert dest.stat().st_size > 1000
-    assert "✓ PDF written to:" in result.output
+    assert f"✓ PDF written to: {dest}" in result.output
+
+
+def test_convert_default_output(tmp_path: Path, simple_md: str) -> None:
+    """Verify that the default output PDF name is derived from the input file name."""
+    src = tmp_path / "test_default_name.md"
+    src.write_text(simple_md, encoding="utf-8")
+    expected_dest = tmp_path / "test_default_name.pdf"
+
+    # Run without -o/--output
+    result = runner.invoke(app, [str(src), "--offline"])
+
+    assert result.exit_code == 0
+    assert expected_dest.exists()
+    assert expected_dest.stat().st_size > 1000
+    assert f"✓ PDF written to: {expected_dest}" in result.output
