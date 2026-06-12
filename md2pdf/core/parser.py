@@ -56,7 +56,15 @@ class _MathRegistrationRenderer(BaseRenderer):
 
 
 # Attributes we extract from mistletoe nodes into the ``attrs`` dict
-_ATTRS_TO_EXTRACT: tuple[str, ...] = ("level", "language", "start", "loose", "target", "title")
+_ATTRS_TO_EXTRACT: tuple[str, ...] = (
+    "level",
+    "language",
+    "start",
+    "loose",
+    "target",
+    "title",
+    "src",
+)
 
 # mistletoe often stores ``start`` as an unbound class method on List nodes.
 # We only want it when it is an integer (ordered list start number).
@@ -111,11 +119,15 @@ class MarkdownParser:
             elif lang in _LATEX_LANGS:
                 token_type = "LatexBlock"
 
+        attrs = self._extract_attrs(node)
+        if token_type == "Image" and "src" in attrs and "target" not in attrs:
+            attrs["target"] = attrs["src"]
+
         token = {
             "type": token_type,
             "raw": getattr(node, "content", "") or "",
             "children": self._extract_children(node),
-            "attrs": self._extract_attrs(node),
+            "attrs": attrs,
             "_node": node,
         }
 
