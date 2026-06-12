@@ -73,6 +73,7 @@ class Pipeline:
 
         # Build the final merged stylesheet after all plugin layers are in.
         self._styles: dict = self._style_registry.build()
+        self._styles["_config"] = self.config
 
     # ------------------------------------------------------------------
     # Public API

@@ -158,3 +158,130 @@ def test_convert_custom_registry(tmp_path: Path) -> None:
     convert(str(src), str(dst), config=cfg, registry=custom_registry)
 
     assert dst.exists()
+
+
+def test_paragraph_handler_markdown_image(tmp_path: Path) -> None:
+    """Verify that standard Markdown images in paragraphs render to ResizableImage flowables."""
+    from PIL import Image as PILImage
+
+    from md2pdf.core.flowables import ResizableImage
+    from md2pdf.handlers.paragraph import ParagraphHandler
+
+    # Create a dummy image file
+    img_path = tmp_path / "test.png"
+    PILImage.new("RGB", (100, 100), "blue").save(img_path)
+
+    # Paragraph with one Image child
+    token = {
+        "type": "Paragraph",
+        "children": [
+            {
+                "type": "Image",
+                "attrs": {"target": str(img_path), "title": "My Title"},
+                "children": [{"type": "RawText", "raw": "Alt text"}],
+            }
+        ],
+    }
+
+    # Setup styles with config reference
+    cfg = Config(input_file=str(tmp_path / "dummy.md"), output_file="out.pdf")
+    from md2pdf.styles.default import build_default_stylesheet
+
+    styles = build_default_stylesheet()
+    styles["_config"] = cfg
+
+    handler = ParagraphHandler()
+    flowables = handler.render(token, styles)
+
+    assert len(flowables) == 1
+    assert isinstance(flowables[0], ResizableImage)
+
+
+def test_paragraph_handler_html_image(tmp_path: Path) -> None:
+    """Verify that HTML img tags in paragraphs are parsed and render to ResizableImage flowables."""
+    from PIL import Image as PILImage
+
+    from md2pdf.core.flowables import ResizableImage
+    from md2pdf.handlers.paragraph import ParagraphHandler
+
+    img_path = tmp_path / "test_html.png"
+    PILImage.new("RGB", (200, 100), "red").save(img_path)
+
+    # Paragraph with RawText containing HTML img tag
+    html_str = f'Before <img src="{img_path}" width="50%" height="100px" alt="test" /> After'
+    token = {
+        "type": "Paragraph",
+        "children": [{"type": "RawText", "raw": html_str}],
+    }
+
+    cfg = Config(input_file=str(tmp_path / "dummy.md"), output_file="out.pdf")
+    from md2pdf.styles.default import build_default_stylesheet
+
+    styles = build_default_stylesheet()
+    styles["_config"] = cfg
+
+    handler = ParagraphHandler()
+    flowables = handler.render(token, styles)
+
+    # Should split into: Paragraph ("Before"), ResizableImage, Paragraph ("After")
+    assert len(flowables) == 3
+    assert flowables[0].text == "Before"
+    assert isinstance(flowables[1], ResizableImage)
+    assert flowables[1].drawWidth == 225.0
+    assert flowables[1].drawHeight == 100.0
+    assert flowables[2].text == "After"
+
+
+def test_paragraph_handler_missing_image(tmp_path: Path) -> None:
+    """Verify that a missing image target produces a PlaceholderBox."""
+    from md2pdf.assets.fallback import PlaceholderBox
+    from md2pdf.handlers.paragraph import ParagraphHandler
+
+    # Image that does not exist
+    token = {
+        "type": "Paragraph",
+        "children": [
+            {
+                "type": "Image",
+                "attrs": {"target": "nonexistent.png", "title": "Missing"},
+                "children": [],
+            }
+        ],
+    }
+
+    cfg = Config(input_file=str(tmp_path / "dummy.md"), output_file="out.pdf")
+    from md2pdf.styles.default import build_default_stylesheet
+
+    styles = build_default_stylesheet()
+    styles["_config"] = cfg
+
+    handler = ParagraphHandler()
+    flowables = handler.render(token, styles)
+
+    assert len(flowables) == 1
+    assert isinstance(flowables[0], PlaceholderBox)
+
+
+def test_cli_config_auto_discovery(tmp_path: Path, monkeypatch) -> None:
+    """Verify auto-discovery of md2pdf.toml in search path (CWD -> ~/.config -> ~)."""
+    from typer.testing import CliRunner
+
+    from md2pdf.cli import app
+
+    runner = CliRunner()
+
+    # Create a config in tmp_path (which we will mock as CWD)
+    config_content = '[md2pdf]\noffline = true\ntheme = "legal"\n'
+    cfg_file = tmp_path / "md2pdf.toml"
+    cfg_file.write_text(config_content, encoding="utf-8")
+
+    # Write a dummy markdown
+    md_file = tmp_path / "test.md"
+    md_file.write_text("# Test Title", encoding="utf-8")
+
+    # Change working directory to tmp_path using monkeypatch
+    monkeypatch.chdir(tmp_path)
+
+    # Run CLI without --config option
+    result = runner.invoke(app, [str(md_file), "-o", "out.pdf", "--validate-only"])
+    assert result.exit_code == 0

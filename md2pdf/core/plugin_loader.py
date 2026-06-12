@@ -81,8 +81,11 @@ class PluginLoader:
         registry.register(ThematicBreakHandler())
         registry.register(CodeFenceHandler())
         # Register Mermaid and Latex handlers in offline mode by default
-        registry.register(MermaidHandler(KrokiClient(), AssetCache(".md2pdf_cache"), True))
-        registry.register(LatexHandler(KrokiClient(), AssetCache(".md2pdf_cache"), True))
+        import os
+
+        default_cache = os.path.expanduser("~/.cache/pymd2pdf")
+        registry.register(MermaidHandler(KrokiClient(), AssetCache(default_cache), True))
+        registry.register(LatexHandler(KrokiClient(), AssetCache(default_cache), True))
 
     def load_entry_points(self) -> None:
         """Auto-discover installed packages that declare ``md2pdf.*`` entry points.

@@ -5,6 +5,21 @@ All notable changes to the `md2pdf` project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-06-12
+
+### Added
+- Full rendering support for standard Markdown images (`[alt](path)`) and HTML `<img>` tags inside paragraphs.
+- Parse custom `width` and `height` attributes (pixels/percentages) for HTML `<img>` tags, matching aspect ratios.
+- Fallback placeholder boxes (`PlaceholderBox`) for missing or corrupt local image paths.
+- Exposed core validation/exception types (`ValidationIssue`, `Md2PdfError`, `ParseError`, `RenderError`, `ConfigError`) at the package level.
+- Config file auto-discovery: automatically search `./md2pdf.toml`, `~/.config/md2pdf/md2pdf.toml`, and `~/.md2pdf.toml`.
+
+### Changed
+- Relocated default cache directory from local `.md2pdf_cache` to cross-platform standard user cache `~/.cache/pymd2pdf`.
+- Made `registry` argument optional in `Pipeline.__init__` and `convert()`.
+- Implemented safe registry copy/overlay logic to prevent mutating caller's registry objects and support custom handler overrides.
+- Ensured `convert()` respects explicit `src`/`dst` path parameters when overriding custom config values.
+
 ## [0.1.0] - 2026-06-12
 
 ### Added

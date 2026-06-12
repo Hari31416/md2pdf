@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import textwrap
 
 import pytest
@@ -14,7 +15,7 @@ def test_defaults() -> None:
     assert cfg.output_file == "output.pdf"
     assert cfg.theme == "default"
     assert cfg.offline is False
-    assert cfg.cache_dir == ".md2pdf_cache"
+    assert cfg.cache_dir == os.path.expanduser("~/.cache/pymd2pdf")
     assert cfg.min_image_scale == 0.8
     assert cfg.plugins_dict == {}
 

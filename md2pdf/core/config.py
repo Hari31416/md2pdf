@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import tomllib
 from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Any
@@ -32,7 +33,7 @@ class Config:
     output_file: str = "output.pdf"
     theme: str = "default"
     offline: bool = False
-    cache_dir: str = ".md2pdf_cache"
+    cache_dir: str = os.path.expanduser("~/.cache/pymd2pdf")
     min_image_scale: float = 0.8
 
     # Structured plugin config from [plugins] TOML section.

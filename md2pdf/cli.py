@@ -70,20 +70,29 @@ def convert(
         typer.echo(f"✗ Input file not found: {input}", err=True)
         raise typer.Exit(code=1)
 
-    cfg = Config(
-        input_file=str(input),
-        output_file=str(output),
-        theme=theme,
-        offline=offline,
-    )
-    if min_image_scale is not None:
-        cfg.min_image_scale = min_image_scale
+    import os
 
+    active_config_file = None
     if config_file is not None:
         if not config_file.exists():
             typer.echo(f"✗ Config file not found: {config_file}", err=True)
             raise typer.Exit(code=1)
-        cfg = Config.from_toml(str(config_file))
+        active_config_file = str(config_file)
+    else:
+        cwd_config = Path("md2pdf.toml")
+        if cwd_config.is_file():
+            active_config_file = str(cwd_config)
+        else:
+            home_config = Path(os.path.expanduser("~/.config/md2pdf/md2pdf.toml"))
+            if home_config.is_file():
+                active_config_file = str(home_config)
+            else:
+                home_dot = Path(os.path.expanduser("~/.md2pdf.toml"))
+                if home_dot.is_file():
+                    active_config_file = str(home_dot)
+
+    if active_config_file is not None:
+        cfg = Config.from_toml(active_config_file)
         # CLI arguments take precedence over config file values.
         cfg.input_file = str(input)
         cfg.output_file = str(output)
@@ -91,6 +100,15 @@ def convert(
             cfg.theme = theme
         if offline:
             cfg.offline = True
+        if min_image_scale is not None:
+            cfg.min_image_scale = min_image_scale
+    else:
+        cfg = Config(
+            input_file=str(input),
+            output_file=str(output),
+            theme=theme,
+            offline=offline,
+        )
         if min_image_scale is not None:
             cfg.min_image_scale = min_image_scale
 
