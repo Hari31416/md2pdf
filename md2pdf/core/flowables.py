@@ -5,10 +5,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-logger = logging.getLogger(__name__)
-
 from reportlab.lib import colors
 from reportlab.platypus import Flowable, Image
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from reportlab.lib.colors import Color

@@ -6,11 +6,10 @@ import logging
 from io import BytesIO
 from typing import TYPE_CHECKING
 
-from md2pdf.core.flowables import ResizableImage
-
 from md2pdf.assets.cache import AssetCache
 from md2pdf.assets.fallback import PlaceholderBox
 from md2pdf.assets.kroki import KrokiClient
+from md2pdf.core.flowables import ResizableImage
 from md2pdf.core.registry import ElementHandler
 
 if TYPE_CHECKING:

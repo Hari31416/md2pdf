@@ -88,6 +88,7 @@ def test_bond_headings_to_image() -> None:
 
 def _get_test_image_bytes() -> bytes:
     from io import BytesIO
+
     from PIL import Image as PILImage
 
     img_data = BytesIO()

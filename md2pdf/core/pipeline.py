@@ -35,9 +35,9 @@ class Pipeline:
     - :class:`~md2pdf.core.plugin_loader.PluginLoader` performs discovery.
     """
 
-    def __init__(self, config: Config, registry: HandlerRegistry) -> None:
+    def __init__(self, config: Config, registry: HandlerRegistry | None = None) -> None:
         self.config = config
-        self.registry = registry
+        self.registry = HandlerRegistry()
 
         # Stage 1 — pre-processor registry (built-ins auto-registered).
         self._pre_registry = PreProcessorRegistry(register_builtins=True)
@@ -64,6 +64,12 @@ class Pipeline:
         # This is done last so that the pipeline's configured asset handlers
         # take precedence and override default handlers loaded from entry points.
         self._register_asset_handlers()
+
+        # Overlay any user-provided custom handlers last so they take highest
+        # precedence and avoid mutating the passed-in registry object.
+        if registry is not None:
+            for _, handler in registry._handlers.items():
+                self.registry.register(handler)
 
         # Build the final merged stylesheet after all plugin layers are in.
         self._styles: dict = self._style_registry.build()

@@ -80,3 +80,81 @@ def test_unimplemented_token_fallback(tmp_pdf: Path, default_registry: HandlerRe
 
     assert tmp_pdf.exists()
     assert tmp_pdf.stat().st_size > 1000
+
+
+def test_pipeline_optional_registry(tmp_pdf: Path) -> None:
+    """Verify that instantiating Pipeline with registry=None defaults correctly."""
+    cfg = Config(input_file="", output_file=str(tmp_pdf), offline=True)
+    pipeline = Pipeline(cfg)
+    assert pipeline.registry is not None
+    assert pipeline.registry.get("Paragraph") is not None
+
+
+def test_pipeline_registry_custom_overrides(tmp_pdf: Path) -> None:
+    """Verify that custom registries passed to Pipeline override defaults without mutating original registry."""
+    from reportlab.platypus import Paragraph
+
+    from md2pdf.core.registry import ElementHandler, HandlerRegistry
+
+    class CustomParagraphHandler(ElementHandler):
+        token_type = "Paragraph"
+
+        def render(self, token: dict, styles: dict) -> list:
+            return [Paragraph("CUSTOM PARAGRAPH RENDER", styles["body"])]
+
+    custom_registry = HandlerRegistry()
+    custom_handler = CustomParagraphHandler()
+    custom_registry.register(custom_handler)
+
+    cfg = Config(input_file="", output_file=str(tmp_pdf), offline=True)
+    pipeline = Pipeline(cfg, custom_registry)
+
+    # Custom handler takes precedence
+    handler = pipeline.registry.get("Paragraph")
+    assert isinstance(handler, CustomParagraphHandler)
+
+    # Caller registry remains unmutated
+    assert list(custom_registry._handlers.keys()) == ["Paragraph"]
+    assert custom_registry.get("Paragraph") is custom_handler
+
+
+def test_convert_config_overrides(tmp_path: Path) -> None:
+    """Verify that convert overrides Config input/output properties to match args."""
+    from md2pdf import convert
+
+    src = tmp_path / "input.md"
+    src.write_text("Hello world", encoding="utf-8")
+    dst = tmp_path / "output_custom.pdf"
+
+    cfg = Config(input_file="dummy.md", output_file="dummy.pdf", offline=True)
+    convert(str(src), str(dst), config=cfg)
+
+    assert cfg.input_file == str(src)
+    assert cfg.output_file == str(dst)
+    assert dst.exists()
+
+
+def test_convert_custom_registry(tmp_path: Path) -> None:
+    """Verify that convert accepts a custom registry and applies it."""
+    from reportlab.platypus import Paragraph
+
+    from md2pdf import convert
+    from md2pdf.core.registry import ElementHandler, HandlerRegistry
+
+    class CustomParagraphHandler(ElementHandler):
+        token_type = "Paragraph"
+
+        def render(self, token: dict, styles: dict) -> list:
+            return [Paragraph("CUSTOM RENDER VIA CONVERT", styles["body"])]
+
+    src = tmp_path / "input.md"
+    src.write_text("Hello world", encoding="utf-8")
+    dst = tmp_path / "output_custom_registry.pdf"
+
+    custom_registry = HandlerRegistry()
+    custom_registry.register(CustomParagraphHandler())
+
+    cfg = Config(input_file="", output_file=str(dst), offline=True)
+    convert(str(src), str(dst), config=cfg, registry=custom_registry)
+
+    assert dst.exists()
