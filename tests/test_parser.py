@@ -179,10 +179,58 @@ class TestFrontMatterStripper:
 
 
 class TestIncludeResolver:
-    def test_returns_input_unchanged(self):
+    def test_returns_input_unchanged_without_main_file(self):
         md = "Some !include path/to/file.md text.\n"
         result = IncludeResolver().process(md)
         assert result == md
+
+    def test_resolves_basic_inclusion(self, tmp_path):
+        main_file = tmp_path / "main.md"
+        inc_file = tmp_path / "inc.md"
+
+        main_file.write_text("Hello\n!include inc.md\nWorld\n")
+        inc_file.write_text("Inside included file")
+
+        resolver = IncludeResolver(str(main_file))
+        result = resolver.process(main_file.read_text())
+        assert result == "Hello\nInside included file\nWorld\n"
+
+    def test_resolves_recursive_inclusion(self, tmp_path):
+        main_file = tmp_path / "main.md"
+        sub_dir = tmp_path / "sub"
+        sub_dir.mkdir()
+
+        inc1 = sub_dir / "inc1.md"
+        inc2 = sub_dir / "inc2.md"
+
+        main_file.write_text("Begin\n!include sub/inc1.md\nEnd\n")
+        inc1.write_text("Mid1\n!include inc2.md\n")
+        inc2.write_text("Mid2")
+
+        resolver = IncludeResolver(str(main_file))
+        result = resolver.process(main_file.read_text())
+        assert "Begin\nMid1\nMid2\nEnd\n" in result
+
+    def test_prevents_circular_inclusion(self, tmp_path):
+        main_file = tmp_path / "main.md"
+        inc_file = tmp_path / "inc.md"
+
+        main_file.write_text("Hello\n!include inc.md\n")
+        inc_file.write_text("Inside\n!include main.md\n")
+
+        resolver = IncludeResolver(str(main_file))
+        result = resolver.process(main_file.read_text())
+        assert (
+            "Circular inclusion of" in result or "Circular inclusion of main.md skipped" in result
+        )
+
+    def test_handles_missing_file_gracefully(self, tmp_path):
+        main_file = tmp_path / "main.md"
+        main_file.write_text("Hello\n!include missing.md\n")
+
+        resolver = IncludeResolver(str(main_file))
+        result = resolver.process(main_file.read_text())
+        assert "Included file not found: missing.md" in result
 
 
 # ---------------------------------------------------------------------------

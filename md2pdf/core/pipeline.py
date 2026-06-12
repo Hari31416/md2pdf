@@ -40,7 +40,9 @@ class Pipeline:
         self.registry = HandlerRegistry()
 
         # Stage 1 — pre-processor registry (built-ins auto-registered).
-        self._pre_registry = PreProcessorRegistry(register_builtins=True)
+        self._pre_registry = PreProcessorRegistry(
+            register_builtins=True, input_file=self.config.input_file
+        )
 
         # Stage 4 — post-processor registry.
         self._post_registry = PostProcessorRegistry()

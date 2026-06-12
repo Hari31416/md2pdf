@@ -1,0 +1,1 @@
+This text is imported dynamically from `docs/included_feature.md` using the new `!include` feature. It demonstrates that formatting, styles, and other features (like inline math $E = mc^2$) work perfectly inside included documents.

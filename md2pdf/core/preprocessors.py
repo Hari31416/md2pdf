@@ -15,8 +15,12 @@ Plugin pre-processors should use priority ≥ 50 so they run after built-ins.
 
 from __future__ import annotations
 
+import logging
+import os
 import re
 from abc import ABC, abstractmethod
+
+logger = logging.getLogger(__name__)
 
 
 class PreProcessor(ABC):
@@ -69,15 +73,63 @@ class FrontMatterStripper(PreProcessor):
 
 
 class IncludeResolver(PreProcessor):
-    """Resolve ``!include path/to/other.md`` directives.
+    """Resolve ``!include path/to/other.md`` directives recursively."""
 
-    This is a **placeholder** implementation that returns the document
-    unchanged.  A real implementation will be added in a future phase.
-    """
+    def __init__(self, main_file: str = "") -> None:
+        self.main_file = main_file
 
     def process(self, raw_md: str) -> str:
-        # TODO: resolve !include directives
-        return raw_md
+        if not self.main_file:
+            return raw_md
+        return self._resolve_includes(raw_md, os.path.abspath(self.main_file), set())
+
+    def _resolve_includes(self, text: str, current_file_path: str, visited: set[str]) -> str:
+        current_dir = os.path.dirname(current_file_path)
+        visited = visited | {current_file_path}
+
+        lines = text.splitlines(keepends=True)
+        resolved_lines = []
+        include_pattern = re.compile(r"^[ \t]*!include[ \t]+([^\n]+?)[ \t]*$")
+
+        for line in lines:
+            m = include_pattern.match(line.rstrip("\r\n"))
+            if m:
+                include_target = m.group(1).strip()
+                if not os.path.isabs(include_target):
+                    target_path = os.path.abspath(os.path.join(current_dir, include_target))
+                else:
+                    target_path = os.path.abspath(include_target)
+
+                if target_path in visited:
+                    logger.warning("Circular inclusion detected: %s", target_path)
+                    resolved_lines.append(
+                        f"<!-- Circular inclusion of {include_target} skipped -->\n"
+                    )
+                    continue
+
+                if not os.path.isfile(target_path):
+                    logger.warning("Included file not found: %s", target_path)
+                    resolved_lines.append(f"<!-- Included file not found: {include_target} -->\n")
+                    continue
+
+                try:
+                    with open(target_path, encoding="utf-8") as f:
+                        included_content = f.read()
+                    resolved_content = self._resolve_includes(
+                        included_content, target_path, visited
+                    )
+                    resolved_lines.append(resolved_content)
+                    if resolved_content and not resolved_content.endswith("\n"):
+                        resolved_lines.append("\n")
+                except Exception as exc:
+                    logger.error("Failed to read included file %s: %s", target_path, exc)
+                    resolved_lines.append(
+                        f"<!-- Failed to read included file: {include_target} -->\n"
+                    )
+            else:
+                resolved_lines.append(line)
+
+        return "".join(resolved_lines)
 
 
 class PreProcessorRegistry:
@@ -93,12 +145,12 @@ class PreProcessorRegistry:
             their canonical priorities.
     """
 
-    def __init__(self, register_builtins: bool = True) -> None:
+    def __init__(self, register_builtins: bool = True, input_file: str = "") -> None:
         # Each entry is a (priority, PreProcessor) tuple.
         self._processors: list[tuple[int, PreProcessor]] = []
         if register_builtins:
             self.register(FrontMatterStripper(), priority=10)
-            self.register(IncludeResolver(), priority=20)
+            self.register(IncludeResolver(input_file), priority=20)
 
     def register(self, pp: PreProcessor, *, priority: int = 50) -> None:
         """Register *pp* at the given *priority*.

@@ -165,3 +165,11 @@ Standard images are scaled down automatically to fit within the printable page a
 If an image file is missing or corrupt, a placeholder box is rendered instead of throwing a compiler crash error:
 
 ![Missing Image Example](missing_image.png)
+
+---
+
+## 11. File Inclusion (!include)
+
+You can split documents into multiple reusable files and combine them at compile-time:
+
+!include included_feature.md
