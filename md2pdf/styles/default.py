@@ -111,6 +111,23 @@ def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
             allowWidows=0,
             allowOrphans=0,
         ),
+        "code_block": ParagraphStyle(
+            "code_block",
+            parent=base["Code"],
+            fontName=theme.font_mono,
+            fontSize=theme.font_size_small - 1,
+            leading=10,
+            backColor=theme.hex("color_code_bg"),
+            borderColor=theme.hex("color_blockquote_bar"),
+            borderWidth=0.5,
+            borderPadding=6,
+            leftIndent=12,
+            rightIndent=12,
+            spaceBefore=6,
+            spaceAfter=6,
+            allowWidows=0,
+            allowOrphans=0,
+        ),
         # ---------------------------------------------------------------- #
         # Table styles
         # ---------------------------------------------------------------- #

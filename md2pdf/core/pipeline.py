@@ -56,6 +56,7 @@ class Pipeline:
             post_registry=self._post_registry,
             style_registry=self._style_registry,
         )
+        loader.register_builtins(self.registry)
         loader.load_entry_points()
         loader.load_from_config(config.plugins_dict)
 
@@ -131,6 +132,24 @@ class Pipeline:
                 flowables.extend(handler.render(token, self._styles))
             else:
                 logger.warning("No handler registered for token type '%s'", token_type)
+                # Fallback: render the unimplemented component as a code block
+                from reportlab.platypus import Preformatted
+                from md2pdf.handlers.code import clean_box_drawing
+                from md2pdf.handlers.inline import inline_render, escape_xml
+
+                raw_content = token.get("raw", "")
+                if not raw_content and token.get("children"):
+                    raw_content = inline_render(token["children"], self._styles)
+
+                # Clean box drawing characters for compatibility
+                raw_content = clean_box_drawing(raw_content)
+
+                repr_str = f"[{token_type} block — not implemented]"
+                if raw_content:
+                    repr_str += f"\n{raw_content}"
+
+                style = self._styles.get("code_block") or self._styles.get("code_inline")
+                flowables.append(Preformatted(escape_xml(repr_str), style))
         return flowables
 
     def _render(self, flowables: list) -> None:

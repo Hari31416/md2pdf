@@ -64,6 +64,7 @@ class PluginLoader:
         from md2pdf.assets.cache import AssetCache
         from md2pdf.assets.kroki import KrokiClient
         from md2pdf.handlers.blockquote import BlockQuoteHandler
+        from md2pdf.handlers.code import CodeFenceHandler
         from md2pdf.handlers.heading import HeadingHandler
         from md2pdf.handlers.latex import LatexHandler
         from md2pdf.handlers.list_ import ListHandler
@@ -78,6 +79,7 @@ class PluginLoader:
         registry.register(BlockQuoteHandler())
         registry.register(TableHandler())
         registry.register(ThematicBreakHandler())
+        registry.register(CodeFenceHandler())
         # Register Mermaid and Latex handlers in offline mode by default
         registry.register(MermaidHandler(KrokiClient(), AssetCache(".md2pdf_cache"), True))
         registry.register(LatexHandler(KrokiClient(), AssetCache(".md2pdf_cache"), True))

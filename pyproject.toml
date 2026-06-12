@@ -18,7 +18,7 @@ dependencies = [
 [project.scripts]
 md2pdf = "md2pdf.cli:app"
 
-# Built-in handlers are declared here (Phase 3).
+# Built-in handlers are declared here
 # Third-party plugins declare their own entries in their own pyproject.toml.
 [project.entry-points."md2pdf.handlers"]
 Heading       = "md2pdf.handlers.heading:HeadingHandler"
@@ -29,6 +29,7 @@ Table         = "md2pdf.handlers.table:TableHandler"
 ThematicBreak = "md2pdf.handlers.thematic_break:ThematicBreakHandler"
 Mermaid       = "md2pdf.handlers.mermaid:MermaidHandler"
 LatexBlock    = "md2pdf.handlers.latex:LatexHandler"
+CodeFence     = "md2pdf.handlers.code:CodeFenceHandler"
 
 [dependency-groups]
 dev = [

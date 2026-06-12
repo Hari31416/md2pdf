@@ -50,6 +50,9 @@ class ThemeConfig:
     # --- Blockquote bar ---
     color_blockquote_bar: str = "#cccccc"
 
+    # --- Code blocks ---
+    color_code_bg: str = "#f5f5f5"
+
     # ------------------------------------------------------------------ #
     # Class methods
     # ------------------------------------------------------------------ #

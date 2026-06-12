@@ -104,6 +104,13 @@ class MermaidHandler(ElementHandler):
         scale_ratio = display_width / (width_px * 0.75)
         display_height = (height_px * 0.75) * scale_ratio
 
+        # Cap height to prevent ReportLab LayoutError from exceeding page height
+        max_height = 600.0
+        if display_height > max_height:
+            height_scale = max_height / display_height
+            display_height = max_height
+            display_width = display_width * height_scale
+
         img = Image(BytesIO(png), width=display_width, height=display_height)
         img.hAlign = "CENTER"
         return [img]

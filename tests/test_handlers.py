@@ -323,3 +323,37 @@ class TestBlockQuoteHandler:
         token = {"type": "BlockQuote", "raw": "", "attrs": {}, "children": [], "_node": None}
         flowables = BlockQuoteHandler().render(token, styles)
         assert flowables == []
+
+
+# ---------------------------------------------------------------------------
+# CodeFenceHandler
+# ---------------------------------------------------------------------------
+
+
+class TestCodeFenceHandler:
+    def test_returns_preformatted_flowable(self, styles):
+        from md2pdf.handlers.code import CodeFenceHandler
+        from reportlab.platypus import Preformatted
+
+        token = {
+            "type": "CodeFence",
+            "raw": "print('hello')",
+            "attrs": {"language": "python"},
+            "children": [],
+            "_node": None,
+        }
+        flowables = CodeFenceHandler().render(token, styles)
+        assert len(flowables) == 1
+        assert isinstance(flowables[0], Preformatted)
+        assert flowables[0].style.name == "code_block"
+
+    def test_clean_box_drawing(self, styles):
+        from md2pdf.handlers.code import clean_box_drawing
+
+        text = "├── docs/\n└── md2pdf/"
+        cleaned = clean_box_drawing(text)
+        assert "├" not in cleaned
+        assert "└" not in cleaned
+        assert "─" not in cleaned
+        assert "+-- docs/" in cleaned
+        assert "+-- md2pdf/" in cleaned

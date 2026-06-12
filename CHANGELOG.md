@@ -29,4 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fixed LaTeX compilation failure for block math environments (like `align*`) on the Kroki `tikz` endpoint by adding newlines to the document wrapper.
 - Fixed diagram sizing issues and whitespace margins by implementing PIL-based auto-cropping for both LaTeX (Tikz) and Mermaid diagrams, removing empty borders and centering diagrams correctly in the PDF layout.
+- Added a height-capping layout safeguard (max 600.0 points) to dynamically scale down tall/large diagrams and prevent ReportLab `LayoutError` crashes.
+- Fixed inline code rendering to correctly resolve text nested within the mistletoe AST's children array.
+- Implemented `CodeFenceHandler` using a monospaced font, thin border, and light gray background to render generic fenced code blocks.
+- Implemented a pipeline-level fallback formatting rule that converts any unimplemented/unsupported markdown elements to monospaced debug blocks showing their token type and content.
 

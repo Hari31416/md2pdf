@@ -67,3 +67,16 @@ def test_offline_uses_cached_image_on_cache_hit(
 
     assert tmp_pdf.exists()
     assert tmp_pdf.stat().st_size > 1000
+
+
+def test_unimplemented_token_fallback(tmp_pdf: Path, default_registry: HandlerRegistry) -> None:
+    """Verify that an unregistered/unimplemented token falls back to rendering as a code block."""
+    cfg = Config(input_file="", output_file=str(tmp_pdf), offline=True)
+    pipeline = Pipeline(cfg, default_registry)
+
+    # BlockCode token is parsed for indented code blocks, and has no registered handler.
+    unimplemented_md = "    indented code block\n    line 2"
+    pipeline.run(unimplemented_md)
+
+    assert tmp_pdf.exists()
+    assert tmp_pdf.stat().st_size > 1000

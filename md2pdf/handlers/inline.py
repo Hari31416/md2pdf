@@ -65,7 +65,8 @@ def inline_render(children: list[dict], styles: dict | None = None) -> str:
             parts.append(f"<i>{inner}</i>")
 
         elif t == "InlineCode":
-            parts.append(f"<font name='Courier'>{escape_xml(raw)}</font>")
+            inner = inline_render(child.get("children", []), styles) or escape_xml(raw)
+            parts.append(f"<font name='Courier'>{inner}</font>")
 
         elif t == "Link":
             href = child.get("attrs", {}).get("target", "")
