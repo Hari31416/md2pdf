@@ -8,9 +8,6 @@ theme       = "default"
 offline     = false          # true = skip Kroki API calls, render placeholders instead
 cache_dir   = ".md2pdf_cache"
 
-# Dotted class paths for handler plugins (Phase 1 / Phase 5).
-# Entry-point-based plugins are auto-discovered — no config needed.
-plugins = []
 
 # ---------------------------------------------------------------------------
 # Theme / colour palette

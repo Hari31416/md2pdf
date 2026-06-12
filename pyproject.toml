@@ -27,6 +27,8 @@ List          = "md2pdf.handlers.list_:ListHandler"
 BlockQuote    = "md2pdf.handlers.blockquote:BlockQuoteHandler"
 Table         = "md2pdf.handlers.table:TableHandler"
 ThematicBreak = "md2pdf.handlers.thematic_break:ThematicBreakHandler"
+Mermaid       = "md2pdf.handlers.mermaid:MermaidHandler"
+LatexBlock    = "md2pdf.handlers.latex:LatexHandler"
 
 [dependency-groups]
 dev = [

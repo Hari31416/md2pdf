@@ -6,8 +6,11 @@ import logging
 
 from md2pdf.core.config import Config
 from md2pdf.core.parser import MarkdownParser
-from md2pdf.core.preprocessors import FrontMatterStripper, PreProcessor
+from md2pdf.core.plugin_loader import PluginLoader
+from md2pdf.core.postprocessors import PostProcessorRegistry
+from md2pdf.core.preprocessors import PreProcessorRegistry
 from md2pdf.core.registry import HandlerRegistry
+from md2pdf.core.styles import StyleRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -17,22 +20,49 @@ class Pipeline:
 
     Stage responsibilities:
 
-    1. ``_pre_process``  — text-level transforms (front-matter, includes) [Phase 2]
-    2. ``_parse``        — mistletoe AST → normalised token list           [Phase 2]
-    3. ``_map``          — token list → ReportLab Flowable list            [Phase 3]
-    4. ``_render``       — Flowable list → PDF file on disk                [Phase 6]
+    1. ``_pre_process``  — text-level transforms (front-matter, includes)
+    2. ``_parse``        — mistletoe AST → normalised token list
+    3. ``_map``          — token list → ReportLab Flowable list
+    4. ``_render``       — post-processors + PDF file on disk (Phase 6)
+
+    Plugin system (Phase 5):
+
+    - :class:`~md2pdf.core.preprocessors.PreProcessorRegistry` drives Stage 1.
+    - :class:`~md2pdf.core.registry.HandlerRegistry` drives Stage 3.
+    - :class:`~md2pdf.core.postprocessors.PostProcessorRegistry` runs in Stage 4.
+    - :class:`~md2pdf.core.styles.StyleRegistry` merges base + plugin stylesheets.
+    - :class:`~md2pdf.core.plugin_loader.PluginLoader` performs discovery.
     """
 
     def __init__(self, config: Config, registry: HandlerRegistry) -> None:
         self.config = config
         self.registry = registry
 
-        # Ordered list of pre-processors.  FrontMatterStripper runs first by default.
-        self._preprocessors: list[PreProcessor] = [FrontMatterStripper()]
+        # Stage 1 — pre-processor registry (built-ins auto-registered).
+        self._pre_registry = PreProcessorRegistry(register_builtins=True)
 
-        # Stylesheet dict built from ThemeConfig — populated here so that
-        # handlers can access styles without a separate initialisation call.
-        self._styles: dict = self._build_styles()
+        # Stage 4 — post-processor registry.
+        self._post_registry = PostProcessorRegistry()
+
+        # Stylesheet registry — base layer added immediately; plugins add more.
+        self._style_registry = StyleRegistry()
+        self._style_registry.add_layer(self._build_base_styles())
+
+        # Register asset handlers (need KrokiClient + AssetCache).
+        self._register_asset_handlers()
+
+        # Plugin discovery — entry points + config-file declared plugins.
+        loader = PluginLoader(
+            handler_registry=self.registry,
+            pre_registry=self._pre_registry,
+            post_registry=self._post_registry,
+            style_registry=self._style_registry,
+        )
+        loader.load_entry_points()
+        loader.load_from_config(config.plugins_dict)
+
+        # Build the final merged stylesheet after all plugin layers are in.
+        self._styles: dict = self._style_registry.build()
 
     # ------------------------------------------------------------------
     # Public API
@@ -56,10 +86,8 @@ class Pipeline:
     # ------------------------------------------------------------------
 
     def _pre_process(self, raw_md: str) -> str:
-        """Stage 1 — run registered pre-processors in order."""
-        for pp in self._preprocessors:
-            raw_md = pp.process(raw_md)
-        return raw_md
+        """Stage 1 — run registered pre-processors in priority order."""
+        return self._pre_registry.run_all(raw_md)
 
     def _parse(self, md: str) -> list[dict]:
         """Stage 2 — parse Markdown into a normalised token list."""
@@ -78,26 +106,54 @@ class Pipeline:
         return flowables
 
     def _render(self, flowables: list) -> None:
-        """Stage 4 placeholder — no-op until Phase 6."""
-        if flowables:
-            logger.debug("_render: %d flowables (PDF build not yet implemented)", len(flowables))
+        """Stage 4 — run post-processors then build PDF (PDF build in Phase 6)."""
+        # Post-processors run even though the actual PDF build is a Phase 6 stub.
+        # They are called here so plugins can be wired up end-to-end before Phase 6.
+        try:
+            from reportlab.platypus import SimpleDocTemplate  # noqa: PLC0415
+
+            doc = SimpleDocTemplate(self.config.output_file)
+            flowables = self._post_registry.run_all(doc, flowables)
+            if flowables:
+                logger.debug(
+                    "_render: %d flowables after post-processing (PDF build not yet implemented)",
+                    len(flowables),
+                )
+        except Exception:
+            logger.debug("_render: post-processing skipped (reportlab unavailable)", exc_info=True)
+            if flowables:
+                logger.debug(
+                    "_render: %d flowables (PDF build not yet implemented)", len(flowables)
+                )
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _build_styles(self) -> dict:
-        """Build the stylesheet from the active theme config.
-
-        Importing here avoids a circular-import issue at module load time,
-        since styles/ imports from reportlab which may not be available in
-        all test environments without the optional dependency installed.
-        """
+    def _build_base_styles(self) -> dict:
+        """Build the base stylesheet from the active theme config."""
         try:
-            from md2pdf.styles.default import build_default_stylesheet
+            from md2pdf.styles.default import build_default_stylesheet  # noqa: PLC0415
 
             theme = getattr(self.config, "theme_config", None)
             return build_default_stylesheet(theme)
         except Exception:
             logger.debug("Could not build stylesheet; using empty styles dict", exc_info=True)
             return {}
+
+    def _register_asset_handlers(self) -> None:
+        """Instantiate and register Mermaid and LaTeX asset handlers."""
+        try:
+            from md2pdf.assets.cache import AssetCache  # noqa: PLC0415
+            from md2pdf.assets.kroki import KrokiClient  # noqa: PLC0415
+            from md2pdf.handlers.latex import LatexHandler  # noqa: PLC0415
+            from md2pdf.handlers.mermaid import MermaidHandler  # noqa: PLC0415
+
+            cache = AssetCache(self.config.cache_dir)
+            client = KrokiClient()
+            offline = getattr(self.config, "offline", False)
+
+            self.registry.register(MermaidHandler(client, cache, offline))
+            self.registry.register(LatexHandler(client, cache, offline))
+        except Exception:
+            logger.debug("Could not register asset handlers", exc_info=True)

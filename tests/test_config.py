@@ -15,7 +15,7 @@ def test_defaults() -> None:
     assert cfg.theme == "default"
     assert cfg.offline is False
     assert cfg.cache_dir == ".md2pdf_cache"
-    assert cfg.plugins == []
+    assert cfg.plugins_dict == {}
 
 
 def test_from_toml_basic(tmp_path) -> None:

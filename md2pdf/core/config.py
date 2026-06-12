@@ -22,6 +22,10 @@ class Config:
     The ``theme_config`` attribute is populated from the optional ``[theme]``
     section and is **not** a direct TOML field — it is excluded from the
     known-fields filter in :meth:`from_toml`.
+
+    ``plugins_dict`` is populated from the ``[plugins]`` TOML section and
+    contains three optional keys: ``handlers``, ``preprocessors``, and
+    ``postprocessors``, each a list of fully-qualified class paths.
     """
 
     input_file: str = ""
@@ -29,9 +33,10 @@ class Config:
     theme: str = "default"
     offline: bool = False
     cache_dir: str = ".md2pdf_cache"
-    # Flat list of dotted handler class paths (e.g. "my_pkg.handlers:MyHandler").
-    # Phase 5 will replace this with a structured plugins_dict sourced from [plugins].
-    plugins: list[str] = field(default_factory=list)
+
+    # Structured plugin config from [plugins] TOML section.
+    # Keys: "handlers", "preprocessors", "postprocessors" → list[str]
+    plugins_dict: dict = field(default_factory=dict)
 
     # Populated from the [theme] TOML section; None means "use ThemeConfig defaults".
     theme_config: Any = field(default=None, repr=False)
@@ -40,8 +45,9 @@ class Config:
     def from_toml(cls, path: str) -> Config:
         """Load configuration from a TOML file.
 
-        Reads the ``[md2pdf]`` table for core settings and the ``[theme]``
-        table (if present) to build a :class:`~md2pdf.styles.theme.ThemeConfig`.
+        Reads the ``[md2pdf]`` table for core settings, the ``[theme]``
+        table (if present) to build a :class:`~md2pdf.styles.theme.ThemeConfig`,
+        and the ``[plugins]`` table for plugin class paths.
 
         Args:
             path: Filesystem path to the TOML config file.
@@ -57,8 +63,8 @@ class Config:
             data = tomllib.load(fh)
 
         md2pdf_section: dict = data.get("md2pdf", {})
-        # ``theme_config`` is not a TOML field — exclude it from the filter.
-        known: set[str] = {f.name for f in fields(cls)} - {"theme_config"}
+        # ``theme_config`` and ``plugins_dict`` are not direct TOML fields.
+        known: set[str] = {f.name for f in fields(cls)} - {"theme_config", "plugins_dict"}
         filtered = {k: v for k, v in md2pdf_section.items() if k in known}
 
         cfg = cls(**filtered)
@@ -72,5 +78,8 @@ class Config:
             cfg.theme_config = ThemeConfig.from_dict(theme_data)
         except Exception:
             cfg.theme_config = None
+
+        # Load [plugins] section into plugins_dict.
+        cfg.plugins_dict = data.get("plugins", {})
 
         return cfg

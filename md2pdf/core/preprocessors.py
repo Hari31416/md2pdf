@@ -1,12 +1,16 @@
 """Pre-processor system for md2pdf.
 
 Pre-processors transform raw Markdown text *before* it is parsed.
-They run in registration order and each receives the output of the previous.
+They run in priority order (lowest number first); each receives the output
+of the previous.
 
 Built-in pre-processors
 -----------------------
-- ``FrontMatterStripper``  — strips YAML front-matter (``--- ... ---``)
-- ``IncludeResolver``      — placeholder for ``!include`` directives (future)
+- ``FrontMatterStripper``  — strips YAML front-matter (``--- ... ---``) — priority 10
+- ``IncludeResolver``      — placeholder for ``!include`` directives (future) — priority 20
+
+:class:`PreProcessorRegistry` manages registration and execution.
+Plugin pre-processors should use priority ≥ 50 so they run after built-ins.
 """
 
 from __future__ import annotations
@@ -73,4 +77,51 @@ class IncludeResolver(PreProcessor):
 
     def process(self, raw_md: str) -> str:
         # TODO: resolve !include directives
+        return raw_md
+
+
+class PreProcessorRegistry:
+    """Priority-sorted registry of :class:`PreProcessor` instances.
+
+    Lower priority number = runs first.  Built-ins are registered at
+    construction time with priorities 10 and 20 so that plugin pre-processors
+    (default priority 50) always run after them.
+
+    Args:
+        register_builtins: If ``True`` (the default), automatically register
+            :class:`FrontMatterStripper` and :class:`IncludeResolver` with
+            their canonical priorities.
+    """
+
+    def __init__(self, register_builtins: bool = True) -> None:
+        # Each entry is a (priority, PreProcessor) tuple.
+        self._processors: list[tuple[int, PreProcessor]] = []
+        if register_builtins:
+            self.register(FrontMatterStripper(), priority=10)
+            self.register(IncludeResolver(), priority=20)
+
+    def register(self, pp: PreProcessor, *, priority: int = 50) -> None:
+        """Register *pp* at the given *priority*.
+
+        Lower priority values run first.  If two processors share the same
+        priority, they run in registration order.
+
+        Args:
+            pp: A :class:`PreProcessor` instance to register.
+            priority: Execution order key.  Defaults to ``50``.
+        """
+        self._processors.append((priority, pp))
+        self._processors.sort(key=lambda x: x[0])
+
+    def run_all(self, raw_md: str) -> str:
+        """Run all registered pre-processors in priority order.
+
+        Args:
+            raw_md: Raw Markdown string to transform.
+
+        Returns:
+            The transformed Markdown string after all processors have run.
+        """
+        for _, pp in self._processors:
+            raw_md = pp.process(raw_md)
         return raw_md

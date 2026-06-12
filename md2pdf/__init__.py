@@ -23,9 +23,6 @@ def convert(src: str, dst: str, config: Config | None = None) -> None:
         config = Config(input_file=src, output_file=dst)
 
     registry = HandlerRegistry()
-    registry.load_entry_points()
-    registry.load_from_config(config.plugins)
-
     pipeline = Pipeline(config, registry)
     raw_md = open(src, encoding="utf-8").read()  # noqa: WPS515
     pipeline.run(raw_md)
