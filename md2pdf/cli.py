@@ -63,6 +63,16 @@ def convert(
     toc: bool = typer.Option(  # noqa: B008
         False, "--toc", help="Generate a Table of Contents page"
     ),
+    header: str = typer.Option(  # noqa: B008
+        None,
+        "--header",
+        help="Header text or template (supports {title} and {section})",
+    ),
+    header_on_first_page: bool = typer.Option(  # noqa: B008
+        False,
+        "--header-on-first-page",
+        help="Draw header on the first page of the document",
+    ),
 ) -> None:
     """Convert a Markdown file to a print-ready PDF."""
     _setup_logging(verbose)
@@ -130,6 +140,10 @@ def convert(
             cfg.min_image_scale = min_image_scale
         if toc:
             cfg.toc = True
+        if header is not None:
+            cfg.header = header
+        if header_on_first_page:
+            cfg.header_on_first_page = True
     else:
         resolved_output = output if output is not None else input.with_suffix(".pdf")
         cfg = Config(
@@ -138,6 +152,8 @@ def convert(
             theme=theme,
             offline=offline,
             toc=toc,
+            header=header if header is not None else "{title} | {section}",
+            header_on_first_page=header_on_first_page,
         )
         if min_image_scale is not None:
             cfg.min_image_scale = min_image_scale

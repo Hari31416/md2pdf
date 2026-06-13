@@ -37,6 +37,8 @@ class Config:
     cache_dir: str = os.path.expanduser("~/.cache/pymd2pdf")
     min_image_scale: float = 0.8
     toc: bool = False
+    header: str = "{title} | {section}"
+    header_on_first_page: bool = False
 
     # Structured plugin config from [plugins] TOML section.
     # Keys: "handlers", "preprocessors", "postprocessors" → list[str]

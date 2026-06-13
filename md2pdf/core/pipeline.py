@@ -140,8 +140,9 @@ class Pipeline:
         md = self._pre_process(raw_md)
         tokens = self._parse(md)
         has_footnotes = any(t.get("type") == "FootnoteDefinition" for t in tokens)
+        has_section_header = bool(self.config.header and "{section}" in self.config.header)
 
-        if self.config.toc or has_footnotes:
+        if self.config.toc or has_footnotes or has_section_header:
             # Pass 1: Build document with dummy/empty positions to collect page/footnote mapping
             flowables = self._map(tokens)
             self._render_pass(flowables, is_final=False)
@@ -278,10 +279,52 @@ class Pipeline:
 
         safe_flowables = self._post_registry.run_all(doc, safe_flowables)
 
+        # Collect bookmarks in order to determine running section headers
+        bookmarks = []
+
+        def find_bookmarks(items: list) -> list:
+            res = []
+            for item in items:
+                from md2pdf.core.flowables import BookmarkFlowable
+
+                if isinstance(item, BookmarkFlowable):
+                    if item.title:
+                        res.append(item)
+                elif hasattr(item, "_content") and isinstance(item._content, list):
+                    res.extend(find_bookmarks(item._content))
+                elif hasattr(item, "inner") and item.inner:
+                    res.extend(find_bookmarks([item.inner]))
+            return res
+
+        if is_final:
+            bookmarks = find_bookmarks(safe_flowables)
+
+        from md2pdf.core.flowables import BookmarkFlowable
+
+        page_registry = BookmarkFlowable.page_registry
+
+        state_first = PageCallbackState(
+            header_template=self.config.header,
+            header_on_first_page=self.config.header_on_first_page,
+            metadata=self.metadata,
+            bookmarks=bookmarks,
+            page_registry=page_registry,
+            is_first_page=True,
+        )
+
+        state_later = PageCallbackState(
+            header_template=self.config.header,
+            header_on_first_page=self.config.header_on_first_page,
+            metadata=self.metadata,
+            bookmarks=bookmarks,
+            page_registry=page_registry,
+            is_first_page=False,
+        )
+
         doc.build(
             safe_flowables,
-            onFirstPage=draw_page_number,
-            onLaterPages=draw_page_number,
+            onFirstPage=PageTemplateCallback(state_first),
+            onLaterPages=PageTemplateCallback(state_later),
         )
 
     def _build_doc(self):
@@ -342,7 +385,66 @@ class Pipeline:
             logger.debug("Could not register asset handlers", exc_info=True)
 
 
-def draw_page_number(canvas, doc) -> None:
+class PageCallbackState:
+    """Carries dynamic document and rendering state to the page rendering callbacks."""
+
+    def __init__(
+        self,
+        header_template: str,
+        header_on_first_page: bool,
+        metadata: dict[str, str],
+        bookmarks: list,
+        page_registry: dict[str, int],
+        is_first_page: bool,
+    ) -> None:
+        self.header_template = header_template
+        self.header_on_first_page = header_on_first_page
+        self.metadata = metadata
+        self.bookmarks = bookmarks
+        self.page_registry = page_registry
+        self.is_first_page = is_first_page
+
+
+class PageTemplateCallback:
+    """Callable wrapper that binds PageCallbackState to reportlab's page template callbacks."""
+
+    def __init__(self, state: PageCallbackState) -> None:
+        self.state = state
+
+    def __call__(self, canvas, doc) -> None:
+        draw_page_number(canvas, doc, state=self.state)
+
+
+def _get_current_section(page_num: int, bookmarks: list, page_registry: dict[str, int]) -> str:
+    """Retrieve the title of the heading applying to the current page number."""
+    best_title = ""
+    best_page = -1
+    best_level = 99
+
+    # First pass: try to find the most recent H1/H2 heading (level <= 1)
+    for b in bookmarks:
+        p = page_registry.get(b.key)
+        if p is not None and p <= page_num:
+            if b.level <= 1:
+                if p > best_page or (p == best_page and b.level < best_level):
+                    best_title = b.title
+                    best_page = p
+                    best_level = b.level
+
+    # If no H1/H2 heading found, fall back to any heading level
+    if not best_title:
+        for b in bookmarks:
+            p = page_registry.get(b.key)
+            if p is not None and p <= page_num:
+                if p > best_page:
+                    best_title = b.title
+                    best_page = p
+                    best_level = b.level
+
+    return best_title
+
+
+def draw_page_number(canvas, doc, state: PageCallbackState | None = None) -> None:
     """Draw the 'Page X' footer centered/aligned on each page."""
     from reportlab.lib import colors
     from reportlab.lib.units import mm
@@ -352,6 +454,36 @@ def draw_page_number(canvas, doc) -> None:
     canvas.setFillColor(colors.HexColor("#888888"))
     page_text = f"Page {canvas.getPageNumber()}"
     canvas.drawRightString(doc.pagesize[0] - 20 * mm, 15, page_text)
+
+    if state and state.header_template:
+        should_draw = True
+        if state.is_first_page and not state.header_on_first_page:
+            should_draw = False
+
+        if should_draw:
+            header_text = state.header_template
+            if "{title}" in header_text:
+                title = state.metadata.get("title", "")
+                header_text = header_text.replace("{title}", title)
+            if "{section}" in header_text:
+                section = _get_current_section(
+                    canvas.getPageNumber(), state.bookmarks, state.page_registry
+                )
+                header_text = header_text.replace("{section}", section)
+
+            header_text = header_text.strip()
+            if header_text:
+                canvas.drawString(20 * mm, doc.pagesize[1] - 15 * mm, header_text)
+
+                canvas.setStrokeColor(colors.HexColor("#cccccc"))
+                canvas.setLineWidth(0.5)
+                canvas.line(
+                    20 * mm,
+                    doc.pagesize[1] - 18 * mm,
+                    doc.pagesize[0] - 20 * mm,
+                    doc.pagesize[1] - 18 * mm,
+                )
+
     canvas.restoreState()
 
 
