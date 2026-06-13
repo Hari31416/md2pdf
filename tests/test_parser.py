@@ -385,4 +385,3 @@ class TestPageBreakParsing:
         tokens2 = MarkdownParser().parse(md2)
         assert len(tokens2) == 1
         assert tokens2[0]["type"] == "PageBreak"
-

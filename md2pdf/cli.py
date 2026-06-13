@@ -73,6 +73,11 @@ def convert(
         "--header-on-first-page",
         help="Draw header on the first page of the document",
     ),
+    emoji: bool = typer.Option(  # noqa: B008
+        True,
+        "--emoji/--no-emoji",
+        help="Replace emoji codepoints with Twemoji PNG images (default: enabled)",
+    ),
 ) -> None:
     """Convert a Markdown file to a print-ready PDF."""
     _setup_logging(verbose)
@@ -144,6 +149,8 @@ def convert(
             cfg.header = header
         if header_on_first_page:
             cfg.header_on_first_page = True
+        if not emoji:
+            cfg.emoji = False
     else:
         resolved_output = output if output is not None else input.with_suffix(".pdf")
         cfg = Config(
@@ -154,6 +161,7 @@ def convert(
             toc=toc,
             header=header if header is not None else "{title} | {section}",
             header_on_first_page=header_on_first_page,
+            emoji=emoji,
         )
         if min_image_scale is not None:
             cfg.min_image_scale = min_image_scale

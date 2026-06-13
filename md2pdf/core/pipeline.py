@@ -55,7 +55,10 @@ class Pipeline:
 
         # Stage 1 — pre-processor registry (built-ins auto-registered).
         self._pre_registry = PreProcessorRegistry(
-            register_builtins=True, input_file=self.config.input_file
+            register_builtins=True,
+            input_file=self.config.input_file,
+            emoji=getattr(self.config, "emoji", True),
+            cache_dir=self.config.cache_dir,
         )
 
         # Stage 4 — post-processor registry.

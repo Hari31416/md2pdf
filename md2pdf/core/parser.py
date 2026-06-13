@@ -145,9 +145,7 @@ class MarkdownParser:
         output = []
         stack = [output]
 
-        start_pattern = re.compile(
-            r'^<div class="admonition\s+([^"]+)"(?:\s+title="([^"]*)")?\s*>'
-        )
+        start_pattern = re.compile(r'^<div class="admonition\s+([^"]+)"(?:\s+title="([^"]*)")?\s*>')
         end_pattern = re.compile(r"^</div>$")
 
         for token in tokens:
@@ -239,7 +237,10 @@ class MarkdownParser:
                 non_empty.append(c)
             if len(non_empty) == 1:
                 child = non_empty[0]
-                if child.get("type") == "RawText" and (child.get("raw") or "").strip() == '<div class="pagebreak"></div>':
+                if (
+                    child.get("type") == "RawText"
+                    and (child.get("raw") or "").strip() == '<div class="pagebreak"></div>'
+                ):
                     return {
                         "type": "PageBreak",
                         "raw": "",
@@ -257,7 +258,10 @@ class MarkdownParser:
                         "attrs": {},
                         "_node": node,
                     }
-        elif token["type"] in ("HTMLBlock", "RawHTML") and token.get("raw", "").strip() == '<div class="pagebreak"></div>':
+        elif (
+            token["type"] in ("HTMLBlock", "RawHTML")
+            and token.get("raw", "").strip() == '<div class="pagebreak"></div>'
+        ):
             return {
                 "type": "PageBreak",
                 "raw": "",

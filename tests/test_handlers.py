@@ -104,7 +104,14 @@ class TestInlineRender:
 
     def test_raw_html_linebreak(self, styles):
         result = inline_render(
-            [{"type": "RawText", "raw": "Line 1<br>Line 2<br />Line 3<BR/>Line 4", "children": [], "attrs": {}}]
+            [
+                {
+                    "type": "RawText",
+                    "raw": "Line 1<br>Line 2<br />Line 3<BR/>Line 4",
+                    "children": [],
+                    "attrs": {},
+                }
+            ]
         )
         assert result == "Line 1<br/>Line 2<br/>Line 3<br/>Line 4"
 
@@ -453,9 +460,9 @@ class TestInlineMathRender:
 
 class TestAdmonitionHandler:
     def test_admonition_handler_renders_box(self, styles):
-        from md2pdf.handlers.admonition import AdmonitionHandler
         from md2pdf.core.flowables import AdmonitionBox
         from md2pdf.core.registry import HandlerRegistry
+        from md2pdf.handlers.admonition import AdmonitionHandler
 
         # Setup handler registry mock in styles
         reg = HandlerRegistry()
@@ -494,6 +501,7 @@ class TestAdmonitionHandler:
 class TestPageBreakHandler:
     def test_renders_page_break(self, styles):
         from reportlab.platypus import PageBreak
+
         from md2pdf.handlers.pagebreak import PageBreakHandler
 
         token = {"type": "PageBreak", "raw": "", "attrs": {}, "children": [], "_node": None}
@@ -501,4 +509,3 @@ class TestPageBreakHandler:
         flowables = handler.render(token, styles)
         assert len(flowables) == 1
         assert isinstance(flowables[0], PageBreak)
-

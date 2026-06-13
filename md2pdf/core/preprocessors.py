@@ -8,6 +8,9 @@ Built-in pre-processors
 -----------------------
 - ``FrontMatterStripper``  — strips YAML front-matter (``--- ... ---``) — priority 10
 - ``IncludeResolver``      — placeholder for ``!include`` directives (future) — priority 20
+- ``PageBreakPreProcessor``  — converts pagebreak directives — priority 25
+- ``AdmonitionPreProcessor`` — converts admonition blocks — priority 30
+- ``EmojiPreProcessor``      — replaces emoji codepoints with Twemoji PNGs — priority 35
 
 :class:`PreProcessorRegistry` manages registration and execution.
 Plugin pre-processors should use priority ≥ 50 so they run after built-ins.
@@ -18,7 +21,10 @@ from __future__ import annotations
 import logging
 import os
 import re
+import unicodedata
 from abc import ABC, abstractmethod
+from pathlib import Path
+from urllib.request import urlretrieve
 
 logger = logging.getLogger(__name__)
 
@@ -299,6 +305,194 @@ class PageBreakPreProcessor(PreProcessor):
         return md
 
 
+# ---------------------------------------------------------------------------
+# Emoji helpers
+# ---------------------------------------------------------------------------
+
+# Characters that are *visually* emoji but are basic Latin/ASCII or
+# common symbols that do not need image substitution.
+_EMOJI_SKIP_RANGES: tuple[tuple[int, int], ...] = (
+    (0x0023, 0x0023),  # # (number sign)
+    (0x002A, 0x002A),  # * (asterisk)
+    (0x0030, 0x0039),  # 0-9 digits
+    # Pure-math Unicode blocks — "So" category but no Twemoji images exist:
+    (0x2100, 0x214F),  # Letterlike Symbols (ℂ ℝ ℤ …)
+    (0x2190, 0x21FF),  # Arrows (← → ↑ ↓ …)
+    (0x2200, 0x22FF),  # Mathematical Operators (∅ ∈ ∩ ∪ ⊂ ≤ ≥ ≠ ≈ ∑ ∏ ∫ …)
+    (0x2300, 0x23FF),  # Miscellaneous Technical (⌨ ⏎ …)
+    (0x2500, 0x257F),  # Box Drawing (─ │ ┌ └ …)
+    (0x2580, 0x259F),  # Block Elements
+    (0x25A0, 0x25FF),  # Geometric Shapes (▶ ■ ▲ …)
+    (0x27C0, 0x27EF),  # Miscellaneous Mathematical Symbols-A
+    (0x27F0, 0x27FF),  # Supplemental Arrows-A
+    (0x2900, 0x297F),  # Supplemental Arrows-B
+    (0x2980, 0x29FF),  # Miscellaneous Mathematical Symbols-B
+    (0x2A00, 0x2AFF),  # Supplemental Mathematical Operators
+)
+
+# Variation selector 16 (U+FE0F) forces emoji presentation; strip it when
+# building the Twemoji filename so we don't include it in the codepoint slug.
+_VARIATION_SELECTOR_16 = 0xFE0F
+# Zero-width joiner used to combine multi-codepoint sequences (e.g. family emoji).
+_ZWJ = 0x200D
+
+_TWEMOJI_BASE = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/{slug}.png"
+
+
+def _is_emoji_char(ch: str) -> bool:
+    """Return True if *ch* is a character we want to substitute with an image."""
+    cp = ord(ch)
+    for lo, hi in _EMOJI_SKIP_RANGES:
+        if lo <= cp <= hi:
+            return False
+    cat = unicodedata.category(ch)
+    # "So" (Symbol, Other) covers emoji-family characters.
+    # Explicitly exclude "Sm" (Symbol, Math) — operators like ∑ ∫ ≤ ≠ ≈
+    # are mathematical and should never be treated as emoji.
+    if cat == "So":
+        return cp > 0x2000  # skip common currency/misc symbols below U+2000
+    # Private-use area characters are not emoji.
+    if 0xE000 <= cp <= 0xF8FF:
+        return False
+    # Supplementary multilingual plane emoji ranges
+    if 0x1F000 <= cp <= 0x1FFFF:
+        return True
+    # Enclosed alphanumeric supplement / dingbats / misc symbols
+    if 0x2600 <= cp <= 0x27BF:
+        return True
+    # Enclosed ideographic supplement
+    if 0x1F200 <= cp <= 0x1F2FF:
+        return True
+    return False
+
+
+def _codepoints_to_slug(chars: str) -> str:
+    """Convert an emoji character (or ZWJ sequence) to a Twemoji filename slug.
+
+    Variation selector U+FE0F is stripped only when it is the *last* character
+    in the sequence.  When it appears mid-sequence (e.g. before a ZWJ in the
+    rainbow-flag sequence 🏳\ufe0f\u200d🌈) it must be kept because Twemoji
+    includes it in the filename slug.
+    """
+    result = []
+    for idx, c in enumerate(chars):
+        cp = ord(c)
+        # Strip a trailing-only VS16
+        if cp == _VARIATION_SELECTOR_16 and idx == len(chars) - 1:
+            continue
+        result.append(hex(cp)[2:])
+    return "-".join(result)
+
+
+def _fetch_emoji_png(slug: str, emoji_cache_dir: Path) -> Path | None:
+    """Return path to a cached PNG for *slug*, downloading it on first use.
+
+    Returns ``None`` if the download fails (network unavailable, 404, etc.).
+    """
+    dest = emoji_cache_dir / f"{slug}.png"
+    if dest.exists():
+        return dest
+
+    url = _TWEMOJI_BASE.format(slug=slug)
+    try:
+        emoji_cache_dir.mkdir(parents=True, exist_ok=True)
+        urlretrieve(url, dest)  # noqa: S310  (URL is a hard-coded CDN constant)
+        logger.debug("Downloaded emoji PNG: %s → %s", url, dest)
+        return dest
+    except Exception as exc:
+        logger.warning("Could not fetch emoji PNG for %s: %s", slug, exc)
+        # Remove partially-written file if any
+        if dest.exists():
+            try:
+                dest.unlink()
+            except OSError:
+                pass
+        return None
+
+
+class EmojiPreProcessor(PreProcessor):
+    """Replace emoji codepoints in raw Markdown with Twemoji ``<img>`` tags.
+
+    Each emoji character (including ZWJ sequences and variation-selector
+    sequences) is replaced with::
+
+        <img src="/path/to/cache/emoji/1f600.png" width="14" height="14"/>
+
+    The PNG files are downloaded from the Twemoji CDN on first use and
+    permanently cached under ``{cache_dir}/emoji/``.
+
+    Args:
+        cache_dir: Root cache directory (same as :attr:`~md2pdf.core.config.Config.cache_dir`).
+        size: Pixel size used for both the ``width`` and ``height`` attributes.
+              Defaults to ``14`` which is approximately one line-height at 10 pt.
+    """
+
+    def __init__(self, cache_dir: str = "", size: int = 14) -> None:
+        self.emoji_cache_dir = (
+            Path(cache_dir) / "emoji" if cache_dir else Path.home() / ".cache/pymd2pdf/emoji"
+        )
+        self.size = size
+
+    def process(self, raw_md: str) -> str:
+        """Scan *raw_md* for emoji and replace them with ``<img>`` references."""
+        result: list[str] = []
+        i = 0
+        text = raw_md
+        n = len(text)
+
+        while i < n:
+            ch = text[i]
+
+            # --- skip fenced code blocks verbatim ---
+            if text[i : i + 3] == "```":
+                end = text.find("```", i + 3)
+                if end == -1:
+                    result.append(text[i:])
+                    break
+                result.append(text[i : end + 3])
+                i = end + 3
+                continue
+
+            # --- skip inline code spans ---
+            if ch == "`":
+                end = text.find("`", i + 1)
+                if end == -1:
+                    result.append(text[i:])
+                    break
+                result.append(text[i : end + 1])
+                i = end + 1
+                continue
+
+            if not _is_emoji_char(ch):
+                result.append(ch)
+                i += 1
+                continue
+
+            # Collect a full ZWJ / variation-selector sequence
+            seq_chars = [ch]
+            j = i + 1
+            while j < n:
+                next_cp = ord(text[j])
+                if next_cp in (_ZWJ, _VARIATION_SELECTOR_16) or _is_emoji_char(text[j]):
+                    seq_chars.append(text[j])
+                    j += 1
+                else:
+                    break
+
+            slug = _codepoints_to_slug("".join(seq_chars))
+            png_path = _fetch_emoji_png(slug, self.emoji_cache_dir)
+            if png_path is not None:
+                img_tag = f'<img src="{png_path}" ' f'width="{self.size}" height="{self.size}"/>'
+                result.append(img_tag)
+            else:
+                # Fallback: keep the original emoji characters
+                result.append("".join(seq_chars))
+
+            i = j
+
+        return "".join(result)
+
+
 class PreProcessorRegistry:
     """Priority-sorted registry of :class:`PreProcessor` instances.
 
@@ -308,11 +502,21 @@ class PreProcessorRegistry:
 
     Args:
         register_builtins: If ``True`` (the default), automatically register
-            :class:`FrontMatterStripper` and :class:`IncludeResolver` with
-            their canonical priorities.
+            built-in pre-processors with their canonical priorities.
+        input_file: Path to the source Markdown file (used by
+            :class:`FrontMatterStripper` and :class:`IncludeResolver`).
+        emoji: If ``True`` (the default), register :class:`EmojiPreProcessor`
+            at priority 35.
+        cache_dir: Cache directory forwarded to :class:`EmojiPreProcessor`.
     """
 
-    def __init__(self, register_builtins: bool = True, input_file: str = "") -> None:
+    def __init__(
+        self,
+        register_builtins: bool = True,
+        input_file: str = "",
+        emoji: bool = True,
+        cache_dir: str = "",
+    ) -> None:
         # Each entry is a (priority, PreProcessor) tuple.
         self._processors: list[tuple[int, PreProcessor]] = []
         if register_builtins:
@@ -320,6 +524,8 @@ class PreProcessorRegistry:
             self.register(IncludeResolver(input_file), priority=20)
             self.register(PageBreakPreProcessor(), priority=25)
             self.register(AdmonitionPreProcessor(), priority=30)
+            if emoji:
+                self.register(EmojiPreProcessor(cache_dir=cache_dir), priority=35)
 
     def register(self, pp: PreProcessor, *, priority: int = 50) -> None:
         """Register *pp* at the given *priority*.

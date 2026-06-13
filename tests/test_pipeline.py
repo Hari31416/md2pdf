@@ -342,6 +342,7 @@ def test_pipeline_with_pagebreaks(tmp_path: Path) -> None:
 
     # Let's count how many PageBreak flowables we have in mapped flowables
     from reportlab.platypus import PageBreak
+
     page_breaks = [f for f in flowables if isinstance(f, PageBreak)]
     assert len(page_breaks) == 2
 
@@ -349,4 +350,3 @@ def test_pipeline_with_pagebreaks(tmp_path: Path) -> None:
     convert(str(input_file), str(output_file))
     assert output_file.exists()
     assert output_file.stat().st_size > 0
-

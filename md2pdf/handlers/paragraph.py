@@ -24,6 +24,27 @@ class ParagraphHandler(ElementHandler):
                 attrs[name] = val
             return attrs
 
+        def _is_block_img(attrs: dict[str, str]) -> bool:
+            """Return True when the img should be extracted as a block flowable.
+
+            An img is treated as a block image when it has *no* explicit dimensions
+            or its dimensions exceed the inline threshold (32 px).  Emoji-sized imgs
+            (≤ 32 px on both axes) stay inside the paragraph and are rendered inline
+            by :func:`~md2pdf.handlers.inline.inline_render`.
+            """
+            from md2pdf.handlers.inline import _INLINE_IMG_MAX_PX  # noqa: PLC0415
+
+            for dim in ("width", "height"):
+                val = attrs.get(dim, "").strip()
+                if not val:
+                    return True  # No dimension → treat as block
+                try:
+                    if float(val) > _INLINE_IMG_MAX_PX:
+                        return True  # Large dimension → block
+                except ValueError:
+                    return True
+            return False  # Both dims small → inline
+
         virtual_children = []
         for child in token.get("children", []):
             t = child.get("type", "")
@@ -33,7 +54,8 @@ class ParagraphHandler(ElementHandler):
                 for part in parts:
                     if part.lower().startswith("<img"):
                         attrs = parse_attributes(part)
-                        if "src" in attrs:
+                        if "src" in attrs and _is_block_img(attrs):
+                            # Large image → extract as a standalone block flowable
                             virtual_children.append(
                                 {
                                     "type": "HTMLImage",
@@ -45,8 +67,12 @@ class ParagraphHandler(ElementHandler):
                                     },
                                 }
                             )
+                        else:
+                            # Small or malformed img — keep in text run for inline_render
+                            virtual_children.append({"type": "RawText", "raw": part})
                     elif part:
                         virtual_children.append({"type": "RawText", "raw": part})
+
             elif t == "Image":
                 target = child.get("attrs", {}).get("target", "")
                 alt = inline_render(child.get("children", []), styles)

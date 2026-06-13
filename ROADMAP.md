@@ -45,9 +45,9 @@ Registered FootnoteReference and FootnoteDefinition markdown tokens. Implemented
 Added configurable page headers/running titles. Supported `--header` and `--header-on-first-page` CLI options, template placeholders (`{title}`, `{section}`), and two-pass layout rendering for section titles.
 
 
-## Colour Emoji Support
+## Colour Emoji Support ✅
 
-**Status:** Research complete — not yet implemented.
+**Status:** Implemented — Option A (Twemoji image substitution).
 
 Standard PDF fonts and ReportLab's text rendering pipeline do not support colour font tables
 (`CBDT/CBLC`, `COLR/CPAL`, `sbix`, `SVG`). Colour emojis cannot be delivered via a font alone.

@@ -495,4 +495,3 @@ class AdmonitionBox(Flowable):
             left_bar_width=self.left_bar_width,
         )
         return [part1, part2]
-

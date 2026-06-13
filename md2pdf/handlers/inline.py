@@ -6,19 +6,76 @@ markup string suitable for use inside a ``Paragraph(text, style)`` call.
 
 Supported inline token types
 -----------------------------
-- ``RawText``   — plain text (XML-escaped)
+- ``RawText``   — plain text (XML-escaped); small ``<img>`` tags (≤32 px)
+                  are rendered as inline ReportLab images automatically.
+- ``InlineXML`` — pre-built ReportLab XML, emitted verbatim.
 - ``Strong``    — ``<b>...</b>``
 - ``Emphasis``  — ``<i>...</i>``
 - ``InlineCode``— ``<font name='Courier'>...</font>``
 - ``Link``      — ``<a href="..." color="...">...</a>``
-- ``Image``     — alt text only (images not embedded inline)
+- ``Image``     — alt text only (large images not embedded inline)
 - ``LineBreak`` — ``<br/>``
 - Anything else — raw text content, XML-escaped
 """
 
 from __future__ import annotations
 
+import re
 import xml.sax.saxutils as saxutils
+
+# ---------------------------------------------------------------------------
+# Inline-image helpers (used for emoji substitution)
+# ---------------------------------------------------------------------------
+
+# Max dimension (px) at which an <img> tag is treated as inline rather than block.
+_INLINE_IMG_MAX_PX: int = 32
+
+_IMG_TAG_RE = re.compile(r"(<img\s+[^>]*?>)", re.IGNORECASE)
+_IMG_ATTR_RE = re.compile(r'(\w+)\s*=\s*(?:"([^"]*)"|\'([^\']*)\')', re.IGNORECASE)
+
+
+def _parse_img_attrs(tag: str) -> dict[str, str]:
+    attrs: dict[str, str] = {}
+    for m in _IMG_ATTR_RE.finditer(tag):
+        attrs[m.group(1).lower()] = m.group(2) or m.group(3) or ""
+    return attrs
+
+
+def _is_small_img(attrs: dict[str, str]) -> bool:
+    """Return True when both width and height are present and ≤ ``_INLINE_IMG_MAX_PX``."""
+    for dim in ("width", "height"):
+        val = attrs.get(dim, "").strip()
+        if not val:
+            return False
+        try:
+            if float(val) > _INLINE_IMG_MAX_PX:
+                return False
+        except ValueError:
+            return False
+    return True
+
+
+def _expand_inline_imgs(raw: str) -> str:
+    """Split *raw* on ``<img>`` tags; keep small ones as ReportLab inline images.
+
+    Large images and tags without a ``src`` attribute are XML-escaped so they
+    appear as literal text (which is the safe fallback for non-paragraph contexts).
+    """
+    out: list[str] = []
+    for part in _IMG_TAG_RE.split(raw):
+        if part.lower().startswith("<img"):
+            attrs = _parse_img_attrs(part)
+            src = attrs.get("src", "")
+            if src and _is_small_img(attrs):
+                w = attrs.get("width", "14")
+                h = attrs.get("height", "14")
+                out.append(f'<img src="{src}" width="{w}" height="{h}" valign="middle"/>')
+            else:
+                # Large or malformed img — escape so it shows as text rather than crashing.
+                out.append(escape_xml(part))
+        else:
+            out.append(escape_xml(part))
+    return "".join(out)
 
 
 def escape_xml(text: str) -> str:
@@ -53,8 +110,16 @@ def inline_render(children: list[dict], styles: dict | None = None) -> str:
         t = child.get("type", "")
         raw = child.get("raw", "") or ""
 
-        if t == "RawText":
-            parts.append(escape_xml(raw))
+        if t == "InlineXML":
+            # Pre-built ReportLab paragraph XML — emit verbatim, no escaping.
+            parts.append(raw)
+
+        elif t == "RawText":
+            if "<img" in raw.lower():
+                # May contain emoji <img> tags — expand small ones inline.
+                parts.append(_expand_inline_imgs(raw))
+            else:
+                parts.append(escape_xml(raw))
 
         elif t == "Strong":
             inner = inline_render(child.get("children", []), styles)
@@ -105,7 +170,6 @@ def inline_render(children: list[dict], styles: dict | None = None) -> str:
                 parts.append(escape_xml(raw))
 
     rendered = "".join(parts)
-    import re
 
     rendered = re.sub(r"&lt;[Bb][Rr]\s*/?&gt;", "<br/>", rendered)
     return rendered

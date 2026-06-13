@@ -367,17 +367,80 @@ font_file_mono = "/path/to/NotoSansMono-Regular.ttf"
 
 Tilde expansion (`~/fonts/MyFont.ttf`) is supported.
 
-### Emojis are Still Not Fully Supported
+### Colour Emoji (Twemoji) 😎
 
-🤨 😥 😫 😞 😔 😕 🙁 ☹️ 🙁 🙁 ☹️ ☹️ 
+Emoji codepoints are automatically detected and replaced with full-colour **Twemoji** PNG images,
+cached locally on first use. No configuration required — it works out of the box.
 
-## 13. File Inclusion (!include)
+Single emoji: 🌍 🚀 🎉 ✅ ❌ 🔥 💡 🧠 🐍 📄
+
+Emoji in prose: The build passed 🎉 and all tests are green ✅. Deploy to production 🚀?
+
+Faces and people: 😀 😎 🤔 😅 🙌 👏 🫶 👍 🤝 🧑‍💻
+
+Nature and travel: 🌸 🌊 🏔️ 🌅 🌙 ⭐ 🌈 🦋 🌿 🍀
+
+Food and objects: 🍕 ☕ 🎸 📦 🔑 📌 🗂️ 📊 🔬 🛠️
+
+Emoji mixed with code references: Use `convert()` 🔧 and `Pipeline` 🚰 together.
+
+To disable emoji substitution, pass `--no-emoji` on the CLI or set `emoji = false` in `md2pdf.toml`:
+
+```bash
+md2pdf docs/showcase.md --no-emoji
+```
+
+```toml
+[md2pdf]
+emoji = false
+```
+
+## 13. Colour Emoji Showcase
+
+This section verifies end-to-end rendering of emoji characters across multiple contexts.
+
+### Inline Paragraph Emoji
+
+All systems nominal 🟢 — pipeline complete 🏁. Found **3 warnings** ⚠️ and **0 errors** ✅.
+
+### Emoji in Headings and Lists
+
+#### 🗒️ Today's Task List
+
+- 🔍 Run the full test suite
+- 📝 Update the changelog
+- 🚀 Tag and publish the release
+- 🎉 Celebrate!
+
+#### 📊 Status Summary
+
+| Component        | Status |
+| :--------------- | :----- |
+| Core pipeline    | ✅ OK   |
+| Emoji support    | ✅ OK   |
+| LaTeX rendering  | ✅ OK   |
+| Mermaid diagrams | ✅ OK   |
+
+### ZWJ Sequences
+
+Complex multi-codepoint emoji sequences (joined with a Zero-Width Joiner) are handled as a
+single unit so they map to the correct Twemoji image:
+
+🧑‍💻 (person: technologist) · 👨‍👩‍👧‍👦 (family) · 🏳️‍🌈 (rainbow flag)
+
+### Emoji in Blockquotes
+
+> 🔑 **Key insight:** Colour emoji in PDFs previously required replacing the entire ReportLab rendering backend. The Twemoji approach slots in as a lightweight pre-processor with zero pipeline changes — emoji PNGs are cached after the first download 📥.
+
+---
+
+## 14. File Inclusion (!include)
 
 You can split documents into multiple reusable files and combine them at compile-time:
 
 !include included_feature.md
 
-## 14. Page Breaks
+## 15. Page Breaks
 
 You can manually control pagination using either the standard HTML comment directive or a custom backslash directive. This compiles directly into a PDF PageBreak flowable.
 
