@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from typing import Any
 
 from md2pdf.core.config import Config
 from md2pdf.core.errors import ValidationIssue
@@ -35,9 +37,16 @@ class Pipeline:
     - :class:`~md2pdf.core.plugin_loader.PluginLoader` performs discovery.
     """
 
-    def __init__(self, config: Config, registry: HandlerRegistry | None = None) -> None:
+    def __init__(
+        self,
+        config: Config,
+        registry: HandlerRegistry | None = None,
+        progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
+    ) -> None:
         self.config = config
         self.registry = HandlerRegistry()
+        self._progress_callback = None
+        self.progress_callback = progress_callback
 
         self.metadata: dict[str, str] = {
             "title": "",
@@ -59,6 +68,7 @@ class Pipeline:
             input_file=self.config.input_file,
             emoji=getattr(self.config, "emoji", True),
             cache_dir=self.config.cache_dir,
+            progress_callback=self.progress_callback,
         )
 
         # Stage 4 — post-processor registry.
@@ -99,6 +109,16 @@ class Pipeline:
         self._styles["_config"] = self.config
         self._styles["_registry"] = self.registry
 
+    @property
+    def progress_callback(self) -> Callable[[str, dict[str, Any]], None] | None:
+        return getattr(self, "_progress_callback", None)
+
+    @progress_callback.setter
+    def progress_callback(self, val: Callable[[str, dict[str, Any]], None] | None) -> None:
+        self._progress_callback = val
+        if hasattr(self, "_pre_registry") and self._pre_registry:
+            self._pre_registry.progress_callback = val
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -126,7 +146,15 @@ class Pipeline:
             raw_md: Raw markdown string read from the source file.
         """
         logger.debug("Pipeline.run: starting")
-        issues = self.validate(raw_md)
+
+        # Temporarily suppress progress reporting during validation gate
+        original_callback = self.progress_callback
+        self.progress_callback = None
+        try:
+            issues = self.validate(raw_md)
+        finally:
+            self.progress_callback = original_callback
+
         errors = [i for i in issues if i.severity == "error"]
         warnings = [i for i in issues if i.severity == "warning"]
 
@@ -141,23 +169,55 @@ class Pipeline:
         FootnoteFlowable.page_registry.clear()
         FootnoteFlowable.page_footnotes.clear()
 
+        if self.progress_callback:
+            self.progress_callback("preprocess_start", {})
         md = self._pre_process(raw_md)
+
+        if self.progress_callback:
+            self.progress_callback("parse_start", {})
         tokens = self._parse(md)
+
         has_footnotes = any(t.get("type") == "FootnoteDefinition" for t in tokens)
         has_section_header = bool(self.config.header and "{section}" in self.config.header)
 
+        # Stage 3 — map token list to ReportLab Flowable list
+        flowables = self._map(tokens)
+
         if self.config.toc or has_footnotes or has_section_header:
             # Pass 1: Build document with dummy/empty positions to collect page/footnote mapping
-            flowables = self._map(tokens)
+            if self.progress_callback:
+                self.progress_callback(
+                    "render_pass_start",
+                    {
+                        "pass_num": 1,
+                        "total_passes": 2,
+                        "description": "Analyzing layout (outlines & footnotes)",
+                    },
+                )
             self._render_pass(flowables, is_final=False)
 
             # Pass 2: Re-build document with populated page numbers and footnotes
-            md = self._pre_process(raw_md)
-            tokens = self._parse(md)
-            flowables = self._map(tokens)
+            # Temporarily suppress sub-stage logs for the pass 2 rebuild
+            self.progress_callback = None
+            try:
+                md = self._pre_process(raw_md)
+                tokens = self._parse(md)
+                flowables = self._map(tokens)
+            finally:
+                self.progress_callback = original_callback
+
+            if self.progress_callback:
+                self.progress_callback(
+                    "render_pass_start",
+                    {"pass_num": 2, "total_passes": 2, "description": "Generating final PDF"},
+                )
             self._render_pass(flowables, is_final=True)
         else:
-            flowables = self._map(tokens)
+            if self.progress_callback:
+                self.progress_callback(
+                    "render_pass_start",
+                    {"pass_num": 1, "total_passes": 1, "description": "Generating final PDF"},
+                )
             self._render_pass(flowables, is_final=True)
 
         logger.debug("Pipeline.run: done → %s", self.config.output_file)
@@ -190,11 +250,25 @@ class Pipeline:
                 text = token.get("raw", "")
                 self.footnotes[f"^{label}"] = (text, "")
 
+        diagram_tokens = [t for t in tokens if t.get("type") in ("Mermaid", "LatexBlock")]
+        num_diagrams = len(diagram_tokens)
+        if self.progress_callback:
+            self.progress_callback("map_start", {"total_diagrams": num_diagrams})
+
         flowables = []
+        diagram_idx = 0
         for token in tokens:
             token_type = token.get("type", "")
             if token_type == "FootnoteDefinition":
                 continue
+
+            if token_type in ("Mermaid", "LatexBlock"):
+                diagram_idx += 1
+                if self.progress_callback:
+                    self.progress_callback(
+                        "render_diagram",
+                        {"type": token_type, "index": diagram_idx, "total": num_diagrams},
+                    )
 
             handler = self.registry.get(token_type)
             if handler:

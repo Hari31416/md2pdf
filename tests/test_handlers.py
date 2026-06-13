@@ -27,6 +27,7 @@ from md2pdf.styles.theme import ThemeConfig
 def styles() -> dict:
     """Default stylesheet with no custom theme."""
     from md2pdf.assets._font_registry import register_fonts
+
     register_fonts()
     return build_default_stylesheet()
 
@@ -35,6 +36,7 @@ def styles() -> dict:
 def custom_styles() -> dict:
     """Stylesheet built from a custom ThemeConfig."""
     from md2pdf.assets._font_registry import register_fonts
+
     register_fonts()
     theme = ThemeConfig(color_table_header_bg="#c0392b")
     return build_default_stylesheet(theme)
@@ -272,6 +274,7 @@ class TestListHandler:
 
     def test_task_list_checkboxes_emoji_disabled(self, styles):
         from unittest.mock import MagicMock
+
         styles["_config"] = MagicMock(emoji=False, cache_dir="")
         token = _make_list_token(["[ ] todo", "[x] done", "[X] done uppercase", "not a task"])
         flowables = ListHandler().render(token, styles)
@@ -306,7 +309,9 @@ class TestListHandler:
             p.parent.mkdir(parents=True, exist_ok=True)
             if not p.exists():
                 from io import BytesIO
+
                 from PIL import Image as PILImage
+
                 buf = BytesIO()
                 PILImage.new("RGBA", (14, 14), (255, 200, 0, 255)).save(buf, format="PNG")
                 p.write_bytes(buf.getvalue())
@@ -330,7 +335,6 @@ class TestListHandler:
         p1 = get_para(items[1])
         assert "2611.png" in p1.text
         assert "done" in p1.text
-
 
 
 # ---------------------------------------------------------------------------

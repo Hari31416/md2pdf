@@ -27,11 +27,16 @@ __all__ = [
 ]
 
 
+from collections.abc import Callable
+from typing import Any
+
+
 def convert(
     src: str,
     dst: str,
     config: Config | None = None,
     registry: HandlerRegistry | None = None,
+    progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
 ) -> None:
     """High-level API: convert a Markdown file to a PDF.
 
@@ -40,6 +45,7 @@ def convert(
         dst: Path to the output PDF file.
         config: Optional Config instance. If omitted, defaults are used.
         registry: Optional custom HandlerRegistry instance.
+        progress_callback: Optional callback invoked with progress updates.
     """
     if config is None:
         config = Config(input_file=src, output_file=dst)
@@ -47,6 +53,6 @@ def convert(
         config.input_file = src
         config.output_file = dst
 
-    pipeline = Pipeline(config, registry)
+    pipeline = Pipeline(config, registry, progress_callback=progress_callback)
     raw_md = open(src, encoding="utf-8").read()  # noqa: WPS515
     pipeline.run(raw_md)

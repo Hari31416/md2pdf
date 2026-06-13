@@ -83,6 +83,7 @@ class ListHandler(ElementHandler):
 
         raw_text = first_inline.get("raw", "")
         import re
+
         # Match [ ] or [x] or [X] at the beginning
         match = re.match(r"^\[([ xX])\](?:[ \t](.*)|$)", raw_text)
         if not match:
@@ -99,13 +100,12 @@ class ListHandler(ElementHandler):
         replacement = None
         if emoji_enabled:
             from pathlib import Path
+
             from md2pdf.core.preprocessors import _fetch_emoji_png
 
             slug = "2611" if is_checked else "25fb"
             emoji_cache_dir = (
-                Path(cache_dir) / "emoji"
-                if cache_dir
-                else Path.home() / ".cache/pymd2pdf/emoji"
+                Path(cache_dir) / "emoji" if cache_dir else Path.home() / ".cache/pymd2pdf/emoji"
             )
 
             png_path = _fetch_emoji_png(slug, emoji_cache_dir)

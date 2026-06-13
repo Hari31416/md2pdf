@@ -113,6 +113,14 @@ GFM-style task list checkboxes (`- [ ] todo` / `- [x] done`) are detected in `Li
 
 ---
 
+## Progress Reporting ✅
+
+**Status:** Implemented in v0.3.0.
+
+Provides detailed stage-level progress feedback on stderr during compilation, particularly useful when downloading emojis or rendering external LaTeX/Mermaid assets. Enabled by default; can be disabled with `--no-progress`.
+
+---
+
 ## Short-term (implementation path is clear)
 
 - **Table column alignment** — `mistletoe` already parses column alignment (`:---`,
@@ -162,10 +170,6 @@ GFM-style task list checkboxes (`- [ ] todo` / `- [x] done`) are detected in `Li
 - **Structured JSON validation output** — `--validate-only` currently writes
   human-readable text to stdout. A `--format json` option would allow CI integration
   (e.g. GitHub Actions annotations).
-
-- **Progress reporting** — for multi-page documents with external assets (Mermaid,
-  LaTeX, emoji downloads), the CLI is silent until completion. Stage-level logging
-  or a progress bar would improve UX.
 
 - **Deterministic PDF output** — ReportLab embeds a creation timestamp and unique `/ID`
   in every PDF. A `--deterministic` flag that pins these values (e.g. to the source

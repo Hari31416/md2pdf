@@ -23,7 +23,9 @@ import os
 import re
 import unicodedata
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 from urllib.request import urlretrieve
 
 logger = logging.getLogger(__name__)
@@ -117,12 +119,19 @@ class FrontMatterStripper(PreProcessor):
 class IncludeResolver(PreProcessor):
     """Resolve ``!include path/to/other.md`` directives recursively."""
 
-    def __init__(self, main_file: str = "") -> None:
+    def __init__(
+        self,
+        main_file: str = "",
+        progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
+    ) -> None:
         self.main_file = main_file
+        self.progress_callback = progress_callback
 
     def process(self, raw_md: str) -> str:
         if not self.main_file:
             return raw_md
+        if self.progress_callback:
+            self.progress_callback("preprocess_resolve_includes", {})
         return self._resolve_includes(raw_md, os.path.abspath(self.main_file), set())
 
     def _resolve_includes(self, text: str, current_file_path: str, visited: set[str]) -> str:
@@ -427,11 +436,17 @@ class EmojiPreProcessor(PreProcessor):
               Defaults to ``14`` which is approximately one line-height at 10 pt.
     """
 
-    def __init__(self, cache_dir: str = "", size: int = 14) -> None:
+    def __init__(
+        self,
+        cache_dir: str = "",
+        size: int = 14,
+        progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
+    ) -> None:
         self.emoji_cache_dir = (
             Path(cache_dir) / "emoji" if cache_dir else Path.home() / ".cache/pymd2pdf/emoji"
         )
         self.size = size
+        self.progress_callback = progress_callback
 
     def process(self, raw_md: str) -> str:
         """Scan *raw_md* for emoji and replace them with ``<img>`` references."""
@@ -439,6 +454,56 @@ class EmojiPreProcessor(PreProcessor):
         i = 0
         text = raw_md
         n = len(text)
+
+        # Pre-scan to identify unique emojis that need downloading
+        if self.progress_callback:
+            slugs_to_download = []
+            seen_slugs = set()
+            while i < n:
+                ch = text[i]
+                if text[i : i + 3] == "```":
+                    end = text.find("```", i + 3)
+                    if end == -1:
+                        break
+                    i = end + 3
+                    continue
+                if ch == "`":
+                    end = text.find("`", i + 1)
+                    if end == -1:
+                        break
+                    i = end + 1
+                    continue
+                if not _is_emoji_char(ch):
+                    i += 1
+                    continue
+                seq_chars = [ch]
+                j = i + 1
+                while j < n:
+                    next_cp = ord(text[j])
+                    if next_cp in (_ZWJ, _VARIATION_SELECTOR_16) or _is_emoji_char(text[j]):
+                        seq_chars.append(text[j])
+                        j += 1
+                    else:
+                        break
+                slug = _codepoints_to_slug("".join(seq_chars))
+                if slug not in seen_slugs:
+                    seen_slugs.add(slug)
+                    dest = self.emoji_cache_dir / f"{slug}.png"
+                    if not dest.exists():
+                        slugs_to_download.append(slug)
+                i = j
+
+            # Reset scanning pointer
+            i = 0
+
+            if slugs_to_download:
+                self.progress_callback("emoji_download_start", {"total": len(slugs_to_download)})
+                for idx, slug in enumerate(slugs_to_download, 1):
+                    self.progress_callback(
+                        "emoji_download_item",
+                        {"slug": slug, "index": idx, "total": len(slugs_to_download)},
+                    )
+                    _fetch_emoji_png(slug, self.emoji_cache_dir)
 
         while i < n:
             ch = text[i]
@@ -516,16 +581,35 @@ class PreProcessorRegistry:
         input_file: str = "",
         emoji: bool = True,
         cache_dir: str = "",
+        progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
     ) -> None:
         # Each entry is a (priority, PreProcessor) tuple.
         self._processors: list[tuple[int, PreProcessor]] = []
+        self._progress_callback = None
+        self.progress_callback = progress_callback
         if register_builtins:
             self.register(FrontMatterStripper(input_file), priority=10)
-            self.register(IncludeResolver(input_file), priority=20)
+            self.register(
+                IncludeResolver(input_file, progress_callback=progress_callback), priority=20
+            )
             self.register(PageBreakPreProcessor(), priority=25)
             self.register(AdmonitionPreProcessor(), priority=30)
             if emoji:
-                self.register(EmojiPreProcessor(cache_dir=cache_dir), priority=35)
+                self.register(
+                    EmojiPreProcessor(cache_dir=cache_dir, progress_callback=progress_callback),
+                    priority=35,
+                )
+
+    @property
+    def progress_callback(self) -> Callable[[str, dict[str, Any]], None] | None:
+        return getattr(self, "_progress_callback", None)
+
+    @progress_callback.setter
+    def progress_callback(self, val: Callable[[str, dict[str, Any]], None] | None) -> None:
+        self._progress_callback = val
+        for _, pp in self._processors:
+            if hasattr(pp, "progress_callback"):
+                pp.progress_callback = val
 
     def register(self, pp: PreProcessor, *, priority: int = 50) -> None:
         """Register *pp* at the given *priority*.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import sys
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -31,6 +32,39 @@ def _report_issues(issues: list) -> None:
         icon = "✗" if issue.severity == "error" else "⚠"
         line_str = f"Line {issue.line}" if issue.line is not None else "Line ?"
         typer.echo(f"{icon} {line_str}: [{issue.code}] {issue.message}")
+
+
+def cli_progress_callback(event: str, data: dict[str, Any]) -> None:
+    """Callback to print compilation progress stage-by-stage."""
+    if event == "preprocess_start":
+        typer.echo("[1/4] Pre-processing document...", err=True)
+    elif event == "preprocess_resolve_includes":
+        typer.echo("  - Resolving includes...", err=True)
+    elif event == "emoji_download_start":
+        typer.echo(f"  - Downloading {data['total']} emoji assets...", err=True)
+    elif event == "emoji_download_item":
+        typer.echo(
+            f"  - Downloading emoji: {data['slug']} ({data['index']}/{data['total']})\r",
+            nl=False,
+            err=True,
+        )
+        if data["index"] == data["total"]:
+            typer.echo("  - Downloaded all emoji assets.                          ", err=True)
+    elif event == "parse_start":
+        typer.echo("[2/4] Parsing Markdown...", err=True)
+    elif event == "map_start":
+        typer.echo("[3/4] Mapping tokens to flowables...", err=True)
+    elif event == "render_diagram":
+        typer.echo(
+            f"  - Rendering {data['type']} diagram ({data['index']}/{data['total']})...", err=True
+        )
+    elif event == "render_pass_start":
+        pass_num = data["pass_num"]
+        total_passes = data["total_passes"]
+        desc = data["description"]
+        typer.echo(
+            f"[4/4] Generating PDF layout (Pass {pass_num}/{total_passes}: {desc})...", err=True
+        )
 
 
 @app.command()
@@ -77,6 +111,11 @@ def convert(
         True,
         "--emoji/--no-emoji",
         help="Replace emoji codepoints with Twemoji PNG images (default: enabled)",
+    ),
+    progress: bool = typer.Option(  # noqa: B008
+        True,
+        "--progress/--no-progress",
+        help="Show compilation progress stages on stderr (default: enabled)",
     ),
 ) -> None:
     """Convert a Markdown file to a print-ready PDF."""
@@ -167,7 +206,9 @@ def convert(
             cfg.min_image_scale = min_image_scale
 
     registry = HandlerRegistry()
-    pipeline = Pipeline(cfg, registry)
+    pipeline = Pipeline(
+        cfg, registry, progress_callback=cli_progress_callback if progress else None
+    )
 
     raw_md = input.read_text(encoding="utf-8")
 

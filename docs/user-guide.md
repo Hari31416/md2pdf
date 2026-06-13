@@ -31,6 +31,9 @@ This guide provides a comprehensive reference to all features, configuration set
   - [Explicit Page Breaks](#explicit-page-breaks)
     - [HTML Comment Syntax](#html-comment-syntax)
     - [Backslash Syntax](#backslash-syntax)
+  - [Progress Reporting](#progress-reporting)
+    - [Stages reported:](#stages-reported)
+    - [Disabling Progress Reporting:](#disabling-progress-reporting)
   - [Tables \& Layout Safeguards](#tables--layout-safeguards)
     - [Repeating Headers \& Row Protection](#repeating-headers--row-protection)
     - [Heading-to-Table Bonding (`KeepTogetherParts`)](#heading-to-table-bonding-keeptogetherparts)
@@ -80,6 +83,7 @@ The CLI is built with `typer` and supports the following options:
 | `--header`               |              | Header text/template. Supports `{title}` and `{section}` placeholders.      |
 | `--header-on-first-page` |              | Render the running header on the first page.                                |
 | `--emoji` / `--no-emoji` |              | Enable or disable colour Twemoji image substitution.                        |
+| `--progress` / `--no-progress` |        | Show or hide stage-level compilation progress on stderr (default: enabled). |
 
 ---
 
@@ -305,6 +309,34 @@ You can manually control document pagination using either of the following direc
 ```
 
 **Constraints**: Both directives must reside on their own line. Leading/trailing whitespace is allowed, and they are case-insensitive. When parsed, they compile directly to a ReportLab `PageBreak` flowable, pushing subsequent elements to the top of a new page.
+
+---
+
+## Progress Reporting
+
+For large documents or compilation pipelines containing external resources (e.g., Mermaid diagrams, LaTeX blocks, colour emojis), compilation can take some time. By default, `md2pdf` outputs compilation progress stage-by-stage to `sys.stderr`.
+
+### Stages reported:
+1. **Pre-processing document**: Includes YAML front-matter stripping, recursive include resolution, and pre-scanning/downloading colour emojis.
+2. **Parsing Markdown**: Internal mistletoe parsing of the document content.
+3. **Mapping tokens to flowables**: Running element handlers, including rendering Mermaid diagrams and LaTeX math blocks via Kroki.
+4. **Generating PDF layout**: Dynamic two-pass pagination and layout construction.
+
+### Disabling Progress Reporting:
+To suppress progress messages, use the `--no-progress` CLI flag:
+```bash
+md2pdf input.md --no-progress
+```
+
+Programmatic users can pass a `progress_callback` function to the `Pipeline` constructor or the high-level `convert()` function:
+```python
+from md2pdf import convert
+
+def my_callback(event: str, data: dict):
+    print(f"Compilation event: {event} -> {data}")
+
+convert("input.md", "output.pdf", progress_callback=my_callback)
+```
 
 ---
 
