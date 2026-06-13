@@ -3,11 +3,15 @@
 # All fields are optional — defaults are shown below.
 
 [md2pdf]
-output_file = "output.pdf"
-theme       = "default"
-offline     = false          # true = skip Kroki API calls, render placeholders instead
-cache_dir   = ".md2pdf_cache"
-# min_image_scale = 0.8       # minimum image scale factor before deferring to a new page (e.g. 0.8)
+output_file          = "output.pdf"
+theme                = "default"
+offline              = false                 # true = skip Kroki API calls, render placeholders instead
+cache_dir            = ".md2pdf_cache"
+# min_image_scale    = 0.8                   # minimum image scale factor before deferring to a new page
+toc                  = false                 # true = generate a Table of Contents page
+header               = "{title} | {section}" # Running header template (supports {title} and {section} placeholders)
+header_on_first_page = false                 # true = render running header on the first page
+emoji                = true                  # true = translate emoji codepoints into Twemoji images
 
 
 
@@ -57,7 +61,11 @@ color_table_row_odd     = "#ffffff"
 color_table_row_even    = "#f5f5f5"
 
 # Blockquote left bar
-color_blockquote_bar = "#cccccc"
+color_blockquote_bar  = "#cccccc"
+
+# Code Blocks
+color_code_bg         = "#f5f5f5"
+syntax_style          = "default"             # Pygments style name (e.g., 'default', 'monokai', 'friendly')
 
 # ---------------------------------------------------------------------------
 # Plugins (Phase 5)

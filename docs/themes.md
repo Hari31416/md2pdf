@@ -35,6 +35,10 @@ color_table_row_even  = "#f5f5f5"
 
 # --- Blockquote Accent Bar ---
 color_blockquote_bar  = "#cccccc"
+
+# --- Code Highlighting ---
+color_code_bg         = "#f5f5f5"
+syntax_style          = "default"
 ```
 
 ---
@@ -59,6 +63,11 @@ The default base stylesheet built from `ThemeConfig` contains the following keys
 | `color_hr`             | `HexColor`       | Color for `<hr>` thematic breaks.                          |
 | `color_link`           | `str`            | Color for hyperlinks (used in XML markup tag rendering).   |
 | `color_blockquote_bar` | `HexColor`       | Left vertical rule color for blockquotes.                  |
+| `code_block`           | `ParagraphStyle` | Multi-line syntax-highlighted code block style.            |
+| `footnote`             | `ParagraphStyle` | Text style for footnote definitions.                       |
+| `color_code_bg`        | `HexColor`       | Background color for code blocks.                          |
+| `syntax_style`         | `str`            | Name of Pygments syntax highlighting theme.                |
+| `spacing_base`         | `int`            | Base spacing metric in points.                             |
 
 All paragraph styles include:
 - `allowWidows = 0`

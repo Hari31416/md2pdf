@@ -2,6 +2,8 @@
 
 `md2pdf` converts structured Markdown documents into beautiful, print-ready PDFs. Unlike other conversion tools, it does not rely on heavy system dependencies like Pandoc, Node.js, or headless Chrome/Chromium browsers. It is written in pure Python and powered by ReportLab and mistletoe.
 
+For detailed guides on settings, styling, and features, see the [Comprehensive Documentation Suite](docs/index.md).
+
 ---
 
 ## Architecture Overview
@@ -56,9 +58,12 @@ graph TD
 
 ```txt
 md2pdf/
-├── docs/                   # Developer documentation
+├── docs/                   # Comprehensive documentation suite
+│   ├── index.md            # Documentation index/landing page
+│   ├── user-guide.md       # Comprehensive User Guide & Features reference
+│   ├── themes.md           # Themes and stylesheet reference
 │   ├── plugin-authoring.md # Instructions for writing plugins
-│   └── themes.md           # Themes and stylesheet reference
+│   └── showcase.md         # Visual feature showcase and rendering test
 ├── md2pdf/                 # Core source directory
 │   ├── assets/             # Kroki client, caching, and fallback elements
 │   ├── core/               # Engine pipeline, parser, validator, layout, registry
@@ -159,12 +164,17 @@ md2pdf input.md -o output.pdf --offline
 
 | Flag | Shortcut | Description |
 | :--- | :--- | :--- |
-| `--output` | `-o` | Path to save the output PDF file (default: `output.pdf`). |
+| `--output` | `-o` | Path to save the output PDF file (default: `<input_filename>.pdf`). |
 | `--config` | `-c` | Path to a custom `md2pdf.toml` config file. |
 | `--theme` | `-t` | Name of the theme to apply (default: `default`). |
 | `--offline` | | Skip external API requests (e.g. Kroki diagram rendering) and use local placeholders. |
 | `--validate-only`| | Execute pre-render validation checks and exit without building a PDF. |
 | `--verbose` | `-v` | Output debug-level logging to `stderr`. |
+| `--min-image-scale`| | Minimum image scale factor before moving image to a new page (default: `0.8`). |
+| `--toc` | | Prepend a dynamically generated Table of Contents page. |
+| `--header` | | Running header template (supports `{title}` and `{section}`). |
+| `--header-on-first-page`| | Render the running header on the first page. |
+| `--emoji` / `--no-emoji`| | Enable or disable Twemoji colour emoji substitution (default: enabled). |
 
 ### Programmatic Python Usage
 

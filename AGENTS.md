@@ -1,0 +1,1 @@
+- When adding new feature or making significant changes, update `CHANGELOG.md`, `docs/user-guide.md` and `docs/index.md` accordingly. 
