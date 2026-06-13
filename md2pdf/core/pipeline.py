@@ -45,8 +45,10 @@ class Pipeline:
             "subject": "",
             "keywords": "",
         }
+        self.footnotes: dict[str, tuple[str, str]] = {}
         if self.config.input_file:
             import os
+
             base_name = os.path.basename(self.config.input_file)
             title_default, _ = os.path.splitext(base_name)
             self.metadata["title"] = title_default
@@ -59,6 +61,7 @@ class Pipeline:
         # Stage 4 — post-processor registry.
         self._post_registry = PostProcessorRegistry()
         from md2pdf.core.postprocessors import MetadataPostProcessor, TableOfContentsPostProcessor
+
         self._post_registry.register(MetadataPostProcessor())
         self._post_registry.register(TableOfContentsPostProcessor())
 
@@ -128,24 +131,27 @@ class Pipeline:
         for e in errors:
             logger.error("[%s] Line %s: %s", e.code, e.line, e.message)
 
-        from md2pdf.core.flowables import BookmarkFlowable
-        BookmarkFlowable.page_registry.clear()
+        from md2pdf.core.flowables import BookmarkFlowable, FootnoteFlowable
 
-        if self.config.toc:
-            # Pass 1: Build document with dummy page numbers to collect pages
-            md = self._pre_process(raw_md)
-            tokens = self._parse(md)
+        BookmarkFlowable.page_registry.clear()
+        FootnoteFlowable.page_registry.clear()
+        FootnoteFlowable.page_footnotes.clear()
+
+        md = self._pre_process(raw_md)
+        tokens = self._parse(md)
+        has_footnotes = any(t.get("type") == "FootnoteDefinition" for t in tokens)
+
+        if self.config.toc or has_footnotes:
+            # Pass 1: Build document with dummy/empty positions to collect page/footnote mapping
             flowables = self._map(tokens)
             self._render_pass(flowables, is_final=False)
 
-            # Pass 2: Re-build document with populated page numbers using fresh flowables
+            # Pass 2: Re-build document with populated page numbers and footnotes
             md = self._pre_process(raw_md)
             tokens = self._parse(md)
             flowables = self._map(tokens)
             self._render_pass(flowables, is_final=True)
         else:
-            md = self._pre_process(raw_md)
-            tokens = self._parse(md)
             flowables = self._map(tokens)
             self._render_pass(flowables, is_final=True)
 
@@ -159,6 +165,7 @@ class Pipeline:
         """Stage 1 — run registered pre-processors in priority order."""
         result = self._pre_registry.run_all(raw_md)
         from md2pdf.core.preprocessors import FrontMatterStripper
+
         for _, pp in self._pre_registry._processors:
             if isinstance(pp, FrontMatterStripper):
                 self.metadata.update(pp.metadata)
@@ -170,12 +177,41 @@ class Pipeline:
 
     def _map(self, tokens: list[dict]) -> list:
         """Stage 3 — dispatch each token to its handler and collect flowables."""
+        # Collect footnote definitions first
+        self.footnotes.clear()
+        for token in tokens:
+            if token.get("type") == "FootnoteDefinition":
+                label = token.get("attrs", {}).get("label", "")
+                text = token.get("raw", "")
+                self.footnotes[f"^{label}"] = (text, "")
+
         flowables = []
         for token in tokens:
             token_type = token.get("type", "")
+            if token_type == "FootnoteDefinition":
+                continue
+
             handler = self.registry.get(token_type)
             if handler:
-                flowables.extend(handler.render(token, self._styles))
+                block_flowables = handler.render(token, self._styles)
+                flowables.extend(block_flowables)
+
+                # Recursively find all footnote references in this block token
+                refs = _find_footnote_references(token)
+                seen = set()
+                unique_refs = []
+                for r in refs:
+                    if r not in seen:
+                        seen.add(r)
+                        unique_refs.append(r)
+
+                for ref in unique_refs:
+                    fn_key = f"^{ref}"
+                    if fn_key in self.footnotes:
+                        text = self.footnotes[fn_key][0]
+                        from md2pdf.core.flowables import FootnoteFlowable
+
+                        flowables.append(FootnoteFlowable(ref, text, self._styles))
             else:
                 logger.warning("No handler registered for token type '%s'", token_type)
                 # Fallback: render the unimplemented component as a code block
@@ -211,9 +247,32 @@ class Pipeline:
         doc._md2pdf_config = self.config
         doc._md2pdf_styles = self._styles
         doc._md2pdf_metadata = self.metadata
-        
+
+        doc._md2pdf_is_final = is_final
         if is_final:
             doc._md2pdf_toc_page_numbers = BookmarkFlowable.page_registry.copy()
+
+            # Populate page_footnotes for FootnoteFlowable
+            from md2pdf.core.flowables import FootnoteFlowable
+
+            FootnoteFlowable.page_footnotes.clear()
+
+            def extract_fns(flowables_list):
+                from reportlab.platypus import KeepTogether
+
+                result = []
+                for f in flowables_list:
+                    if isinstance(f, FootnoteFlowable):
+                        result.append(f)
+                    elif isinstance(f, KeepTogether):
+                        result.extend(extract_fns(f._content))
+                return result
+
+            all_fns = extract_fns(safe_flowables)
+            for f in all_fns:
+                page_num = FootnoteFlowable.page_registry.get(f.label)
+                if page_num is not None:
+                    FootnoteFlowable.page_footnotes.setdefault(page_num, []).append(f)
         else:
             doc._md2pdf_toc_page_numbers = None
 
@@ -294,3 +353,14 @@ def draw_page_number(canvas, doc) -> None:
     page_text = f"Page {canvas.getPageNumber()}"
     canvas.drawRightString(doc.pagesize[0] - 20 * mm, 15, page_text)
     canvas.restoreState()
+
+
+def _find_footnote_references(token: dict) -> list[str]:
+    refs = []
+    if token.get("type") == "FootnoteReference":
+        raw = token.get("raw", "")
+        if raw:
+            refs.append(raw)
+    for child in token.get("children", []):
+        refs.extend(_find_footnote_references(child))
+    return refs

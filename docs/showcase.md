@@ -74,6 +74,11 @@ This section tests inline layout and inline style parsing:
 - **Nested Styles**: You can combine styles like ***bold-italic nested runs***.
 - `Code Inline`: Use backticks for monospace symbols like `Pipeline`, `ThemeConfig`, or `build_default_stylesheet()`.
 - Hyperlinks: Clickable links like the [md2pdf GitHub page](https://github.com/hari31416/md2pdf) are automatically colored.
+- **Footnotes**: Clickable footnote references[^1] linked to their definitions[^2] at the bottom of the page.
+
+[^1]: This is the first footnote definition, explaining reference 1.
+[^2]: This is the second footnote definition, containing inline formatting like **bold text**.
+
 
 ---
 

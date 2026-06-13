@@ -180,6 +180,16 @@ def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
             ("LEFTPADDING", (0, 0), (-1, -1), 6),
             ("RIGHTPADDING", (0, 0), (-1, -1), 6),
         ],
+        "footnote": ParagraphStyle(
+            "footnote",
+            parent=base["Normal"],
+            fontName=theme.font_body,
+            fontSize=theme.font_size_small - 1,
+            leading=10,
+            textColor=theme.hex("color_body_text"),
+            allowWidows=0,
+            allowOrphans=0,
+        ),
         # ---------------------------------------------------------------- #
         # Scalar values consumed by non-Paragraph handlers
         # ---------------------------------------------------------------- #

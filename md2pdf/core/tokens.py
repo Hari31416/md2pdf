@@ -20,12 +20,15 @@ MERMAID = "Mermaid"  # code fence with lang="mermaid"
 LATEX_BLOCK = "LatexBlock"  # code fence with lang="latex" or lang="math"
 THEMATIC_BREAK = "ThematicBreak"
 RAW_HTML = "RawHTML"
+FOOTNOTE_DEFINITION = "FootnoteDefinition"
 
 # ---------------------------------------------------------------------------
 # Inline token types  (used inside token["children"])
 # ---------------------------------------------------------------------------
 IMAGE = "Image"
 LINK = "Link"
+FOOTNOTE_REFERENCE = "FootnoteReference"
+
 
 # ---------------------------------------------------------------------------
 # All recognised block-level types — used by tests / validators
@@ -42,4 +45,5 @@ ALL_BLOCK_TYPES: tuple[str, ...] = (
     LATEX_BLOCK,
     THEMATIC_BREAK,
     RAW_HTML,
+    FOOTNOTE_DEFINITION,
 )

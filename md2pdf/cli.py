@@ -37,7 +37,10 @@ def _report_issues(issues: list) -> None:
 def convert(
     input: Path = typer.Argument(..., help="Path to input .md file"),  # noqa: B008
     output: Path = typer.Option(  # noqa: B008
-        None, "-o", "--output", help="Output PDF path. If not specified, defaults to the input filename with a .pdf extension."
+        None,
+        "-o",
+        "--output",
+        help="Output PDF path. If not specified, defaults to the input filename with a .pdf extension.",
     ),
     config_file: Path = typer.Option(  # noqa: B008
         None, "-c", "--config", help="Path to md2pdf.toml"
@@ -103,6 +106,7 @@ def convert(
         else:
             # Check if TOML file explicitly configured output_file
             import tomllib
+
             toml_has_output = False
             try:
                 with open(active_config_file, "rb") as fh:

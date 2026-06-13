@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import PageBreak, Paragraph, Spacer, Table
 
@@ -124,7 +123,7 @@ More text.
 """
     pdf_path = tmp_path / "test_toc.pdf"
     cfg = Config(input_file="", output_file=str(pdf_path), offline=True, toc=True)
-    
+
     pipeline = Pipeline(cfg, default_registry)
     pipeline.run(md_content)
 
@@ -135,6 +134,7 @@ More text.
 def test_toc_finds_nested_bookmarks(default_registry) -> None:
     """Verify that TableOfContentsPostProcessor finds bookmarks nested inside KeepTogether or BlockQuoteBar."""
     from reportlab.platypus import KeepTogether
+
     from md2pdf.core.flowables import BlockQuoteBar
 
     cfg = Config(input_file="", output_file="", offline=True, toc=True)
@@ -143,7 +143,7 @@ def test_toc_finds_nested_bookmarks(default_registry) -> None:
     doc._md2pdf_styles = {}
 
     style = ParagraphStyle("test_style", fontName="Helvetica", fontSize=10)
-    
+
     # 1. Bookmark inside KeepTogether
     kt_bookmark = BookmarkFlowable("kt-title", "Keep Together Title", level=0)
     kt = KeepTogether([kt_bookmark, Paragraph("KT text", style)])
@@ -159,7 +159,7 @@ def test_toc_finds_nested_bookmarks(default_registry) -> None:
 
     # Prepend should have succeeded and found both bookmarks
     assert len(result) == len(flowables) + 5
-    
+
     # TOC title
     assert isinstance(result[1], Paragraph)
     assert result[1].text == "Table of Contents"

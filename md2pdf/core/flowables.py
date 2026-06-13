@@ -176,3 +176,144 @@ class ResizableImage(Image):
                 ResizableImage.max_avail_height,
             )
             return self.orig_width, self.orig_height
+
+
+class FootnoteFlowable(Flowable):
+    """A custom Flowable that renders a footnote at the bottom of the page frame.
+
+    During Pass 1, it records the page number it naturally lands on.
+    During Pass 2 (final pass), it draws the separator line (if it is the first
+    footnote on the page) and draws the footnote text styled as a Paragraph at the
+    absolute bottom of the page frame.
+    """
+
+    page_registry: dict[str, int] = {}
+    page_footnotes: dict[int, list[FootnoteFlowable]] = {}
+
+    def __init__(self, label: str, text: str, styles: dict) -> None:
+        super().__init__()
+        self.label = label
+        self.text = text
+        self.styles = styles
+
+        # Normalize and parse any inline markdown formatting inside the footnote text
+        from mistletoe.span_token import tokenize_inner
+        from reportlab.platypus import Paragraph
+
+        from md2pdf.core.parser import MarkdownParser
+        from md2pdf.handlers.inline import inline_render
+
+        parser = MarkdownParser()
+        inline_tokens = [parser._normalize(t) for t in tokenize_inner(text)]
+        rendered_text = inline_render(inline_tokens, styles)
+
+        # Style and format the footnote text
+        footnote_style = styles.get("footnote")
+        self.para_text = f'<sup><a name="fn-{label}"/>{label}</sup> {rendered_text}'
+        self.paragraph = Paragraph(self.para_text, footnote_style)
+        self.width = 0.0
+        self.height = 0.0
+
+    def get_height(self, availWidth: float, availHeight: float) -> float:
+        """Eagerly compute and cache the height of the footnote.
+
+        This is necessary because later footnotes on a page may not have been wrapped
+        yet when the first footnote is being drawn, meaning their height is otherwise
+        recorded as 0.0, leading to overlapping layout.
+        """
+        if self.height > 0.0:
+            return self.height
+
+        w, h = self.paragraph.wrap(availWidth, availHeight)
+        self.width = w
+
+        page_num = FootnoteFlowable.page_registry.get(self.label)
+        is_first = False
+        if page_num is not None:
+            fns = FootnoteFlowable.page_footnotes.get(page_num, [])
+            if fns and fns[0] is self:
+                is_first = True
+
+        if is_first:
+            self.height = h + 14.0  # 10pt for separator rule space, 4pt padding
+        else:
+            self.height = h + 4.0  # 4pt padding
+
+        return self.height
+
+    def wrap(self, availWidth: float, availHeight: float) -> tuple[float, float]:
+        h = self.get_height(availWidth, availHeight)
+        return self.width, h
+
+    def draw(self) -> None:
+        page_num = self.canv.getPageNumber()
+        # Record the page number where this footnote flowable is drawn
+        FootnoteFlowable.page_registry[self.label] = page_num
+
+        is_final = getattr(self.canv._doctemplate, "_md2pdf_is_final", False)
+        if not is_final:
+            self.paragraph.drawOn(self.canv, 0, 0)
+            return
+
+        # Find all footnotes on this page to align properly
+        fns = FootnoteFlowable.page_footnotes.get(page_num, [])
+        if not fns:
+            return
+
+        doc = getattr(self.canv, "_doctemplate", None)
+        if doc is None:
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib.units import mm
+
+            # Fallback to standard A4 dimensions with 20mm horizontal margins and 22mm vertical margins
+            left_margin = 20 * mm
+            bottom_margin = 22 * mm
+            width = A4[0] - left_margin * 2
+            height = A4[1] - bottom_margin * 2
+        else:
+            width, height = doc.width, doc.height
+            left_margin = doc.leftMargin
+            bottom_margin = doc.bottomMargin
+
+        # Total height of all footnotes on this page
+        total_H = sum(f.get_height(width, height) for f in fns)
+
+        # Calculate the absolute position of this flowable's origin
+        x_abs, y_abs = self.canv.absolutePosition(0, 0)
+
+        # Find our index among the footnotes on this page
+        try:
+            idx = fns.index(self)
+        except ValueError:
+            return
+
+        # Calculate the starting y_abs for this footnote.
+        # Footnotes are stacked downwards starting from (bottom_margin + total_H).
+        y_start_abs = bottom_margin + total_H
+        for i in range(idx):
+            y_start_abs -= fns[i].get_height(width, height)
+
+        # If this is the first footnote, draw the separator line!
+        if idx == 0:
+            line_y_abs = y_start_abs - 6.0
+            line_x_start = left_margin
+            line_x_end = left_margin + 72.0  # 1 inch line
+
+            # Translate to local coordinates
+            local_line_y = line_y_abs - y_abs
+            local_line_x_start = line_x_start - x_abs
+            local_line_x_end = line_x_end - x_abs
+
+            self.canv.saveState()
+            self.canv.setStrokeColor(self.styles.get("color_hr") or colors.HexColor("#cccccc"))
+            self.canv.setLineWidth(0.5)
+            self.canv.line(local_line_x_start, local_line_y, local_line_x_end, local_line_y)
+            self.canv.restoreState()
+
+        para_y_abs = y_start_abs - self.get_height(width, height) + 4.0
+
+        # Draw the paragraph at its absolute position
+        para_x_local = left_margin - x_abs
+        para_y_local = para_y_abs - y_abs
+
+        self.paragraph.drawOn(self.canv, para_x_local, para_y_local)

@@ -94,7 +94,9 @@ class TableOfContentsPostProcessor(PostProcessor):
             body_style = body_style or base_styles["Normal"]
 
         toc_flowables = []
-        toc_flowables.append(BookmarkFlowable("table-of-contents", title="Table of Contents", level=0))
+        toc_flowables.append(
+            BookmarkFlowable("table-of-contents", title="Table of Contents", level=0)
+        )
         toc_flowables.append(Paragraph("Table of Contents", h1_style))
         toc_flowables.append(Spacer(1, 15))
 
@@ -155,19 +157,19 @@ class TableOfContentsPostProcessor(PostProcessor):
 
         doc_width = getattr(doc, "width", 450)
         toc_table = Table(table_data, colWidths=[doc_width - 40, 40])
-        
+
         table_commands = [
-            ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 0),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ("TOPPADDING", (0, 0), (-1, -1), 2),
         ]
-        
+
         for i, b in enumerate(bookmarks):
             level = max(0, min(b.level, 5))
             indent = 20 * level
-            table_commands.append(('LEFTPADDING', (0, i), (0, i), indent))
+            table_commands.append(("LEFTPADDING", (0, i), (0, i), indent))
 
         toc_table.setStyle(TableStyle(table_commands))
 

@@ -92,8 +92,8 @@ class FrontMatterStripper(PreProcessor):
                 key = key.strip().lower()
                 val = val.strip()
                 if len(val) >= 2 and (
-                    (val.startswith('"') and val.endswith('"')) or
-                    (val.startswith("'") and val.endswith("'"))
+                    (val.startswith('"') and val.endswith('"'))
+                    or (val.startswith("'") and val.endswith("'"))
                 ):
                     val = val[1:-1]
                 if key in ("title", "author", "subject", "keywords"):

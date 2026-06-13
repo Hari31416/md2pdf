@@ -19,6 +19,7 @@ class DocumentValidator:
         "Mermaid",
         "LatexBlock",
         "ThematicBreak",
+        "FootnoteDefinition",
     }
 
     def validate(self, tokens: list[dict]) -> list[ValidationIssue]:

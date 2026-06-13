@@ -90,9 +90,7 @@ def register_fonts() -> None:
     for logical_name, filename in _FONT_FILES.items():
         ttf_path = fonts_dir / filename
         if not ttf_path.is_file():
-            logger.warning(
-                "Bundled font '%s' not found at %s — skipping.", logical_name, ttf_path
-            )
+            logger.warning("Bundled font '%s' not found at %s — skipping.", logical_name, ttf_path)
             continue
         try:
             pdfmetrics.registerFont(TTFont(logical_name, str(ttf_path)))
@@ -113,7 +111,7 @@ def register_fonts() -> None:
                 FONT_SANS,
                 normal=FONT_SANS,
                 bold=FONT_SANS_BOLD,
-                italic=FONT_SANS,          # DejaVu has no separate italic variant
+                italic=FONT_SANS,  # DejaVu has no separate italic variant
                 boldItalic=FONT_SANS_BOLD,
             )
             registerFontFamily(
@@ -128,7 +126,9 @@ def register_fonts() -> None:
             logger.warning("Could not register font families.", exc_info=True)
 
     _registered = True
-    logger.debug("Font registration complete (%d/%d fonts loaded).", registered_count, len(_FONT_FILES))
+    logger.debug(
+        "Font registration complete (%d/%d fonts loaded).", registered_count, len(_FONT_FILES)
+    )
 
 
 def register_theme_fonts(theme: object) -> None:
@@ -193,4 +193,3 @@ def register_theme_fonts(theme: object) -> None:
                 ttf_path,
                 exc_info=True,
             )
-

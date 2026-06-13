@@ -21,13 +21,70 @@ Specialisation rules
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from mistletoe import Document
 from mistletoe.base_renderer import BaseRenderer
+from mistletoe.block_token import BlockToken
 from mistletoe.latex_token import Math
+from mistletoe.span_token import SpanToken
 
 logger = logging.getLogger(__name__)
+
+
+class FootnoteReference(SpanToken):
+    pattern = re.compile(r"\[\^([^\]\s]+)\]")
+    parse_inner = False
+    parse_group = 1
+
+
+class FootnoteDefinition(BlockToken):
+    pattern = re.compile(r"^ {0,3}\[\^([^\]]+)\]:\s*(.*)$")
+
+    def __init__(self, match):
+        self.label, self.text = match
+        self.content = self.text
+
+    @classmethod
+    def start(cls, line):
+        cls.match_obj = cls.pattern.match(line)
+        return cls.match_obj is not None
+
+    @classmethod
+    def read(cls, lines):
+        next(lines)
+        content = [cls.match_obj.group(2).strip()]
+        next_line = lines.peek()
+        while (
+            next_line is not None
+            and next_line.strip() != ""
+            and not next_line.lstrip().startswith("[")
+        ):
+            content.append(next(lines).strip())
+            next_line = lines.peek()
+        return cls.match_obj.group(1), " ".join(content)
+
+
+class _MathRegistrationRenderer(BaseRenderer):
+    """Dummy renderer used solely as a context manager to register the Math span token.
+
+    Because mistletoe registers span tokens dynamically when entering the renderer
+    context, using this context manager enables mistletoe to parse '$math$' and '$$math$$'.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(Math, FootnoteReference, FootnoteDefinition, *args, **kwargs)
+
+    def render_math(self, token: Any) -> str:
+        return ""
+
+    def render_footnote_reference(self, token: Any) -> str:
+        return ""
+
+    def render_footnote_definition(self, token: Any) -> str:
+        return ""
+
 
 # Languages that specialise a CodeFence into a Mermaid token
 _MERMAID_LANGS: frozenset[str] = frozenset({"mermaid"})
@@ -39,20 +96,6 @@ _LATEX_LANGS: frozenset[str] = frozenset({"latex", "math"})
 _CLASS_NAME_REMAP: dict[str, str] = {
     "Quote": "BlockQuote",
 }
-
-
-class _MathRegistrationRenderer(BaseRenderer):
-    """Dummy renderer used solely as a context manager to register the Math span token.
-
-    Because mistletoe registers span tokens dynamically when entering the renderer
-    context, using this context manager enables mistletoe to parse '$math$' and '$$math$$'.
-    """
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(Math, *args, **kwargs)
-
-    def render_math(self, token: Any) -> str:
-        return ""
 
 
 # Attributes we extract from mistletoe nodes into the ``attrs`` dict
@@ -92,6 +135,7 @@ class MarkdownParser:
         """
         with _MathRegistrationRenderer():
             doc = Document(raw_md)
+            self.footnotes = getattr(doc, "footnotes", {})
             tokens = self._flatten(doc.children)
         logger.debug("MarkdownParser.parse: produced %d top-level tokens", len(tokens))
         return tokens
@@ -122,6 +166,9 @@ class MarkdownParser:
         attrs = self._extract_attrs(node)
         if token_type == "Image" and "src" in attrs and "target" not in attrs:
             attrs["target"] = attrs["src"]
+
+        if token_type == "FootnoteDefinition":
+            attrs["label"] = getattr(node, "label", "")
 
         token = {
             "type": token_type,

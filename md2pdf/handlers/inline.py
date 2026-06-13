@@ -88,6 +88,9 @@ def inline_render(children: list[dict], styles: dict | None = None) -> str:
             alt = child.get("attrs", {}).get("title", "") or escape_xml(raw)
             parts.append(escape_xml(alt))
 
+        elif t == "FootnoteReference":
+            parts.append(f'<sup><a href="#fn-{raw}" color="{link_color}">{raw}</a></sup>')
+
         elif t == "LineBreak":
             parts.append("<br/>")
 

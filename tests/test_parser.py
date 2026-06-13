@@ -195,7 +195,7 @@ class TestFrontMatterStripper:
 
     def test_strips_quotes_from_metadata(self):
         stripper = FrontMatterStripper()
-        md = '---\ntitle: "Double Quotes"\nauthor: \'Single Quotes\'\n---\n# Content'
+        md = "---\ntitle: \"Double Quotes\"\nauthor: 'Single Quotes'\n---\n# Content"
         stripper.process(md)
         assert stripper.metadata["title"] == "Double Quotes"
         assert stripper.metadata["author"] == "Single Quotes"

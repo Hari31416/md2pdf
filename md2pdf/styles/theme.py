@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, fields
 
-from md2pdf.assets._font_registry import FONT_MONO, FONT_MONO_BOLD, FONT_SANS, FONT_SANS_BOLD
+from md2pdf.assets._font_registry import FONT_MONO, FONT_SANS, FONT_SANS_BOLD
 
 
 @dataclass
