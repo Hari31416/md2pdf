@@ -1,3 +1,10 @@
+---
+title: "md2pdf Feature Showcase & Rendering Test"
+author: "pymd2pdf"
+subject: "Comprehensive typesetting and rendering test suite"
+keywords: "markdown, pdf, reportlab, typesetting, testing"
+---
+
 # md2pdf Feature Showcase & Rendering Test
 
 This document serves as both a user guide and a comprehensive rendering test suite for the `md2pdf` typesetting engine. It includes all supported Markdown and layout elements to verify visual layout quality, vertical spacing, and formatting.

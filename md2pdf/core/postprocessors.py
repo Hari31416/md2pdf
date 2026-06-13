@@ -177,6 +177,30 @@ class TableOfContentsPostProcessor(PostProcessor):
         return toc_flowables + flowables
 
 
+class MetadataPostProcessor(PostProcessor):
+    """Apply PDF document metadata (title, author, subject, keywords) to the document.
+
+    Reads metadata from `doc._md2pdf_metadata` and applies it as properties
+    on the `SimpleDocTemplate` object (`doc.title`, `doc.author`, etc.).
+    """
+
+    def process(self, doc: SimpleDocTemplate, flowables: list) -> list:
+        metadata = getattr(doc, "_md2pdf_metadata", {})
+        if not metadata:
+            return flowables
+
+        if metadata.get("title"):
+            doc.title = metadata["title"]
+        if metadata.get("author"):
+            doc.author = metadata["author"]
+        if metadata.get("subject"):
+            doc.subject = metadata["subject"]
+        if metadata.get("keywords"):
+            doc.keywords = metadata["keywords"]
+
+        return flowables
+
+
 class PageNumberPostProcessor(PostProcessor):
     """Attach page-number footer callbacks to the document.
 

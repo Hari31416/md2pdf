@@ -172,6 +172,34 @@ class TestFrontMatterStripper:
         assert "Content." in result
         assert "a: 1" not in result
 
+    def test_default_metadata(self):
+        stripper = FrontMatterStripper()
+        assert stripper.metadata["author"] == "pymd2pdf"
+        assert stripper.metadata["title"] == ""
+        assert stripper.metadata["subject"] == ""
+        assert stripper.metadata["keywords"] == ""
+
+    def test_default_metadata_with_input_file(self):
+        stripper = FrontMatterStripper(input_file="docs/showcase.md")
+        assert stripper.metadata["title"] == "showcase"
+        assert stripper.metadata["author"] == "pymd2pdf"
+
+    def test_parses_metadata_from_front_matter(self):
+        stripper = FrontMatterStripper()
+        md = "---\ntitle: Custom Title\nauthor: John Doe\nsubject: Test Subj\nkeywords: one, two\n---\n# Content"
+        stripper.process(md)
+        assert stripper.metadata["title"] == "Custom Title"
+        assert stripper.metadata["author"] == "John Doe"
+        assert stripper.metadata["subject"] == "Test Subj"
+        assert stripper.metadata["keywords"] == "one, two"
+
+    def test_strips_quotes_from_metadata(self):
+        stripper = FrontMatterStripper()
+        md = '---\ntitle: "Double Quotes"\nauthor: \'Single Quotes\'\n---\n# Content'
+        stripper.process(md)
+        assert stripper.metadata["title"] == "Double Quotes"
+        assert stripper.metadata["author"] == "Single Quotes"
+
 
 # ---------------------------------------------------------------------------
 # IncludeResolver (placeholder — should be a no-op)

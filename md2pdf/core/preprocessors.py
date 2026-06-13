@@ -68,8 +68,44 @@ class FrontMatterStripper(PreProcessor):
         re.DOTALL,
     )
 
+    def __init__(self, input_file: str = "") -> None:
+        self.input_file = input_file
+        self.metadata: dict[str, str] = {
+            "title": "",
+            "author": "pymd2pdf",
+            "subject": "",
+            "keywords": "",
+        }
+        if self.input_file:
+            base_name = os.path.basename(self.input_file)
+            title_default, _ = os.path.splitext(base_name)
+            self.metadata["title"] = title_default
+
+    def _parse_metadata(self, block: str) -> None:
+        lines = block.splitlines()
+        for line in lines:
+            line_str = line.strip()
+            if line_str == "---" or not line_str:
+                continue
+            if ":" in line_str:
+                key, val = line_str.split(":", 1)
+                key = key.strip().lower()
+                val = val.strip()
+                if len(val) >= 2 and (
+                    (val.startswith('"') and val.endswith('"')) or
+                    (val.startswith("'") and val.endswith("'"))
+                ):
+                    val = val[1:-1]
+                if key in ("title", "author", "subject", "keywords"):
+                    self.metadata[key] = val
+
     def process(self, raw_md: str) -> str:
-        return self._PATTERN.sub("", raw_md, count=1)
+        match = self._PATTERN.match(raw_md)
+        if match:
+            block = match.group(0)
+            self._parse_metadata(block)
+            return self._PATTERN.sub("", raw_md, count=1)
+        return raw_md
 
 
 class IncludeResolver(PreProcessor):
@@ -149,7 +185,7 @@ class PreProcessorRegistry:
         # Each entry is a (priority, PreProcessor) tuple.
         self._processors: list[tuple[int, PreProcessor]] = []
         if register_builtins:
-            self.register(FrontMatterStripper(), priority=10)
+            self.register(FrontMatterStripper(input_file), priority=10)
             self.register(IncludeResolver(input_file), priority=20)
 
     def register(self, pp: PreProcessor, *, priority: int = 50) -> None:

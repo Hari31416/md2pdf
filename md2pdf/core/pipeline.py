@@ -39,6 +39,18 @@ class Pipeline:
         self.config = config
         self.registry = HandlerRegistry()
 
+        self.metadata: dict[str, str] = {
+            "title": "",
+            "author": "pymd2pdf",
+            "subject": "",
+            "keywords": "",
+        }
+        if self.config.input_file:
+            import os
+            base_name = os.path.basename(self.config.input_file)
+            title_default, _ = os.path.splitext(base_name)
+            self.metadata["title"] = title_default
+
         # Stage 1 — pre-processor registry (built-ins auto-registered).
         self._pre_registry = PreProcessorRegistry(
             register_builtins=True, input_file=self.config.input_file
@@ -46,7 +58,8 @@ class Pipeline:
 
         # Stage 4 — post-processor registry.
         self._post_registry = PostProcessorRegistry()
-        from md2pdf.core.postprocessors import TableOfContentsPostProcessor
+        from md2pdf.core.postprocessors import MetadataPostProcessor, TableOfContentsPostProcessor
+        self._post_registry.register(MetadataPostProcessor())
         self._post_registry.register(TableOfContentsPostProcessor())
 
         # Stylesheet registry — base layer added immediately; plugins add more.
@@ -144,7 +157,12 @@ class Pipeline:
 
     def _pre_process(self, raw_md: str) -> str:
         """Stage 1 — run registered pre-processors in priority order."""
-        return self._pre_registry.run_all(raw_md)
+        result = self._pre_registry.run_all(raw_md)
+        from md2pdf.core.preprocessors import FrontMatterStripper
+        for _, pp in self._pre_registry._processors:
+            if isinstance(pp, FrontMatterStripper):
+                self.metadata.update(pp.metadata)
+        return result
 
     def _parse(self, md: str) -> list[dict]:
         """Stage 2 — parse Markdown into a normalised token list."""
@@ -192,6 +210,7 @@ class Pipeline:
         doc = self._build_doc()
         doc._md2pdf_config = self.config
         doc._md2pdf_styles = self._styles
+        doc._md2pdf_metadata = self.metadata
         
         if is_final:
             doc._md2pdf_toc_page_numbers = BookmarkFlowable.page_registry.copy()
