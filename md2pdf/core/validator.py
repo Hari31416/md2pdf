@@ -21,6 +21,7 @@ class DocumentValidator:
         "ThematicBreak",
         "FootnoteDefinition",
         "Admonition",
+        "PageBreak",
     }
 
     def validate(self, tokens: list[dict]) -> list[ValidationIssue]:

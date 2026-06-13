@@ -237,6 +237,16 @@ class MarkdownParser:
                 if c.get("type") == "RawText" and not (c.get("raw") or "").strip():
                     continue
                 non_empty.append(c)
+            if len(non_empty) == 1:
+                child = non_empty[0]
+                if child.get("type") == "RawText" and (child.get("raw") or "").strip() == '<div class="pagebreak"></div>':
+                    return {
+                        "type": "PageBreak",
+                        "raw": "",
+                        "children": [],
+                        "attrs": {},
+                        "_node": node,
+                    }
             if len(non_empty) == 1 and non_empty[0].get("type") == "Math":
                 math_raw = non_empty[0].get("raw") or ""
                 if math_raw.startswith("$$") and math_raw.endswith("$$"):
@@ -247,6 +257,14 @@ class MarkdownParser:
                         "attrs": {},
                         "_node": node,
                     }
+        elif token["type"] in ("HTMLBlock", "RawHTML") and token.get("raw", "").strip() == '<div class="pagebreak"></div>':
+            return {
+                "type": "PageBreak",
+                "raw": "",
+                "children": [],
+                "attrs": {},
+                "_node": node,
+            }
 
         return token
 

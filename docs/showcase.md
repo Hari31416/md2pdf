@@ -377,4 +377,19 @@ You can split documents into multiple reusable files and combine them at compile
 
 !include included_feature.md
 
----
+## 14. Page Breaks
+
+You can manually control pagination using either the standard HTML comment directive or a custom backslash directive. This compiles directly into a PDF PageBreak flowable.
+
+<!-- pagebreak -->
+
+### HTML Comment Syntax
+```markdown
+<!-- pagebreak -->
+```
+
+### Backslash Syntax
+```markdown
+\pagebreak
+```
+Both directives must reside on their own line (leading/trailing whitespace is allowed, and they are case-insensitive).

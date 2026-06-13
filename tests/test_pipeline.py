@@ -309,3 +309,44 @@ This is a standard admonition block with some *formatting* inside.
 
     assert output_file.exists()
     assert output_file.stat().st_size > 0
+
+
+def test_pipeline_with_pagebreaks(tmp_path: Path) -> None:
+    """Verify that a document containing page breaks is successfully built to PDF."""
+    from md2pdf import convert
+    from md2pdf.core.config import Config
+    from md2pdf.core.pipeline import Pipeline
+
+    md_content = """
+# Page 1
+
+<!-- pagebreak -->
+
+# Page 2
+
+\\pagebreak
+
+# Page 3
+"""
+    input_file = tmp_path / "test_pagebreaks.md"
+    input_file.write_text(md_content, encoding="utf-8")
+    output_file = tmp_path / "output_pagebreaks.pdf"
+
+    cfg = Config(input_file=str(input_file), output_file=str(output_file))
+    pipeline = Pipeline(cfg)
+
+    # Process stage by stage and check mapped flowables
+    md = pipeline._pre_process(md_content)
+    tokens = pipeline._parse(md)
+    flowables = pipeline._map(tokens)
+
+    # Let's count how many PageBreak flowables we have in mapped flowables
+    from reportlab.platypus import PageBreak
+    page_breaks = [f for f in flowables if isinstance(f, PageBreak)]
+    assert len(page_breaks) == 2
+
+    # Now verify that it converts end-to-end without raising errors
+    convert(str(input_file), str(output_file))
+    assert output_file.exists()
+    assert output_file.stat().st_size > 0
+

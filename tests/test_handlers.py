@@ -489,3 +489,16 @@ class TestAdmonitionHandler:
         assert len(box.content) == 1
         assert isinstance(box.content[0], Paragraph)
         assert "Hello" in box.content[0].text
+
+
+class TestPageBreakHandler:
+    def test_renders_page_break(self, styles):
+        from reportlab.platypus import PageBreak
+        from md2pdf.handlers.pagebreak import PageBreakHandler
+
+        token = {"type": "PageBreak", "raw": "", "attrs": {}, "children": [], "_node": None}
+        handler = PageBreakHandler()
+        flowables = handler.render(token, styles)
+        assert len(flowables) == 1
+        assert isinstance(flowables[0], PageBreak)
+

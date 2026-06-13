@@ -22,6 +22,7 @@ THEMATIC_BREAK = "ThematicBreak"
 RAW_HTML = "RawHTML"
 FOOTNOTE_DEFINITION = "FootnoteDefinition"
 ADMONITION = "Admonition"
+PAGE_BREAK = "PageBreak"
 
 # ---------------------------------------------------------------------------
 # Inline token types  (used inside token["children"])
@@ -48,4 +49,5 @@ ALL_BLOCK_TYPES: tuple[str, ...] = (
     RAW_HTML,
     FOOTNOTE_DEFINITION,
     ADMONITION,
+    PAGE_BREAK,
 )

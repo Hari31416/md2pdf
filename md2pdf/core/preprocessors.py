@@ -272,6 +272,33 @@ class AdmonitionPreProcessor(PreProcessor):
         return "\n".join(processed_lines)
 
 
+class PageBreakPreProcessor(PreProcessor):
+    r"""Pre-processor to translate pagebreak comments and directives into HTML blocks.
+
+    Translates:
+    1. `<!-- pagebreak -->` (flexible spacing/case)
+    2. `\pagebreak` (flexible spacing/case)
+    into `<div class="pagebreak"></div>`.
+    """
+
+    def process(self, raw_md: str) -> str:
+        # Replace <!-- pagebreak -->
+        md = re.sub(
+            r"^[ \t]*<!--[ \t]*pagebreak[ \t]*-->[ \t]*$",
+            r'<div class="pagebreak"></div>',
+            raw_md,
+            flags=re.MULTILINE | re.IGNORECASE,
+        )
+        # Replace \pagebreak
+        md = re.sub(
+            r"^[ \t]*\\pagebreak[ \t]*$",
+            r'<div class="pagebreak"></div>',
+            md,
+            flags=re.MULTILINE | re.IGNORECASE,
+        )
+        return md
+
+
 class PreProcessorRegistry:
     """Priority-sorted registry of :class:`PreProcessor` instances.
 
@@ -291,6 +318,7 @@ class PreProcessorRegistry:
         if register_builtins:
             self.register(FrontMatterStripper(input_file), priority=10)
             self.register(IncludeResolver(input_file), priority=20)
+            self.register(PageBreakPreProcessor(), priority=25)
             self.register(AdmonitionPreProcessor(), priority=30)
 
     def register(self, pp: PreProcessor, *, priority: int = 50) -> None:

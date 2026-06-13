@@ -54,8 +54,8 @@ class _AppendPostProcessor(PostProcessor):
 class TestPreProcessorRegistry:
     def test_builtins_registered_by_default(self) -> None:
         reg = PreProcessorRegistry(register_builtins=True)
-        # Three built-ins: FrontMatterStripper (10) + IncludeResolver (20) + AdmonitionPreProcessor (30)
-        assert len(reg._processors) == 3
+        # Four built-ins: FrontMatterStripper (10) + IncludeResolver (20) + PageBreakPreProcessor (25) + AdmonitionPreProcessor (30)
+        assert len(reg._processors) == 4
 
     def test_no_builtins_when_disabled(self) -> None:
         reg = PreProcessorRegistry(register_builtins=False)

@@ -346,3 +346,43 @@ class TestMarkdownParserAdmonitions:
         nested = tokens[0]["children"][0]
         assert nested["type"] == "Admonition"
         assert nested["attrs"]["type"] == "warning"
+
+
+class TestPageBreakParsing:
+    def test_comment_pagebreak(self):
+        from md2pdf.core.preprocessors import PageBreakPreProcessor
+
+        md = "Some content\n\n<!-- pagebreak -->\n\nMore content"
+        md = PageBreakPreProcessor().process(md)
+        tokens = MarkdownParser().parse(md)
+        assert len(tokens) == 3
+        assert tokens[0]["type"] == PARAGRAPH
+        assert tokens[1]["type"] == "PageBreak"
+        assert tokens[2]["type"] == PARAGRAPH
+
+    def test_backslash_pagebreak(self):
+        from md2pdf.core.preprocessors import PageBreakPreProcessor
+
+        md = "Some content\n\n\\pagebreak\n\nMore content"
+        md = PageBreakPreProcessor().process(md)
+        tokens = MarkdownParser().parse(md)
+        assert len(tokens) == 3
+        assert tokens[0]["type"] == PARAGRAPH
+        assert tokens[1]["type"] == "PageBreak"
+        assert tokens[2]["type"] == PARAGRAPH
+
+    def test_case_insensitive_and_whitespace_pagebreak(self):
+        from md2pdf.core.preprocessors import PageBreakPreProcessor
+
+        md1 = "  <!--   PageBreak   -->  "
+        md1 = PageBreakPreProcessor().process(md1)
+        tokens1 = MarkdownParser().parse(md1)
+        assert len(tokens1) == 1
+        assert tokens1[0]["type"] == "PageBreak"
+
+        md2 = "  \\PageBreak  "
+        md2 = PageBreakPreProcessor().process(md2)
+        tokens2 = MarkdownParser().parse(md2)
+        assert len(tokens2) == 1
+        assert tokens2[0]["type"] == "PageBreak"
+

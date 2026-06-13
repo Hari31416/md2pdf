@@ -31,6 +31,7 @@ Mermaid       = "md2pdf.handlers.mermaid:MermaidHandler"
 LatexBlock    = "md2pdf.handlers.latex:LatexHandler"
 CodeFence     = "md2pdf.handlers.code:CodeFenceHandler"
 Admonition    = "md2pdf.handlers.admonition:AdmonitionHandler"
+PageBreak     = "md2pdf.handlers.pagebreak:PageBreakHandler"
 
 [dependency-groups]
 dev = [

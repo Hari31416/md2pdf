@@ -8,7 +8,7 @@ from md2pdf.core.validator import DocumentValidator
 def test_validator_supported_types() -> None:
     """Verify that supported types do not generate warnings."""
     validator = DocumentValidator()
-    tokens = [{"type": "Heading", "children": []}]
+    tokens = [{"type": "Heading", "children": []}, {"type": "PageBreak", "children": []}]
     issues = validator.validate(tokens)
     assert len(issues) == 0
 
