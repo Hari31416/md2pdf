@@ -39,6 +39,7 @@ dev = [
     "pytest-cov>=5",
     "black>=24",
     "ruff>=0.4",
+    "pre-commit>=4.0",
 ]
 
 [tool.pytest.ini_options]

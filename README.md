@@ -8,7 +8,7 @@ For detailed guides on settings, styling, and features, see the [Comprehensive D
 
 ## Architecture Overview
 
-`md2pdf` is designed as a pipeline that runs in four distinct stages: preprocessing, parsing/validation, element rendering, and layout composition. 
+`md2pdf` is designed as a pipeline that runs in four distinct stages: preprocessing, parsing/validation, element rendering, and layout composition.
 
 ```mermaid
 graph TD
@@ -137,6 +137,9 @@ cd md2pdf
 # Create virtual environment and install all dependencies (including dev)
 uv sync
 source .venv/bin/activate
+
+# Install pre-commit hooks
+uv run pre-commit install
 ```
 
 ---
@@ -186,8 +189,8 @@ convert("input.md", "output.pdf")
 
 # Option 2: Advanced programmatic pipeline usage
 config = Config(
-    offline=False, 
-    cache_dir=".md2pdf_cache", 
+    offline=False,
+    cache_dir=".md2pdf_cache",
     output_file="my_document.pdf"
 )
 pipeline = Pipeline(config)
