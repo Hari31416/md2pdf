@@ -102,6 +102,12 @@ class TestInlineRender:
         assert escape_xml("<b>") == "&lt;b&gt;"
         assert escape_xml("AT&T") == "AT&amp;T"
 
+    def test_raw_html_linebreak(self, styles):
+        result = inline_render(
+            [{"type": "RawText", "raw": "Line 1<br>Line 2<br />Line 3<BR/>Line 4", "children": [], "attrs": {}}]
+        )
+        assert result == "Line 1<br/>Line 2<br/>Line 3<br/>Line 4"
+
 
 # ---------------------------------------------------------------------------
 # HeadingHandler

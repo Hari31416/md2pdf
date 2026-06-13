@@ -104,4 +104,8 @@ def inline_render(children: list[dict], styles: dict | None = None) -> str:
             else:
                 parts.append(escape_xml(raw))
 
-    return "".join(parts)
+    rendered = "".join(parts)
+    import re
+
+    rendered = re.sub(r"&lt;[Bb][Rr]\s*/?&gt;", "<br/>", rendered)
+    return rendered

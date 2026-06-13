@@ -62,7 +62,14 @@ class LayoutComposer:
                 # Don't bond heading to another heading or an image block
                 if not self._is_heading(nxt) and not self._is_image_block(nxt):
                     elements = [bookmark, heading, nxt] if bookmark else [heading, nxt]
-                    result.append(KeepTogether(elements))
+                    from reportlab.platypus import Table
+
+                    from md2pdf.core.flowables import KeepTogetherParts
+
+                    if isinstance(nxt, Table):
+                        result.append(KeepTogetherParts(elements))
+                    else:
+                        result.append(KeepTogether(elements))
                     i = idx_next + 1
                     continue
 

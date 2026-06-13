@@ -6,7 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from reportlab.lib import colors
-from reportlab.platypus import Flowable, Image
+from reportlab.platypus import Flowable, Image, KeepTogether
 
 logger = logging.getLogger(__name__)
 
@@ -317,3 +317,73 @@ class FootnoteFlowable(Flowable):
         para_y_local = para_y_abs - y_abs
 
         self.paragraph.drawOn(self.canv, para_x_local, para_y_local)
+
+
+class KeepTogetherParts(KeepTogether):
+    """A subclass of KeepTogether that checks if a minimum subset of flowables fits.
+
+    Specifically, if the last flowable is a Table, it calculates the height of the preceding
+    flowables plus the height of the first row of the Table (or the repeated header rows plus
+    the first data row). If this minimum height fits in the available space, it splits and
+    allows the components to flow, allowing the table to start on the current page and split
+    to the next page, preventing huge empty gaps at the bottom of pages.
+    """
+
+    def split(self, aW: float, aH: float) -> list[Flowable]:
+        if getattr(self, "_wrapInfo", None) != (aW, aH):
+            self.wrap(aW, aH)
+
+        from reportlab.platypus import Table
+        from reportlab.platypus.flowables import _listWrapOn
+
+        dims: list[tuple[float, float]] = []
+        _listWrapOn(self._content, aW, self.canv, dims=dims)
+
+        h_before = 0.0
+        h_table_first_row = 0.0
+
+        for i, child in enumerate(self._content):
+            child_w, child_h = dims[i]
+            if isinstance(child, Table) and i == len(self._content) - 1:
+                row_heights = getattr(child, "_rowHeights", None)
+                if row_heights:
+                    num_rows_to_keep = max(1, getattr(child, "repeatRows", 0))
+                    if len(row_heights) > num_rows_to_keep:
+                        num_rows_to_keep += 1
+                    # Add 15 points safety margin for grid lines/padding/borders
+                    h_table_first_row = sum(row_heights[:num_rows_to_keep]) + 15.0
+                else:
+                    h_table_first_row = 45.0  # 30 + 15 fallback
+            else:
+                h_before += child_h
+
+        h_min = h_before + h_table_first_row
+
+        S = self._content[:]
+        cf = atTop = getattr(self, "_frame", None)
+        if cf:
+            atTop = getattr(cf, "_atTop", None)
+            cAW = cf._width
+            cAH = cf._height
+
+        C0 = h_min > aH
+        C1 = C0 and atTop
+
+        if C0 or C1:
+            fb = False
+            panf = self._doctemplateAttr("_peekNextFrame")
+            if cf and panf:
+                nf = panf()
+                nAW = nf._width
+                nAH = nf._height
+            if C0 and not atTop:
+                fb = not (atTop and cf and nf and cAW >= nAW and cAH >= nAH)
+            elif nf and nAW >= cf._width and nAH >= h_min:
+                fb = True
+
+            from reportlab.platypus.doctemplate import FrameBreak, NullActionFlowable
+
+            S.insert(0, (FrameBreak() if fb else NullActionFlowable()))
+
+        return S
+

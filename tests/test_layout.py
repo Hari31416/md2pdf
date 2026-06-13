@@ -86,6 +86,25 @@ def test_bond_headings_to_image() -> None:
     assert composed[0]._content == [h, box]
 
 
+def test_bond_headings_to_table() -> None:
+    """Heading followed by Table should be wrapped in KeepTogetherParts."""
+    from reportlab.platypus import Table
+
+    from md2pdf.core.flowables import KeepTogetherParts
+
+    composer = LayoutComposer()
+    h1_style = ParagraphStyle("h1")
+
+    h = Paragraph("Header", h1_style)
+    t = Table([["A", "B"]])
+    flowables = [h, t]
+    composed = composer.compose(flowables)
+
+    assert len(composed) == 1
+    assert isinstance(composed[0], KeepTogetherParts)
+    assert composed[0]._content == [h, t]
+
+
 def _get_test_image_bytes() -> bytes:
     from io import BytesIO
 
