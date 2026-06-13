@@ -26,12 +26,16 @@ from md2pdf.styles.theme import ThemeConfig
 @pytest.fixture
 def styles() -> dict:
     """Default stylesheet with no custom theme."""
+    from md2pdf.assets._font_registry import register_fonts
+    register_fonts()
     return build_default_stylesheet()
 
 
 @pytest.fixture
 def custom_styles() -> dict:
     """Stylesheet built from a custom ThemeConfig."""
+    from md2pdf.assets._font_registry import register_fonts
+    register_fonts()
     theme = ThemeConfig(color_table_header_bg="#c0392b")
     return build_default_stylesheet(theme)
 
@@ -265,6 +269,68 @@ class TestListHandler:
         token = _make_list_token([])
         flowables = ListHandler().render(token, styles)
         assert isinstance(flowables[0], ListFlowable)
+
+    def test_task_list_checkboxes_emoji_disabled(self, styles):
+        from unittest.mock import MagicMock
+        styles["_config"] = MagicMock(emoji=False, cache_dir="")
+        token = _make_list_token(["[ ] todo", "[x] done", "[X] done uppercase", "not a task"])
+        flowables = ListHandler().render(token, styles)
+
+        lf = flowables[0]
+        items = lf._content
+
+        def get_para(item):
+            return item._flowable if hasattr(item, "_flowable") else item
+
+        p0 = get_para(items[0])
+        assert "☐ todo" in p0.text
+
+        p1 = get_para(items[1])
+        assert "☑ done" in p1.text
+
+        p2 = get_para(items[2])
+        assert "☑ done uppercase" in p2.text
+
+        p3 = get_para(items[3])
+        assert "not a task" in p3.text
+
+    @patch("md2pdf.core.preprocessors._fetch_emoji_png")
+    def test_task_list_checkboxes_emoji_enabled(self, mock_fetch, styles, tmp_path):
+        from pathlib import Path
+        from unittest.mock import MagicMock
+
+        styles["_config"] = MagicMock(emoji=True, cache_dir=str(tmp_path))
+
+        def mock_fetch_emoji(slug, cache_dir):
+            p = Path(cache_dir) / f"{slug}.png"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            if not p.exists():
+                from io import BytesIO
+                from PIL import Image as PILImage
+                buf = BytesIO()
+                PILImage.new("RGBA", (14, 14), (255, 200, 0, 255)).save(buf, format="PNG")
+                p.write_bytes(buf.getvalue())
+            return p
+
+        mock_fetch.side_effect = mock_fetch_emoji
+
+        token = _make_list_token(["[ ] todo", "[x] done"])
+        flowables = ListHandler().render(token, styles)
+
+        lf = flowables[0]
+        items = lf._content
+
+        def get_para(item):
+            return item._flowable if hasattr(item, "_flowable") else item
+
+        p0 = get_para(items[0])
+        assert "25fb.png" in p0.text
+        assert "todo" in p0.text
+
+        p1 = get_para(items[1])
+        assert "2611.png" in p1.text
+        assert "done" in p1.text
+
 
 
 # ---------------------------------------------------------------------------

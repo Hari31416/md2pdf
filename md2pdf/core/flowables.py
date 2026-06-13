@@ -472,7 +472,7 @@ class AdmonitionBox(Flowable):
             h_used += h_f + 4.0
             fit_idx = i + 1
 
-        if fit_idx == 0:
+        if fit_idx == 0 or fit_idx == len(self.content):
             return []
 
         content_fit = self.content[:fit_idx]

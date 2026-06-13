@@ -1,4 +1,4 @@
-- When adding new feature or making significant changes, update `CHANGELOG.md`, `docs/user-guide.md` and `docs/index.md` accordingly.
+- When adding new feature or making significant changes, update `CHANGELOG.md`, `docs/user-guide.md` and `docs/index.md` accordingly. Update `docs/showcase.md` as well and rerender it.
 - Do not commit changes unless explicitly asked to do so. When asked, use the following format for commit messages:
 
   ```txt

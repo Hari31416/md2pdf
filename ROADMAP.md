@@ -105,10 +105,15 @@ on subset size), but zero runtime network dependency.
 
 ---
 
-## Short-term (implementation path is clear)
+## Task List Checkboxes ✅
 
-- **Task list checkboxes** — `- [x] done` / `- [ ] todo` renders as plain text today.
-  Detect the `[x]`/`[ ]` prefix in `ListHandler` and emit a ☑/☐ symbol (or Twemoji image).
+**Status:** Implemented
+
+GFM-style task list checkboxes (`- [ ] todo` / `- [x] done`) are detected in `ListHandler` and replaced with Twemoji images (if `emoji` option is enabled and downloaded successfully) or with ballot box Unicode characters (`☐` / `☑`) from the default DejaVu Sans font.
+
+---
+
+## Short-term (implementation path is clear)
 
 - **Table column alignment** — `mistletoe` already parses column alignment (`:---`,
   `:---:`, `---:`) and exposes it on the table node. `TableHandler` currently ignores it.

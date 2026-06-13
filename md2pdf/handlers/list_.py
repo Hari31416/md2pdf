@@ -59,6 +59,65 @@ class ListHandler(ElementHandler):
     # Internal helpers
     # ------------------------------------------------------------------ #
 
+    def _process_checkbox(self, item_token: dict, styles: dict) -> None:
+        """Detect and rewrite GFM-style task list checkboxes [ ] and [x]."""
+        children = item_token.get("children", [])
+        if not children:
+            return
+
+        first_child = children[0]
+        if first_child.get("type") == "List":
+            return
+
+        if first_child.get("type") == "Paragraph":
+            inline_children = first_child.get("children", [])
+        else:
+            inline_children = children
+
+        if not inline_children:
+            return
+
+        first_inline = inline_children[0]
+        if first_inline.get("type") != "RawText":
+            return
+
+        raw_text = first_inline.get("raw", "")
+        import re
+        # Match [ ] or [x] or [X] at the beginning
+        match = re.match(r"^\[([ xX])\](?:[ \t](.*)|$)", raw_text)
+        if not match:
+            return
+
+        checked_char = match.group(1)
+        remaining_text = match.group(2) or ""
+
+        is_checked = checked_char in ("x", "X")
+        config = styles.get("_config")
+        emoji_enabled = getattr(config, "emoji", True) if config else True
+        cache_dir = getattr(config, "cache_dir", "") if config else ""
+
+        replacement = None
+        if emoji_enabled:
+            from pathlib import Path
+            from md2pdf.core.preprocessors import _fetch_emoji_png
+
+            slug = "2611" if is_checked else "25fb"
+            emoji_cache_dir = (
+                Path(cache_dir) / "emoji"
+                if cache_dir
+                else Path.home() / ".cache/pymd2pdf/emoji"
+            )
+
+            png_path = _fetch_emoji_png(slug, emoji_cache_dir)
+            if png_path and png_path.exists():
+                replacement = f'<img src="{png_path}" width="14" height="14"/>'
+
+        if not replacement:
+            replacement = "☑" if is_checked else "☐"
+
+        # Update the raw text inline token
+        first_inline["raw"] = f"{replacement} {remaining_text}" if remaining_text else replacement
+
     def _render_item(
         self,
         item_token: dict,
@@ -73,6 +132,8 @@ class ListHandler(ElementHandler):
         - Nested ``List`` tokens → rendered recursively and appended after
           the paragraph
         """
+        self._process_checkbox(item_token, styles)
+
         contents: list = []
         inline_children: list[dict] = []
 

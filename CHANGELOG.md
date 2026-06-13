@@ -5,6 +5,10 @@ All notable changes to the `md2pdf` project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## WIP
+
+- **Task List Checkboxes**: Changed `ListHandler` to use a white square emoji (`U+25FB`) for unchecked tasks instead of the black ballot box emoji (`U+2610`). This ensures that unchecked tasks display correctly with the color emoji theme enabled (where only checked boxes use the specific `2611` PNG).
+
 ## [0.3.0] - 2026-06-13
 
 ### Added

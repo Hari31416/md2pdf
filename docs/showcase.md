@@ -101,6 +101,13 @@ This section tests inline layout and inline style parsing:
    2. Sub-step 2.b
 3. Final step
 
+### Task List Checkboxes
+- [ ] Uncompleted task list item
+- [x] Completed task list item (lowercase)
+- [X] Completed task list item (uppercase)
+- [ ] Task list item with a link: [md2pdf GitHub page](https://github.com/hari31416/md2pdf)
+- [ ] Task list item with inline code: `x = 1`
+
 ---
 
 ## 5. Blockquotes

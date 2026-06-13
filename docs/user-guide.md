@@ -18,6 +18,7 @@ This guide provides a comprehensive reference to all features, configuration set
     - [Page Footers](#page-footers)
     - [Page Headers](#page-headers)
   - [Colour Emoji Support (Twemoji)](#colour-emoji-support-twemoji)
+  - [Task Lists \& Checkboxes](#task-lists--checkboxes)
   - [Footnotes](#footnotes)
     - [Syntax:](#syntax)
     - [Layout Logic:](#layout-logic)
@@ -198,6 +199,22 @@ Running headers are configurable and disabled by default. When enabled (via CLI 
 4. Subsequent runs use the cache directly with zero network requests.
 5. If the system is run with `--offline`, placeholders are rendered instead of downloading missing graphics.
 6. To disable emoji rendering completely, pass `--no-emoji` or set `emoji = false` in `md2pdf.toml`.
+
+---
+
+## Task Lists & Checkboxes
+
+`md2pdf` supports GFM-style task list checklists:
+
+* **Syntax**:
+  ```markdown
+  - [ ] Uncompleted task list item
+  - [x] Completed task list item
+  - [X] Completed (case-insensitive)
+  ```
+* **Styling**:
+  * If color emoji support is enabled (using the `--emoji` flag or `emoji = true` in config), checkboxes are rendered using Twemoji's checked (☑) and unchecked (☐) box images.
+  * If color emoji support is disabled or the images cannot be loaded, checkboxes fall back to using Unicode ballot box symbols (`☐` and `☑`) from the default DejaVu Sans font.
 
 ---
 
