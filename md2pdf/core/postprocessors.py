@@ -19,6 +19,13 @@ import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from reportlab.lib.enums import TA_RIGHT
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import PageBreak, Paragraph, Spacer, Table, TableStyle
+
+from md2pdf.core.flowables import BookmarkFlowable
+from md2pdf.handlers.inline import escape_xml
+
 if TYPE_CHECKING:
     from reportlab.platypus import SimpleDocTemplate
 
@@ -46,6 +53,128 @@ class PostProcessor(ABC):
             list even if it is the same object passed in.
         """
         ...
+
+
+class TableOfContentsPostProcessor(PostProcessor):
+    """Prepend a linked Table of Contents page to the document.
+
+    Walks flowables to find `BookmarkFlowable` instances and prepends a TOC page
+    if `doc._md2pdf_config.toc` is enabled.
+    """
+
+    def process(self, doc: SimpleDocTemplate, flowables: list) -> list:
+        config = getattr(doc, "_md2pdf_config", None)
+        if not config or not getattr(config, "toc", False):
+            return flowables
+
+        def find_bookmarks(items: list) -> list[BookmarkFlowable]:
+            res = []
+            for item in items:
+                if isinstance(item, BookmarkFlowable):
+                    if item.title:
+                        res.append(item)
+                elif hasattr(item, "_content") and isinstance(item._content, list):
+                    res.extend(find_bookmarks(item._content))
+                elif hasattr(item, "inner") and item.inner:
+                    res.extend(find_bookmarks([item.inner]))
+            return res
+
+        bookmarks = find_bookmarks(flowables)
+
+        if not bookmarks:
+            return flowables
+
+        styles = getattr(doc, "_md2pdf_styles", {})
+        h1_style = styles.get("h1")
+        body_style = styles.get("body")
+
+        if not h1_style or not body_style:
+            base_styles = getSampleStyleSheet()
+            h1_style = h1_style or base_styles["Heading1"]
+            body_style = body_style or base_styles["Normal"]
+
+        toc_flowables = []
+        toc_flowables.append(BookmarkFlowable("table-of-contents", title="Table of Contents", level=0))
+        toc_flowables.append(Paragraph("Table of Contents", h1_style))
+        toc_flowables.append(Spacer(1, 15))
+
+        # Create ParagraphStyles for each level (indentation is handled via Table cell padding)
+        toc_styles = {}
+        for level in range(6):
+            toc_styles[level] = ParagraphStyle(
+                f"toc_level_{level}",
+                parent=body_style,
+                leftIndent=0,
+                spaceBefore=0,
+                spaceAfter=0,
+            )
+
+        # Style H1 (level 0) entries to be bold and stand out
+        bold_font = styles.get("h2", body_style).fontName
+        toc_styles[0] = ParagraphStyle(
+            "toc_level_0",
+            parent=body_style,
+            fontName=bold_font,
+            leftIndent=0,
+            spaceBefore=6,
+            spaceAfter=2,
+        )
+
+        page_num_style = ParagraphStyle(
+            "toc_page_num",
+            parent=body_style,
+            alignment=TA_RIGHT,
+        )
+
+        page_num_style_bold = ParagraphStyle(
+            "toc_page_num_bold",
+            parent=page_num_style,
+            fontName=bold_font,
+        )
+
+        link_color = styles.get("color_link", "#0366d6")
+        page_numbers = getattr(doc, "_md2pdf_toc_page_numbers", None)
+
+        table_data = []
+        for b in bookmarks:
+            level = max(0, min(b.level, 5))
+
+            # Clickable link for the title
+            escaped_title = escape_xml(b.title)
+            title_text = f'<link href="#{b.key}" color="{link_color}">{escaped_title}</link>'
+
+            # Clickable link for the page number
+            page_num = str(page_numbers.get(b.key, "99")) if page_numbers is not None else "99"
+            page_text = f'<link href="#{b.key}" color="{link_color}">{page_num}</link>'
+
+            title_p = Paragraph(title_text, toc_styles[level])
+            p_style = page_num_style_bold if level == 0 else page_num_style
+            page_p = Paragraph(page_text, p_style)
+
+            table_data.append([title_p, page_p])
+
+        doc_width = getattr(doc, "width", 450)
+        toc_table = Table(table_data, colWidths=[doc_width - 40, 40])
+        
+        table_commands = [
+            ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ]
+        
+        for i, b in enumerate(bookmarks):
+            level = max(0, min(b.level, 5))
+            indent = 20 * level
+            table_commands.append(('LEFTPADDING', (0, i), (0, i), indent))
+
+        toc_table.setStyle(TableStyle(table_commands))
+
+        toc_flowables.append(toc_table)
+        toc_flowables.append(PageBreak())
+
+        return toc_flowables + flowables
 
 
 class PageNumberPostProcessor(PostProcessor):

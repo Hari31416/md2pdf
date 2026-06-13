@@ -36,6 +36,7 @@ class Config:
     offline: bool = False
     cache_dir: str = os.path.expanduser("~/.cache/pymd2pdf")
     min_image_scale: float = 0.8
+    toc: bool = False
 
     # Structured plugin config from [plugins] TOML section.
     # Keys: "handlers", "preprocessors", "postprocessors" → list[str]

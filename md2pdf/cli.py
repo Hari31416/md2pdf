@@ -57,6 +57,9 @@ def convert(
         "--min-image-scale",
         help="Minimum scale factor for resizing images before deferring to a new page (e.g. 0.8)",
     ),
+    toc: bool = typer.Option(  # noqa: B008
+        False, "--toc", help="Generate a Table of Contents page"
+    ),
 ) -> None:
     """Convert a Markdown file to a print-ready PDF."""
     _setup_logging(verbose)
@@ -121,6 +124,8 @@ def convert(
             cfg.offline = True
         if min_image_scale is not None:
             cfg.min_image_scale = min_image_scale
+        if toc:
+            cfg.toc = True
     else:
         resolved_output = output if output is not None else input.with_suffix(".pdf")
         cfg = Config(
@@ -128,6 +133,7 @@ def convert(
             output_file=str(resolved_output),
             theme=theme,
             offline=offline,
+            toc=toc,
         )
         if min_image_scale is not None:
             cfg.min_image_scale = min_image_scale

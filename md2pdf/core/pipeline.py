@@ -46,6 +46,8 @@ class Pipeline:
 
         # Stage 4 — post-processor registry.
         self._post_registry = PostProcessorRegistry()
+        from md2pdf.core.postprocessors import TableOfContentsPostProcessor
+        self._post_registry.register(TableOfContentsPostProcessor())
 
         # Stylesheet registry — base layer added immediately; plugins add more.
         self._style_registry = StyleRegistry()
@@ -113,10 +115,27 @@ class Pipeline:
         for e in errors:
             logger.error("[%s] Line %s: %s", e.code, e.line, e.message)
 
-        md = self._pre_process(raw_md)
-        tokens = self._parse(md)
-        flowables = self._map(tokens)
-        self._render(flowables)
+        from md2pdf.core.flowables import BookmarkFlowable
+        BookmarkFlowable.page_registry.clear()
+
+        if self.config.toc:
+            # Pass 1: Build document with dummy page numbers to collect pages
+            md = self._pre_process(raw_md)
+            tokens = self._parse(md)
+            flowables = self._map(tokens)
+            self._render_pass(flowables, is_final=False)
+
+            # Pass 2: Re-build document with populated page numbers using fresh flowables
+            md = self._pre_process(raw_md)
+            tokens = self._parse(md)
+            flowables = self._map(tokens)
+            self._render_pass(flowables, is_final=True)
+        else:
+            md = self._pre_process(raw_md)
+            tokens = self._parse(md)
+            flowables = self._map(tokens)
+            self._render_pass(flowables, is_final=True)
+
         logger.debug("Pipeline.run: done → %s", self.config.output_file)
 
     # ------------------------------------------------------------------
@@ -158,20 +177,27 @@ class Pipeline:
                 flowables.append(Preformatted(escape_xml(repr_str), style))
         return flowables
 
-    def _render(self, flowables: list) -> None:
+    def _render_pass(self, flowables: list, is_final: bool) -> None:
         """Stage 4 — run post-processors then build the PDF with layout safeguards."""
-        from md2pdf.core.flowables import ResizableImage
+        from md2pdf.core.flowables import BookmarkFlowable, ResizableImage
+        from md2pdf.core.layout import LayoutComposer
 
         # Reset max available height for the current rendering pass
         ResizableImage.max_avail_height = 0.0
         ResizableImage.min_scale = self.config.min_image_scale
 
-        from md2pdf.core.layout import LayoutComposer
-
         composer = LayoutComposer()
         safe_flowables = composer.compose(flowables)
 
         doc = self._build_doc()
+        doc._md2pdf_config = self.config
+        doc._md2pdf_styles = self._styles
+        
+        if is_final:
+            doc._md2pdf_toc_page_numbers = BookmarkFlowable.page_registry.copy()
+        else:
+            doc._md2pdf_toc_page_numbers = None
+
         safe_flowables = self._post_registry.run_all(doc, safe_flowables)
 
         doc.build(

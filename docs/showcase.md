@@ -173,15 +173,7 @@ Successful image references are dynamically loaded, scaled, and centered:
 
 ---
 
-## 11. File Inclusion (!include)
-
-You can split documents into multiple reusable files and combine them at compile-time:
-
-!include included_feature.md
-
----
-
-## 12. Unicode & Special Characters
+## 11. Unicode & Special Characters
 
 `md2pdf` uses **DejaVu Sans** as its default font family, bundled directly with the package. DejaVu provides broad Unicode coverage so that special characters render correctly out-of-the-box — no configuration required.
 
@@ -269,3 +261,11 @@ Tilde expansion (`~/fonts/MyFont.ttf`) is supported.
 ### Emojis are Still Not Fully Supported
 
 🤨 😥 😫 😞 😔 😕 🙁 ☹️ 🙁 🙁 ☹️ ☹️ 
+
+## 12. File Inclusion (!include)
+
+You can split documents into multiple reusable files and combine them at compile-time:
+
+!include included_feature.md
+
+---

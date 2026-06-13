@@ -79,6 +79,8 @@ class BookmarkFlowable(Flowable):
     navigation / bookmarks panel.
     """
 
+    page_registry: dict[str, int] = {}
+
     def __init__(self, key: str, title: str = "", level: int = 0) -> None:
         super().__init__()
         self.key = key
@@ -91,6 +93,7 @@ class BookmarkFlowable(Flowable):
 
     def draw(self) -> None:
         self.canv.bookmarkPage(self.key)
+        BookmarkFlowable.page_registry[self.key] = self.canv.getPageNumber()
         if self.title:
             try:
                 self.canv.addOutlineEntry(
