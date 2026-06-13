@@ -285,3 +285,64 @@ class TestMarkdownParserMath:
         assert children[1]["type"] == "Math"
         assert children[1]["raw"] == "$x^2$"
         assert children[2]["type"] == "RawText"
+
+
+class TestMarkdownParserAdmonitions:
+    def test_admonition_fenced_conversion(self):
+        from md2pdf.core.preprocessors import AdmonitionPreProcessor
+
+        md = ":::note\nThis is a note.\n:::\n"
+        md = AdmonitionPreProcessor().process(md)
+        tokens = MarkdownParser().parse(md)
+        assert len(tokens) == 1
+        assert tokens[0]["type"] == "Admonition"
+        assert tokens[0]["attrs"]["type"] == "note"
+        assert tokens[0]["attrs"]["title"] == ""
+        assert tokens[0]["children"][0]["type"] == PARAGRAPH
+
+    def test_admonition_fenced_custom_title(self):
+        from md2pdf.core.preprocessors import AdmonitionPreProcessor
+
+        md = ':::warning "Read Carefully"\nBe warned!\n:::\n'
+        md = AdmonitionPreProcessor().process(md)
+        tokens = MarkdownParser().parse(md)
+        assert len(tokens) == 1
+        assert tokens[0]["type"] == "Admonition"
+        assert tokens[0]["attrs"]["type"] == "warning"
+        assert tokens[0]["attrs"]["title"] == "Read Carefully"
+
+    def test_github_alerts_conversion(self):
+        from md2pdf.core.preprocessors import AdmonitionPreProcessor
+
+        md = "> [!TIP]\n> Use this tip!\n"
+        md = AdmonitionPreProcessor().process(md)
+        tokens = MarkdownParser().parse(md)
+        assert len(tokens) == 1
+        assert tokens[0]["type"] == "Admonition"
+        assert tokens[0]["attrs"]["type"] == "tip"
+        assert tokens[0]["attrs"]["title"] == ""
+
+    def test_github_alerts_same_line_text(self):
+        from md2pdf.core.preprocessors import AdmonitionPreProcessor
+
+        md = "> [!IMPORTANT] Crucial info here\n> More info\n"
+        md = AdmonitionPreProcessor().process(md)
+        tokens = MarkdownParser().parse(md)
+        assert len(tokens) == 1
+        assert tokens[0]["type"] == "Admonition"
+        assert tokens[0]["attrs"]["type"] == "important"
+        assert tokens[0]["children"][0]["type"] == PARAGRAPH
+
+    def test_nested_admonitions(self):
+        from md2pdf.core.preprocessors import AdmonitionPreProcessor
+
+        md = ":::note\n:::warning\nNested\n:::\n:::\n"
+        md = AdmonitionPreProcessor().process(md)
+        tokens = MarkdownParser().parse(md)
+        assert len(tokens) == 1
+        assert tokens[0]["type"] == "Admonition"
+        assert tokens[0]["attrs"]["type"] == "note"
+        assert len(tokens[0]["children"]) == 1
+        nested = tokens[0]["children"][0]
+        assert nested["type"] == "Admonition"
+        assert nested["attrs"]["type"] == "warning"

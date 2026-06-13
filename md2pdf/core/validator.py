@@ -20,6 +20,7 @@ class DocumentValidator:
         "LatexBlock",
         "ThematicBreak",
         "FootnoteDefinition",
+        "Admonition",
     }
 
     def validate(self, tokens: list[dict]) -> list[ValidationIssue]:
@@ -68,7 +69,7 @@ class DocumentValidator:
                 )
 
         # Recursively check children of block containers
-        if t in ("List", "ListItem", "BlockQuote"):
+        if t in ("List", "ListItem", "BlockQuote", "Admonition"):
             for child in token.get("children", []):
                 issues.extend(self._check_token(child))
 

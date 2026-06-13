@@ -285,3 +285,27 @@ def test_cli_config_auto_discovery(tmp_path: Path, monkeypatch) -> None:
     # Run CLI without --config option
     result = runner.invoke(app, [str(md_file), "-o", "out.pdf", "--validate-only"])
     assert result.exit_code == 0
+
+
+def test_pipeline_with_admonitions(tmp_path: Path) -> None:
+    """Verify that a document containing admonitions and alerts is successfully built to PDF."""
+    from md2pdf import convert
+
+    md_content = """
+# Showcase Document
+
+:::note "Custom Note Title"
+This is a standard admonition block with some *formatting* inside.
+:::
+
+> [!WARNING]
+> This is a GitHub-style alert warning!
+"""
+    input_file = tmp_path / "test_admonitions.md"
+    input_file.write_text(md_content, encoding="utf-8")
+    output_file = tmp_path / "output_admonitions.pdf"
+
+    convert(str(input_file), str(output_file))
+
+    assert output_file.exists()
+    assert output_file.stat().st_size > 0

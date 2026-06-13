@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from md2pdf.handlers.admonition import AdmonitionHandler
 from md2pdf.handlers.blockquote import BlockQuoteHandler
 from md2pdf.handlers.heading import HeadingHandler
 from md2pdf.handlers.inline import inline_render
@@ -21,5 +22,6 @@ __all__ = [
     "ThematicBreakHandler",
     "MermaidHandler",
     "LatexHandler",
+    "AdmonitionHandler",
     "inline_render",
 ]

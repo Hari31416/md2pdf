@@ -63,6 +63,7 @@ class PluginLoader:
         """
         from md2pdf.assets.cache import AssetCache
         from md2pdf.assets.kroki import KrokiClient
+        from md2pdf.handlers.admonition import AdmonitionHandler
         from md2pdf.handlers.blockquote import BlockQuoteHandler
         from md2pdf.handlers.code import CodeFenceHandler
         from md2pdf.handlers.heading import HeadingHandler
@@ -80,6 +81,7 @@ class PluginLoader:
         registry.register(TableHandler())
         registry.register(ThematicBreakHandler())
         registry.register(CodeFenceHandler())
+        registry.register(AdmonitionHandler())
         # Register Mermaid and Latex handlers in offline mode by default
         import os
 

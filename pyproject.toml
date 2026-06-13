@@ -30,6 +30,7 @@ ThematicBreak = "md2pdf.handlers.thematic_break:ThematicBreakHandler"
 Mermaid       = "md2pdf.handlers.mermaid:MermaidHandler"
 LatexBlock    = "md2pdf.handlers.latex:LatexHandler"
 CodeFence     = "md2pdf.handlers.code:CodeFenceHandler"
+Admonition    = "md2pdf.handlers.admonition:AdmonitionHandler"
 
 [dependency-groups]
 dev = [

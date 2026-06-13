@@ -116,7 +116,104 @@ Blockquotes are styled with a left vertical accent bar and an indented block for
 
 ---
 
-## 6. Code Blocks (Syntax Highlighting)
+## 6. Admonition & Callout Blocks
+
+`md2pdf` supports Obsidian/MkDocs style fenced admonitions (`:::type`, etc.) and GitHub Markdown alerts (`> [!TYPE]`, etc.) with customizable titles and distinct border/background styling.
+
+### Fenced Admonitions
+
+#### Blue / Slate Themes (`note`, `info`, `todo`)
+
+:::note
+This is a standard `note` callout block.
+:::
+
+:::info "Information"
+This is an `info` callout block with a custom title.
+:::
+
+:::todo "Task Checklist"
+This is a `todo` callout block for keeping track of tasks.
+:::
+
+#### Green Themes (`tip`, `success`, `check`)
+
+:::tip "Pro Tip"
+This is a `tip` callout block to share helpful suggestions.
+:::
+
+:::success "Completed successfully"
+This is a `success` callout block indicating successful completion.
+:::
+
+:::check "Status Checked"
+This is a `check` callout block verifying a positive status.
+:::
+
+#### Amber / Orange Themes (`warning`, `attention`)
+
+:::warning "Potential Risk"
+This is a `warning` callout block indicating a warning condition.
+:::
+
+:::attention "Attention Required"
+This is an `attention` callout block for items needing care.
+:::
+
+#### Red Themes (`danger`, `error`, `failure`, `bug`, `caution`)
+
+:::danger "Critical Danger"
+This is a `danger` callout block for serious threats or data loss alerts.
+:::
+
+:::error "Error Encountered"
+This is an `error` callout block showing critical execution issues.
+:::
+
+:::failure "Build Failed"
+This is a `failure` callout block indicating a failed pipeline run.
+:::
+
+:::bug "Active Bug"
+This is a `bug` callout block to highlight software defects.
+:::
+
+:::caution "Precautionary Note"
+This is a `caution` callout block with red theme styling.
+:::
+
+#### Teal / Cyan Theme (`important`)
+
+:::important "Crucial Note"
+This is an `important` callout block highlighting key details.
+:::
+
+#### Unknown Fallback Theme
+
+:::custom "Custom Type"
+This is a fallback custom type admonition showing the default theme color.
+:::
+
+### GitHub-style Markdown Alerts
+
+> [!NOTE]
+> This is a GitHub-style `NOTE` alert block.
+
+> [!TIP]
+> This is a GitHub-style `TIP` alert block.
+
+> [!IMPORTANT]
+> This is a GitHub-style `IMPORTANT` alert block.
+
+> [!WARNING]
+> This is a GitHub-style `WARNING` alert block.
+
+> [!CAUTION]
+> This is a GitHub-style `CAUTION` alert block.
+
+---
+
+## 7. Code Blocks (Syntax Highlighting)
 
 Monospaced code blocks are typeset with syntax highlighting powered by Pygments (theme customizable via the stylesheet configuration).
 
@@ -132,7 +229,7 @@ def hello_world(name: str) -> None:
 
 ---
 
-## 7. Tables
+## 8. Tables
 
 Tables split cleanly across page boundaries. Table columns automatically distribute width evenly across the printable area, and the header repeats at the top of every page.
 
@@ -145,7 +242,7 @@ Tables split cleanly across page boundaries. Table columns automatically distrib
 
 ---
 
-## 8. Diagrams (Mermaid)
+## 9. Diagrams (Mermaid)
 
 Mermaid diagram blocks are rendered as cropped PNG images using the Kroki API and cached locally.
 
@@ -159,7 +256,7 @@ graph LR
 
 ---
 
-## 9. Math & Equations (LaTeX)
+## 10. Math & Equations (LaTeX)
 
 LaTeX math expressions are compiled to transparent images and centered:
 
@@ -169,7 +266,7 @@ $$
 
 ---
 
-## 10. Images & Placeholders
+## 11. Images & Placeholders
 
 Standard images are scaled down automatically to fit within the printable page area.
 
@@ -185,7 +282,7 @@ Successful image references are dynamically loaded, scaled, and centered:
 
 ---
 
-## 11. Unicode & Special Characters
+## 12. Unicode & Special Characters
 
 `md2pdf` uses **DejaVu Sans** as its default font family, bundled directly with the package. DejaVu provides broad Unicode coverage so that special characters render correctly out-of-the-box — no configuration required.
 
@@ -274,7 +371,7 @@ Tilde expansion (`~/fonts/MyFont.ttf`) is supported.
 
 🤨 😥 😫 😞 😔 😕 🙁 ☹️ 🙁 🙁 ☹️ ☹️ 
 
-## 12. File Inclusion (!include)
+## 13. File Inclusion (!include)
 
 You can split documents into multiple reusable files and combine them at compile-time:
 

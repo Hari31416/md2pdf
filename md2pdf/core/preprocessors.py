@@ -168,6 +168,110 @@ class IncludeResolver(PreProcessor):
         return "".join(resolved_lines)
 
 
+class AdmonitionPreProcessor(PreProcessor):
+    """Pre-processor to translate Admonitions and GitHub alerts into HTML containers.
+
+    Translates:
+    1. GitHub alerts `> [!NOTE]` into `:::note` fenced container blocks.
+    2. `:::note` (and other types) fenced blocks into `<div class="admonition <type>">...</div>` HTML blocks.
+    """
+
+    def process(self, raw_md: str) -> str:
+        md = self._process_github_alerts(raw_md)
+        md = self._process_fenced_containers(md)
+        return md
+
+    def _process_github_alerts(self, raw_md: str) -> str:
+        lines = raw_md.splitlines()
+        processed_lines = []
+
+        i = 0
+        n = len(lines)
+        while i < n:
+            line = lines[i]
+            m = re.match(
+                r"^[ \t]*>[ \t]*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:\s+(.*))?$",
+                line,
+                re.IGNORECASE,
+            )
+            if m:
+                alert_type = m.group(1).lower()
+                first_line_text = m.group(2) or ""
+
+                alert_content_lines = []
+                if first_line_text.strip():
+                    alert_content_lines.append(first_line_text)
+
+                i += 1
+                while i < n:
+                    next_line = lines[i]
+                    if re.match(
+                        r"^[ \t]*>[ \t]*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]",
+                        next_line,
+                        re.IGNORECASE,
+                    ):
+                        break
+                    bq_match = re.match(r"^[ \t]*>(?:[ \t](.*))?$", next_line)
+                    if bq_match:
+                        content = bq_match.group(1) or ""
+                        alert_content_lines.append(content)
+                        i += 1
+                    elif next_line.strip() == "":
+                        j = i + 1
+                        while j < n and lines[j].strip() == "":
+                            j += 1
+                        if j < n and re.match(r"^[ \t]*>", lines[j]):
+                            for _ in range(j - i):
+                                alert_content_lines.append("")
+                            i = j
+                        else:
+                            break
+                    else:
+                        break
+
+                processed_lines.append(f":::{alert_type}")
+                for content_line in alert_content_lines:
+                    processed_lines.append(content_line)
+                processed_lines.append(":::")
+            else:
+                processed_lines.append(line)
+                i += 1
+
+        return "\n".join(processed_lines)
+
+    def _process_fenced_containers(self, raw_md: str) -> str:
+        lines = raw_md.splitlines()
+        processed_lines = []
+
+        open_pattern = re.compile(r"^[ \t]*:::[ \t]*([a-zA-Z0-9_-]+)(?:\s+(.*))?$")
+        close_pattern = re.compile(r"^[ \t]*:::[ \t]*$")
+
+        for line in lines:
+            open_match = open_pattern.match(line)
+            if open_match:
+                container_type = open_match.group(1)
+                title = open_match.group(2) or ""
+                title = title.strip()
+                if len(title) >= 2 and (
+                    (title.startswith('"') and title.endswith('"'))
+                    or (title.startswith("'") and title.endswith("'"))
+                ):
+                    title = title[1:-1]
+
+                if title:
+                    processed_lines.append(
+                        f'\n<div class="admonition {container_type}" title="{title}">\n'
+                    )
+                else:
+                    processed_lines.append(f'\n<div class="admonition {container_type}">\n')
+            elif close_pattern.match(line):
+                processed_lines.append("\n</div>\n")
+            else:
+                processed_lines.append(line)
+
+        return "\n".join(processed_lines)
+
+
 class PreProcessorRegistry:
     """Priority-sorted registry of :class:`PreProcessor` instances.
 
@@ -187,6 +291,7 @@ class PreProcessorRegistry:
         if register_builtins:
             self.register(FrontMatterStripper(input_file), priority=10)
             self.register(IncludeResolver(input_file), priority=20)
+            self.register(AdmonitionPreProcessor(), priority=30)
 
     def register(self, pp: PreProcessor, *, priority: int = 50) -> None:
         """Register *pp* at the given *priority*.

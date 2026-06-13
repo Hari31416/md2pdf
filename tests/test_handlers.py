@@ -449,3 +449,43 @@ class TestInlineMathRender:
         tokens = [{"type": "Math", "raw": "$x^2$", "children": [], "attrs": {}}]
         result = inline_render(tokens, styles)
         assert result == "$x^2$"
+
+
+class TestAdmonitionHandler:
+    def test_admonition_handler_renders_box(self, styles):
+        from md2pdf.handlers.admonition import AdmonitionHandler
+        from md2pdf.core.flowables import AdmonitionBox
+        from md2pdf.core.registry import HandlerRegistry
+
+        # Setup handler registry mock in styles
+        reg = HandlerRegistry()
+        reg.register(ParagraphHandler())
+        styles["_registry"] = reg
+
+        token = {
+            "type": "Admonition",
+            "raw": "",
+            "attrs": {"type": "note", "title": "My Note"},
+            "children": [
+                {
+                    "type": "Paragraph",
+                    "raw": "Hello",
+                    "attrs": {},
+                    "children": [{"type": "RawText", "raw": "Hello", "children": [], "attrs": {}}],
+                    "_node": None,
+                }
+            ],
+            "_node": None,
+        }
+
+        handler = AdmonitionHandler()
+        flowables = handler.render(token, styles)
+        assert len(flowables) == 1
+        assert isinstance(flowables[0], AdmonitionBox)
+        box = flowables[0]
+        assert box.title_flowable is not None
+        assert isinstance(box.title_flowable, Paragraph)
+        assert "My Note" in box.title_flowable.text
+        assert len(box.content) == 1
+        assert isinstance(box.content[0], Paragraph)
+        assert "Hello" in box.content[0].text

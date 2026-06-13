@@ -138,7 +138,59 @@ class MarkdownParser:
             self.footnotes = getattr(doc, "footnotes", {})
             tokens = self._flatten(doc.children)
         logger.debug("MarkdownParser.parse: produced %d top-level tokens", len(tokens))
-        return tokens
+        return self._group_admonitions(tokens)
+
+    def _group_admonitions(self, tokens: list[dict]) -> list[dict]:
+        """Group top-level tokens between admonition open/close HTML tags into Admonition tokens."""
+        output = []
+        stack = [output]
+
+        start_pattern = re.compile(
+            r'^<div class="admonition\s+([^"]+)"(?:\s+title="([^"]*)")?\s*>'
+        )
+        end_pattern = re.compile(r"^</div>$")
+
+        for token in tokens:
+            is_start = False
+            is_end = False
+            tag_match = None
+
+            if token.get("type") == "Paragraph" and len(token.get("children", [])) == 1:
+                child = token["children"][0]
+                if child.get("type") == "RawText":
+                    raw_val = (child.get("raw") or "").strip()
+                    tag_match = start_pattern.match(raw_val)
+                    if tag_match:
+                        is_start = True
+                    elif end_pattern.match(raw_val):
+                        is_end = True
+
+            if is_start:
+                admonition_type = tag_match.group(1)
+                admonition_title = tag_match.group(2) or ""
+
+                new_token = {
+                    "type": "Admonition",
+                    "raw": "",
+                    "children": [],
+                    "attrs": {
+                        "type": admonition_type,
+                        "title": admonition_title,
+                    },
+                }
+                stack[-1].append(new_token)
+                stack.append(new_token["children"])
+            elif is_end:
+                if len(stack) > 1:
+                    stack.pop()
+                else:
+                    stack[-1].append(token)
+            else:
+                if token.get("children"):
+                    token["children"] = self._group_admonitions(token["children"])
+                stack[-1].append(token)
+
+        return output
 
     # ------------------------------------------------------------------
     # Internal helpers

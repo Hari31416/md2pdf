@@ -387,3 +387,112 @@ class KeepTogetherParts(KeepTogether):
 
         return S
 
+
+class AdmonitionBox(Flowable):
+    """A custom Flowable wrapping multiple inner flowables with a filled background
+
+    and a left vertical accent bar. Supports splitting across page boundaries.
+    """
+
+    def __init__(
+        self,
+        content: list[Flowable],
+        border_color: colors.Color,
+        bg_color: colors.Color,
+        title_flowable: Flowable | None = None,
+        padding: float = 10.0,
+        left_bar_width: float = 4.0,
+    ) -> None:
+        super().__init__()
+        self.content = content
+        self.title_flowable = title_flowable
+        self.border_color = border_color
+        self.bg_color = bg_color
+        self.padding = padding
+        self.left_bar_width = left_bar_width
+        self.width = 0.0
+        self.height = 0.0
+        self.spaceBefore = 0
+        self.spaceAfter = 8
+
+    def wrap(self, availWidth: float, availHeight: float) -> tuple[float, float]:
+        inner_avail_width = max(0.0, availWidth - (self.left_bar_width + self.padding * 2))
+        h_total = self.padding
+        if self.title_flowable:
+            _, h_title = self.title_flowable.wrap(inner_avail_width, availHeight)
+            h_total += h_title + 6.0
+        for f in self.content:
+            _, h_f = f.wrap(inner_avail_width, availHeight)
+            h_total += h_f + 4.0
+        h_total += self.padding
+        self.width = availWidth
+        self.height = h_total
+        return self.width, self.height
+
+    def draw(self) -> None:
+        c = self.canv
+        c.saveState()
+        # 1. Background
+        c.setFillColor(self.bg_color)
+        c.rect(0, 0, self.width, self.height, fill=1, stroke=0)
+        # 2. Left accent bar
+        c.setFillColor(self.border_color)
+        c.rect(0, 0, self.left_bar_width, self.height, fill=1, stroke=0)
+        c.restoreState()
+
+        # 3. Draw content
+        inner_x = self.left_bar_width + self.padding
+        y_cursor = self.height - self.padding
+        if self.title_flowable:
+            h_title = self.title_flowable.height
+            y_cursor -= h_title
+            self.title_flowable.drawOn(c, inner_x, y_cursor)
+            y_cursor -= 6.0
+        for f in self.content:
+            h_f = f.height
+            y_cursor -= h_f
+            f.drawOn(c, inner_x, y_cursor)
+            y_cursor -= 4.0
+
+    def split(self, availWidth: float, availHeight: float) -> list[Flowable]:
+        inner_avail_width = max(0.0, availWidth - (self.left_bar_width + self.padding * 2))
+        title_h = 0.0
+        if self.title_flowable:
+            _, title_h = self.title_flowable.wrap(inner_avail_width, availHeight)
+
+        h_used = self.padding
+        if self.title_flowable:
+            h_used += title_h + 6.0
+
+        fit_idx = 0
+        for i, f in enumerate(self.content):
+            _, h_f = f.wrap(inner_avail_width, availHeight)
+            if h_used + h_f + self.padding > availHeight:
+                break
+            h_used += h_f + 4.0
+            fit_idx = i + 1
+
+        if fit_idx == 0:
+            return []
+
+        content_fit = self.content[:fit_idx]
+        content_leftover = self.content[fit_idx:]
+
+        part1 = AdmonitionBox(
+            content=content_fit,
+            border_color=self.border_color,
+            bg_color=self.bg_color,
+            title_flowable=self.title_flowable,
+            padding=self.padding,
+            left_bar_width=self.left_bar_width,
+        )
+        part2 = AdmonitionBox(
+            content=content_leftover,
+            border_color=self.border_color,
+            bg_color=self.bg_color,
+            title_flowable=None,
+            padding=self.padding,
+            left_bar_width=self.left_bar_width,
+        )
+        return [part1, part2]
+
