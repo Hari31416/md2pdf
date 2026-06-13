@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pymd2pdf"
-version = "0.1.4"
+version = "0.2.0"
 description = "Automated programmatic Markdown-to-PDF typesetting engine"
 readme = "README.md"
 requires-python = ">=3.11"

@@ -14,6 +14,37 @@ panel). Every heading (H1–H6) becomes a clickable entry at the correct nesting
 
 ---
 
+## Table of Contents Generation ✅
+
+**Status:** Implemented in v0.2.0.
+
+Prepend a dynamically generated, A4-aligned Table of Contents page before the content by walking bookmark flowables. Can be enabled via the `--toc` CLI flag and `toc` config property.
+
+---
+
+## YAML Front-Matter PDF Metadata ✅
+
+**Status:** Implemented in v0.2.0.
+
+Integrated yaml front-matter parsing to extract PDF metadata (`title`, `author`, `subject`, `keywords`) and applied them to the final PDF properties. Fallbacks are set to "pymd2pdf" for author and the input filename for title.
+
+---
+
+## Footnotes Support ✅
+
+**Status:** Implemented in v0.2.0.
+
+Registered FootnoteReference and FootnoteDefinition markdown tokens. Implemented `FootnoteFlowable` with eager height calculations for overlapping stack prevention, supporting internal clickable links and two-pass page resolving.
+
+---
+
+## Running Page Headers & Section Titles ✅
+
+**Status:** Implemented in v0.2.0.
+
+Added configurable page headers/running titles. Supported `--header` and `--header-on-first-page` CLI options, template placeholders (`{title}`, `{section}`), and two-pass layout rendering for section titles.
+
+
 ## Colour Emoji Support
 
 **Status:** Research complete — not yet implemented.
@@ -54,21 +85,6 @@ on subset size), but zero runtime network dependency.
 ## Additional Planned Items
 
 ### Near-term (fits current architecture)
-
-- **Table of Contents generation** — walk collected `BookmarkFlowable` anchors after Stage 3
-  and prepend a linked TOC page. Implementable as a `PostProcessor` that inspects flowables
-  for `BookmarkFlowable` instances and emits `Paragraph` entries with `<link>` XML tags.
-
-- **YAML front-matter → PDF metadata** — `FrontMatterStripper` already strips the block;
-  extend it to parse and expose `title`, `author`, `subject`, `keywords` so a `PostProcessor`
-  can set `doc.title`, `doc.author`, etc., making the fields appear in "File → Properties".
-
-- **Footnotes** — `[^1]` footnote syntax collected during Stage 3 and rendered at the bottom
-  of each page via a custom `Flowable` that draws a separator rule + footnote text.
-
-- **Page headers / running titles** — extend `draw_page_number` in `pipeline.py` to also
-  draw a configurable header string (e.g., document title or current section name).
-  Requires passing state through the `onFirstPage` / `onLaterPages` callbacks.
 
 - **`<!-- pagebreak -->` directive** — a `PreProcessor` that converts the HTML comment
   (or a custom `\pagebreak` syntax) into a `PageBreak` flowable token, giving authors

@@ -5,6 +5,17 @@ All notable changes to the `md2pdf` project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-06-13
+
+### Added
+- **Table of Contents (TOC) Generation**: Prepend a dynamically generated, A4-aligned Table of Contents page before the content by walking bookmark flowables. Added a `--toc` CLI flag and `toc` config property.
+- **YAML Front-Matter PDF Metadata**: Integrated yaml front-matter parsing to extract PDF metadata (`title`, `author`, `subject`, `keywords`) and applied them to the final PDF properties. Fallbacks are set to "pymd2pdf" for author and the input filename for title.
+- **Footnotes Support**: Registered FootnoteReference and FootnoteDefinition markdown tokens. Implemented `FootnoteFlowable` with eager height calculations for overlapping stack prevention, supporting internal clickable links and two-pass page resolving.
+- **Running Page Headers & Section Titles**: Added configurable page headers/running titles. Supported `--header` and `--header-on-first-page` CLI options, template placeholders (`{title}`, `{section}`), and two-pass layout rendering for section titles.
+
+### Changed
+- Improved `README.md` documentation covering bookmark/unicode features, corrected project tree structure, and updated development setup instructions.
+
 ## [0.1.4] - 2026-06-12
 
 ### Fixed
