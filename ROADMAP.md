@@ -44,6 +44,13 @@ Registered FootnoteReference and FootnoteDefinition markdown tokens. Implemented
 
 Added configurable page headers/running titles. Supported `--header` and `--header-on-first-page` CLI options, template placeholders (`{title}`, `{section}`), and two-pass layout rendering for section titles.
 
+---
+
+## Hyperlink Pass-Through ✅
+
+**Status:** Implemented.
+
+Markdown links `[text](https://...)` are compiled into HTML-like `<a href="...">` XML tags in `inline_render()`, enabling ReportLab to write active, clickable URI annotations directly into the generated PDF.
 
 ## Colour Emoji Support ✅
 
@@ -98,11 +105,21 @@ on subset size), but zero runtime network dependency.
 
 ---
 
-## Medium-term (needs design work)
+## Short-term (implementation path is clear)
 
-- **Hyperlink pass-through** — `[text](https://…)` links currently render as styled text.
-  Emit `<link href="…">` XML in `inline_render` so ReportLab writes a real clickable
-  URI annotation into the PDF.
+- **Task list checkboxes** — `- [x] done` / `- [ ] todo` renders as plain text today.
+  Detect the `[x]`/`[ ]` prefix in `ListHandler` and emit a ☑/☐ symbol (or Twemoji image).
+
+- **Table column alignment** — `mistletoe` already parses column alignment (`:---`,
+  `:---:`, `---:`) and exposes it on the table node. `TableHandler` currently ignores it.
+  Pass alignment through to ReportLab `TableStyle` `ALIGN` commands.
+
+- **Superscript & subscript** — `x^2^` and `H~2~O` syntax. ReportLab supports `<sup>`
+  and `<sub>` tags natively; this needs a new `SpanToken` subclass + `inline_render` case.
+
+---
+
+## Medium-term (needs design work)
 
 - **Multi-column layouts** — two- or three-column text flow for newsletter-style documents.
   ReportLab supports multi-frame layouts via `BaseDocTemplate` + `PageTemplate`; this
@@ -114,6 +131,42 @@ on subset size), but zero runtime network dependency.
 - **Strikethrough & highlight** — `~~strikethrough~~` and `==highlight==` inline spans.
   Strikethrough can be simulated by drawing a line over the text in a custom `Paragraph`
   subclass; highlight requires a filled background rectangle behind the glyph runs.
+
+- **Cover page generation** — a `--cover` flag that auto-generates a title page from
+  YAML front-matter (`title`, `author`, `date`) and prepends it before the TOC. Natural
+  extension of the existing `MetadataPostProcessor` + `TableOfContentsPostProcessor`.
+
+---
+
+## Robustness & DX
+
+- **Font path validation** — if a user-specified `font_file_body` path in `[theme]`
+  doesn't exist, the pipeline crashes with a cryptic ReportLab error during
+  `register_fonts()`. A pre-flight check that validates font paths and emits a clear
+  `ConfigError` would help.
+
+- **Encoding detection** — `cli.py` hard-codes `encoding="utf-8"`. Files in Latin-1 or
+  Windows-1252 will crash. Add an `--encoding` CLI flag with optional auto-detection.
+
+- **Emoji download timeout** — `EmojiPreProcessor` uses bare `urlretrieve` with no
+  timeout. A slow or unresponsive CDN will hang the pipeline indefinitely.
+
+- **`--dry-run` flag** — show what the pipeline would do (pre-processors matched,
+  handlers dispatched, token counts) without actually rendering the PDF.
+
+- **Structured JSON validation output** — `--validate-only` currently writes
+  human-readable text to stdout. A `--format json` option would allow CI integration
+  (e.g. GitHub Actions annotations).
+
+- **Progress reporting** — for multi-page documents with external assets (Mermaid,
+  LaTeX, emoji downloads), the CLI is silent until completion. Stage-level logging
+  or a progress bar would improve UX.
+
+- **Deterministic PDF output** — ReportLab embeds a creation timestamp and unique `/ID`
+  in every PDF. A `--deterministic` flag that pins these values (e.g. to the source
+  file's mtime) would enable byte-identical CI rebuilds.
+
+---
 
 ## Longer-term / exploratory
 
@@ -128,3 +181,11 @@ on subset size), but zero runtime network dependency.
 
 - **Image captions** — render `![caption](url)` caption text below figures using a
   small italic `Paragraph` with a configurable style, matching academic document conventions.
+
+- **Pre-built themes** — ship 2–3 additional themes (e.g. `academic`, `minimal`, `dark`)
+  as built-in options selectable via `--theme academic`. The `[theme]` system is powerful
+  but currently only has a `default`.
+
+- **Integration tests** — the test suite is unit-focused. An end-to-end test that converts
+  a reference `.md` → `.pdf` and extracts text (via `pdfplumber` or `PyMuPDF`) to assert
+  content correctness would catch regressions that unit tests miss.
