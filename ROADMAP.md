@@ -82,19 +82,23 @@ on subset size), but zero runtime network dependency.
 
 ---
 
-## Additional Planned Items
+## `<!-- pagebreak -->` Directive ✅
 
-### Near-term (fits current architecture)
+**Status:** Implemented in v0.3.0.
 
-- **`<!-- pagebreak -->` directive** — a `PreProcessor` that converts the HTML comment
-  (or a custom `\pagebreak` syntax) into a `PageBreak` flowable token, giving authors
-  explicit control over pagination without editing the pipeline.
+`PageBreakPreProcessor` translates `<!-- pagebreak -->` HTML comments and `\pagebreak` backslash syntax into `PageBreak` tokens. `PageBreakHandler` emits a ReportLab `PageBreak` flowable, giving authors explicit pagination control.
 
-- **Admonition / callout blocks** — `:::note`, `:::warning`, `:::tip` fenced containers
-  (standard in MkDocs/Obsidian). Implementable as a `PreProcessor` that rewrites them
-  to HTML `<div class="admonition …">` before parsing, then a matching `ElementHandler`.
+---
 
-### Medium-term (needs design work)
+## Admonition / Callout Blocks ✅
+
+**Status:** Implemented in v0.3.0.
+
+`AdmonitionPreProcessor` converts MkDocs/Obsidian-style fenced containers (`:::note`, `:::warning`, `:::tip`, `:::info`, `:::caution`) and GitHub-style alerts (`> [!NOTE]`, `> [!WARNING]`, etc.) into HTML before parsing. `AdmonitionHandler` renders them with `AdmonitionBox` flowables — coloured left border and tinted background — with distinct colour themes per severity level.
+
+---
+
+## Medium-term (needs design work)
 
 - **Hyperlink pass-through** — `[text](https://…)` links currently render as styled text.
   Emit `<link href="…">` XML in `inline_render` so ReportLab writes a real clickable
@@ -111,7 +115,7 @@ on subset size), but zero runtime network dependency.
   Strikethrough can be simulated by drawing a line over the text in a custom `Paragraph`
   subclass; highlight requires a filled background rectangle behind the glyph runs.
 
-### Longer-term / exploratory
+## Longer-term / exploratory
 
 - **Watch mode** — `md2pdf --watch input.md` that re-renders on file change using
   `watchfiles` or `watchdog`, useful for live-preview workflows.

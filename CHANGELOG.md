@@ -5,6 +5,18 @@ All notable changes to the `md2pdf` project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-06-13
+
+### Added
+- **Colour Emoji Support (Twemoji)**: Added `EmojiPreProcessor` (priority 35) that detects emoji codepoints in Markdown source, downloads matching PNG files from the Twemoji CDN, caches them under `~/.cache/pymd2pdf/emoji/`, and injects inline `<img>` tags so emojis render in colour in the final PDF. Handles ZWJ sequences, variation-selector-16, skin-tone modifiers, and multi-codepoint sequences as single units. Skips pure-math Unicode blocks (arrows, box-drawing, etc.) to avoid false positives. Added `emoji: bool = True` config field and `--emoji`/`--no-emoji` CLI flag.
+- **Pagebreak Directive**: Added `PageBreakPreProcessor` that translates `<!-- pagebreak -->` HTML comments and `\pagebreak` backslash syntax into `PageBreak` tokens. Implemented `PageBreakHandler` which emits a ReportLab `PageBreak` flowable, giving authors explicit pagination control without touching the pipeline.
+- **Admonition / Callout Blocks**: Added `AdmonitionPreProcessor` that converts MkDocs/Obsidian-style fenced containers (`:::note`, `:::warning`, `:::tip`, `:::info`, `:::caution`) and GitHub-style alerts (`> [!NOTE]`, `> [!WARNING]`, etc.) into HTML. Implemented `AdmonitionBox` flowable with a coloured left border and tinted background, and a matching `AdmonitionHandler` with distinct colour themes per severity level.
+- **Inline `<br>` Tag Support**: `inline_render()` now translates escaped raw HTML `<br>` tags into ReportLab paragraph break tags, enabling hard line breaks inside paragraphs, lists, and table cells.
+
+### Changed
+- **Table / Heading Layout**: Added `KeepTogetherParts` flowable to allow tables to split across pages while keeping their preceding heading attached. `LayoutComposer` now wraps heading–table pairs in `KeepTogetherParts` instead of a strict `KeepTogether`, preventing orphaned headings without forcing entire large tables onto a new page.
+- **Inline Image Handling**: `ParagraphHandler` classifies images by size threshold (≤ 32 px = inline, larger = block `ResizableImage` flowable). `_expand_inline_imgs()` helper added to `inline_render()` so emoji render inline (`valign=middle`) in headings, lists, tables, and blockquotes.
+
 ## [0.2.0] - 2026-06-13
 
 ### Added
