@@ -29,6 +29,51 @@ Beyond zero system dependencies, you also get:
 
 ---
 
+## Performance
+
+Although performance was not a primary design goal, `md2pdf` is highly efficient. By parsing the Markdown AST and mapping it directly to ReportLab flowables, it naturally avoids browser launching, process forking, and intermediate HTML rendering overhead.
+
+### Benchmarks (macOS-arm64, Apple Silicon)
+
+To evaluate compilation speeds, we compared `md2pdf` against **Pandoc** (using various PDF engines) and **Playwright (Chromium)** across documents of different sizes:
+* **Cold Start**: Spawns a clean process to capture initialization costs (like browser startup for Playwright or module import overhead for `md2pdf`).
+* **Warm Start (Median)**: Measures rendering throughput by averaging subsequent runs in a warm environment.
+
+#### Warm Start Rendering Speed (Median)
+![Warm Start Performance](scripts/benchmark_outputs/benchmark_chart_warm.png)
+
+#### Cold Start Rendering Speed
+![Cold Start Performance](scripts/benchmark_outputs/benchmark_chart_cold.png)
+
+#### Summary Metrics (seconds, lower is better)
+
+| Document             | Engine                | Cold Start (s) | Warm Median (s) | Status  |
+| :------------------- | :-------------------- | :------------: | :-------------: | :------ |
+| **`simple.md`**      | **md2pdf (native)**   |   **0.253s**   |   **0.014s**    | Success |
+| *(Short document)*   | Playwright (Chromium) |     0.387s     |     0.040s      | Success |
+|                      | Pandoc (weasyprint)   |     0.362s     |     0.369s      | Success |
+|                      | Pandoc (pdflatex)     |     0.760s     |     0.783s      | Success |
+|                      | Pandoc (xelatex)      |     1.480s     |     1.498s      | Success |
+| **`medium.md`**      | Playwright (Chromium) |     0.410s     |   **0.043s**    | Success |
+| *(With math/code)*   | **md2pdf (native)**   |   **0.472s**   |   **0.046s**    | Success |
+|                      | Pandoc (weasyprint)   |     0.482s     |     0.475s      | Success |
+|                      | Pandoc (pdflatex)     |     0.837s     |     0.842s      | Success |
+|                      | Pandoc (xelatex)      |     1.597s     |     1.537s      | Success |
+| **`large.md`**       | Playwright (Chromium) |     0.404s     |   **0.048s**    | Success |
+| *(Multi-page guide)* | **md2pdf (native)**   |   **0.281s**   |   **0.049s**    | Success |
+|                      | Pandoc (weasyprint)   |     0.528s     |     0.532s      | Success |
+|                      | Pandoc (pdflatex)     |     0.868s     |     0.842s      | Success |
+|                      | Pandoc (xelatex)      |     1.518s     |     1.529s      | Success |
+
+*Note: For `medium.md`, `md2pdf`'s cold start is higher because it contains mathematical formulas, which initializes the LaTeX math typesetting subsystem. For `large.md` (which has no math), `md2pdf`'s cold start is much faster.*
+
+To run these benchmarks on your local system:
+```bash
+make benchmark
+```
+
+---
+
 ## Installation
 
 Using `uv` (recommended):

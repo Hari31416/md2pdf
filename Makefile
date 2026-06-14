@@ -40,6 +40,9 @@ test:  ## Run the test suite
 test-cov:  ## Run tests with coverage report
 	uv run pytest --cov=md2pdf --cov-report=term-missing
 
+benchmark:  ## Run rendering engine speed benchmarks
+	uv run --with playwright python scripts/benchmark.py
+
 # ---------------------------------------------------------------------------
 # Documentation
 # ---------------------------------------------------------------------------
