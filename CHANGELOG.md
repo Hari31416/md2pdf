@@ -5,21 +5,26 @@ All notable changes to the `md2pdf` project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## WIP
+## [0.4.3] - 2026-06-14
 
 ### Added
 - **Font Path Validation**: Added pre-flight validation for `[theme]` custom font file paths (`font_file_body`, `font_file_heading`, `font_file_mono`). A new `validate_font_paths()` function in `_font_registry.py` raises a `ConfigError` with a clear message if any configured path does not exist on disk, preventing cryptic ReportLab registration crashes from surfacing mid-pipeline.
 - **Emoji Download Timeout**: Replaced `urlretrieve` with a `urlopen`-based download in `_fetch_emoji_png` to support a configurable network timeout. `EmojiPreProcessor` now accepts a `timeout` parameter (default `10.0` seconds) forwarded to every download call, and `PreProcessorRegistry` exposes a matching `emoji_timeout` constructor argument. Any timeout or network error is caught and treated as a graceful fallback (original emoji character is kept).
-- **Unified Documentation Manual**: Added `docs/user_manual.md` which aggregates all individual guides (`index.md`, `user-guide.md`, `themes.md`, `plugin-authoring.md`, `showcase.md`) into a single print-ready documentation manual with a Table of Contents.
-- **Example Suite**: Added `examples/` directory containing four production-grade markdown templates and rendered PDFs:
-  - `academic_paper`: showcases abstract formatting, LaTeX math equation blocks, citations, and Mermaid flowcharting.
-  - `business_invoice`: showcases clean table alignment, discount highlighting, and custom TOML stylesheet overrides (Corporate Blue theme).
-  - `project_roadmap`: showcases GFM task checklists, multi-level admonition boxes, Pygments syntax highlighting, and Mermaid Gantt charts.
-  - `simple_cv`: showcases clean personal resume alignments, contact emoji styling, structural tables, and custom margins.
+- **Unified Documentation Manual**: Added `docs/user_manual.md` which aggregates all individual guides into a single print-ready documentation manual with a Table of Contents.
+- **Example Suite**: Added `examples/` directory containing four production-grade markdown templates and rendered PDFs: `academic_paper`, `business_invoice`, `project_roadmap`, and `simple_cv`.
 - **Documentation Build Tooling**: Added `scripts/build_docs.py` and a `make docs` Makefile target to automate rebuilding all docs and examples into high-resolution PDFs.
+- **MIT License**: Added `LICENSE` file.
+- **CI Pipeline**: Added `ci.yml` GitHub Actions workflow that runs the full test suite with branch coverage on every push and pull request to `main`, and uploads results to Codecov.
+- **PyPI Metadata**: Added `license`, Python version `classifiers`, and an improved package description to `pyproject.toml` for correct shields.io badge resolution after next release.
+- **`matplotlib` Test Marker**: Added `matplotlib` pytest marker to skip optional-dependency tests in environments without `pymd2pdf[matplotlib]` installed.
 
 ### Changed
+- **README Overhaul**: Restructured README with a user-first perspective — installation and quick start moved to the top, architecture diagrams moved to the bottom. Added "Why md2pdf?" comparison table, Quick Start, Configuration, and Contributing sections. Fixed placeholder git clone URL.
 - **Release Workflow Testing**: Added automated testing step (`uv run pytest`) to the GitHub Actions release workflow to verify code correctness before initiating packaging and release publication.
+
+### Fixed
+- **CLI Test ANSI Codes**: Fixed `test_help` failure in CI caused by typer/Rich injecting ANSI escape sequences into `result.output`. Added `strip_ansi()` helper to `test_cli.py` to sanitize output before string assertions.
+
 
 ## [0.4.2] - 2026-06-14
 
