@@ -66,6 +66,7 @@ class ThemeConfig:
     color_blockquote_text: str = "#555555"
     color_link: str = "#0366d6"
     color_hr: str = "#cccccc"
+    color_highlight: str = "#ffff00"
 
     # --- Table colors ---
     color_table_header_bg: str = "#2c3e50"

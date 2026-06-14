@@ -195,6 +195,7 @@ def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
         # ---------------------------------------------------------------- #
         "color_hr": theme.hex("color_hr"),
         "color_link": theme.color_link,  # raw str for XML attr
+        "color_highlight": theme.color_highlight,  # raw str for XML attr
         "color_blockquote_bar": theme.hex("color_blockquote_bar"),
         "syntax_style": theme.syntax_style,
         "spacing_base": theme.spacing_base,

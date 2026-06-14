@@ -22,6 +22,7 @@ This guide provides a comprehensive reference to all features, configuration set
   - [Footnotes](#footnotes)
     - [Syntax:](#syntax)
     - [Layout Logic:](#layout-logic)
+  - [Strikethrough \& Highlight](#strikethrough--highlight)
   - [File Inclusion (!include)](#file-inclusion-include)
     - [Key Behaviors:](#key-behaviors)
   - [Admonitions \& GitHub Alerts](#admonitions--github-alerts)
@@ -238,6 +239,20 @@ Here is a paragraph with a footnote reference[^1] and a second one[^detail].
 * Footnote reference citations (e.g., `[1]`) are clickable anchors.
 * The matching footnote definitions are aligned at the bottom of the page where the reference first appears.
 * A two-pass compile cycle is utilized to calculate dynamic content height and prevent text overlap at the bottom page margin.
+
+---
+
+## Strikethrough & Highlight
+
+`md2pdf` supports inline formatting for strikethrough and highlighted text spans:
+
+* **Strikethrough**: Wrap text in double tildes (`~~strikethrough~~`) to draw a line over it. This compiles to ReportLab `<strike>` tags.
+* **Highlight**: Wrap text in double equals (`==highlight==`) to draw a filled background rectangle behind the text. This compiles to ReportLab `<span backcolor="...">` tags.
+* **Highlight Color Configuration**: The background color of highlights defaults to yellow (`#ffff00`). This is fully customizable in the `[theme]` section of your `md2pdf.toml` configuration:
+  ```toml
+  [theme]
+  color_highlight = "#ffff00"  # Hex color code for text highlights
+  ```
 
 ---
 

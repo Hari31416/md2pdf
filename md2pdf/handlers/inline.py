@@ -129,6 +129,15 @@ def inline_render(children: list[dict], styles: dict | None = None) -> str:
             inner = inline_render(child.get("children", []), styles)
             parts.append(f"<i>{inner}</i>")
 
+        elif t == "Strikethrough":
+            inner = inline_render(child.get("children", []), styles)
+            parts.append(f"<strike>{inner}</strike>")
+
+        elif t == "Highlight":
+            inner = inline_render(child.get("children", []), styles)
+            highlight_color = (styles or {}).get("color_highlight", "#ffff00")
+            parts.append(f'<span backcolor="{highlight_color}">{inner}</span>')
+
         elif t == "InlineCode":
             inner = inline_render(child.get("children", []), styles) or escape_xml(raw)
             parts.append(f"<font name='Courier'>{inner}</font>")

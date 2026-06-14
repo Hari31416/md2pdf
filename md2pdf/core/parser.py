@@ -66,6 +66,16 @@ class FootnoteDefinition(BlockToken):
         return cls.match_obj.group(1), " ".join(content)
 
 
+class Strikethrough(SpanToken):
+    pattern = re.compile(r"~~(?=\S)(.+?\S)~~")
+    parse_inner = True
+
+
+class Highlight(SpanToken):
+    pattern = re.compile(r"==(?=\S)(.+?\S)==")
+    parse_inner = True
+
+
 class _MathRegistrationRenderer(BaseRenderer):
     """Dummy renderer used solely as a context manager to register the Math span token.
 
@@ -74,7 +84,15 @@ class _MathRegistrationRenderer(BaseRenderer):
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(Math, FootnoteReference, FootnoteDefinition, *args, **kwargs)
+        super().__init__(
+            Math,
+            FootnoteReference,
+            FootnoteDefinition,
+            Strikethrough,
+            Highlight,
+            *args,
+            **kwargs,
+        )
 
     def render_math(self, token: Any) -> str:
         return ""
@@ -83,6 +101,12 @@ class _MathRegistrationRenderer(BaseRenderer):
         return ""
 
     def render_footnote_definition(self, token: Any) -> str:
+        return ""
+
+    def render_strikethrough(self, token: Any) -> str:
+        return ""
+
+    def render_highlight(self, token: Any) -> str:
         return ""
 
 

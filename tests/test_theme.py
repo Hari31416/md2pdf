@@ -65,6 +65,7 @@ class TestThemeConfig:
             "color_blockquote_text",
             "color_link",
             "color_hr",
+            "color_highlight",
             "color_table_header_bg",
             "color_table_header_text",
             "color_table_grid",
