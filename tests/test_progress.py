@@ -76,7 +76,9 @@ def test_pipeline_progress_with_diagrams(tmp_path: Path) -> None:
 
 def test_pipeline_progress_with_emojis(tmp_path: Path) -> None:
     """Verify that emoji downloading emits progress events for uncached emojis."""
+    import io
     from io import BytesIO
+    from unittest.mock import MagicMock
 
     from PIL import Image as PILImage
 
@@ -94,18 +96,18 @@ def test_pipeline_progress_with_emojis(tmp_path: Path) -> None:
 
     emoji_pp = EmojiPreProcessor(cache_dir=str(tmp_path), progress_callback=progress_callback)
 
-    def mock_retrieve_side_effect(url, dest):
-        Path(dest).write_bytes(valid_png_bytes)
+    # urlopen is used as a context manager; make it return valid PNG bytes
+    mock_response = MagicMock()
+    mock_response.__enter__ = lambda s: io.BytesIO(valid_png_bytes)
+    mock_response.__exit__ = MagicMock(return_value=False)
 
-    # Mock urlretrieve to write valid dummy PNG and pretend download succeeds
-    with patch(
-        "md2pdf.core.preprocessors.urlretrieve", side_effect=mock_retrieve_side_effect
-    ) as mock_retrieve:
+    # Mock urlopen to return a valid response and track call count
+    with patch("md2pdf.core.preprocessors.urlopen", return_value=mock_response) as mock_open:
         # We need two emojis: 🌍 and 😀
         emoji_pp.process("Hello 🌍 and 😀!")
 
         # Verify download was attempted
-        assert mock_retrieve.call_count == 2
+        assert mock_open.call_count == 2
 
     event_names = [e[0] for e in events]
     assert "emoji_download_start" in event_names
@@ -152,9 +154,9 @@ def test_pipeline_progress_with_cached_emojis(tmp_path: Path) -> None:
 
     pipeline = Pipeline(cfg, progress_callback=progress_callback)
 
-    with patch("md2pdf.core.preprocessors.urlretrieve") as mock_retrieve:
+    with patch("md2pdf.core.preprocessors.urlopen") as mock_open:
         pipeline.run("Hello 🌍!")
-        mock_retrieve.assert_not_called()
+        mock_open.assert_not_called()
 
     event_names = [e[0] for e in events]
     # Since emoji is cached, no downloads are performed

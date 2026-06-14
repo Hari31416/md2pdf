@@ -11,6 +11,7 @@ from md2pdf.core.preprocessors import (
     EmojiPreProcessor,
     PreProcessorRegistry,
     _codepoints_to_slug,
+    _fetch_emoji_png,
     _is_emoji_char,
 )
 
@@ -70,6 +71,58 @@ class TestCodepointsToSlug:
 
 
 # ---------------------------------------------------------------------------
+# _fetch_emoji_png — timeout forwarding and error handling
+# ---------------------------------------------------------------------------
+
+
+class TestFetchEmojiPng:
+    def test_timeout_forwarded_to_urlopen(self, tmp_path: Path) -> None:
+        """_fetch_emoji_png must pass *timeout* to urlopen, not ignore it."""
+        import io
+
+        fake_response = MagicMock()
+        fake_response.__enter__ = lambda s: io.BytesIO(b"PNGDATA")
+        fake_response.__exit__ = MagicMock(return_value=False)
+
+        with patch("md2pdf.core.preprocessors.urlopen", return_value=fake_response) as mock_open:
+            _fetch_emoji_png("1f600", tmp_path / "emoji", timeout=5.0)
+
+        mock_open.assert_called_once()
+        _, kwargs = mock_open.call_args
+        assert kwargs.get("timeout") == 5.0
+
+    def test_timeout_error_returns_none(self, tmp_path: Path) -> None:
+        """A TimeoutError (network hang) must return None, not propagate."""
+        with patch(
+            "md2pdf.core.preprocessors.urlopen",
+            side_effect=TimeoutError("timed out"),
+        ):
+            result = _fetch_emoji_png("1f600", tmp_path / "emoji", timeout=0.001)
+        assert result is None
+
+    def test_partial_file_cleaned_up_on_error(self, tmp_path: Path) -> None:
+        """Partial file left from a previous failed attempt must not be returned."""
+        emoji_dir = tmp_path / "emoji"
+        emoji_dir.mkdir()
+        dest = emoji_dir / "1f600.png"
+        # Simulate a leftover partial file from a prior broken download
+        dest.write_bytes(b"partial")
+        # Mark it as a directory so the existence check passes but it's actually stale;
+        # easier: just delete it so _fetch_emoji_png attempts a fresh download that fails.
+        dest.unlink()
+
+        with patch(
+            "md2pdf.core.preprocessors.urlopen",
+            side_effect=TimeoutError("timed out"),
+        ):
+            result = _fetch_emoji_png("1f600", emoji_dir, timeout=0.001)
+
+        assert result is None
+        # No partial file should remain
+        assert not dest.exists()
+
+
+# ---------------------------------------------------------------------------
 # EmojiPreProcessor unit tests (with mocked network)
 # ---------------------------------------------------------------------------
 
@@ -112,7 +165,7 @@ class TestEmojiPreProcessor:
 
     def test_network_failure_falls_back_to_original(self, emoji_pp: EmojiPreProcessor) -> None:
         with patch(
-            "md2pdf.core.preprocessors.urlretrieve",
+            "md2pdf.core.preprocessors.urlopen",
             side_effect=OSError("no network"),
         ):
             result = emoji_pp.process("Hello 🌍!")
@@ -125,12 +178,12 @@ class TestEmojiPreProcessor:
         fake_png = emoji_dir / "1f30d.png"
         fake_png.write_bytes(b"CACHED")
 
-        mock_urlretrieve = MagicMock()
-        with patch("md2pdf.core.preprocessors.urlretrieve", mock_urlretrieve):
+        mock_urlopen = MagicMock()
+        with patch("md2pdf.core.preprocessors.urlopen", mock_urlopen):
             result = emoji_pp.process("🌍")
 
-        # urlretrieve should NOT have been called — we already had the file
-        mock_urlretrieve.assert_not_called()
+        # urlopen should NOT have been called — we already had the file
+        mock_urlopen.assert_not_called()
         assert "1f30d.png" in result
 
     def test_multiple_emoji_in_line(self, emoji_pp: EmojiPreProcessor, tmp_path: Path) -> None:
@@ -183,6 +236,26 @@ class TestPreProcessorRegistryEmojiToggle:
         for priority, pp in reg._processors:
             if type(pp).__name__ == "EmojiPreProcessor":
                 assert priority == 35
+                return
+        pytest.fail("EmojiPreProcessor not found in registry")
+
+    def test_emoji_default_timeout_is_10(self, tmp_path: Path) -> None:
+        """The default download timeout should be 10 seconds."""
+        reg = PreProcessorRegistry(register_builtins=True, cache_dir=str(tmp_path))
+        for _, pp in reg._processors:
+            if type(pp).__name__ == "EmojiPreProcessor":
+                assert pp.timeout == 10.0
+                return
+        pytest.fail("EmojiPreProcessor not found in registry")
+
+    def test_custom_emoji_timeout_propagated(self, tmp_path: Path) -> None:
+        """emoji_timeout passed to the registry must reach EmojiPreProcessor."""
+        reg = PreProcessorRegistry(
+            register_builtins=True, cache_dir=str(tmp_path), emoji_timeout=3.5
+        )
+        for _, pp in reg._processors:
+            if type(pp).__name__ == "EmojiPreProcessor":
+                assert pp.timeout == 3.5
                 return
         pytest.fail("EmojiPreProcessor not found in registry")
 

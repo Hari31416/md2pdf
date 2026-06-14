@@ -9,7 +9,7 @@ from typing import Any
 from reportlab.platypus import SimpleDocTemplate
 
 from md2pdf.core.config import Config
-from md2pdf.core.errors import ValidationIssue
+from md2pdf.core.errors import ConfigError, ValidationIssue
 from md2pdf.core.parser import MarkdownParser
 from md2pdf.core.plugin_loader import PluginLoader
 from md2pdf.core.postprocessors import PostProcessorRegistry
@@ -466,6 +466,9 @@ class Pipeline:
         Font registration is performed first so that DejaVu (or any other
         bundled font) is available to ReportLab before the stylesheet
         references it by name.
+
+        Raises:
+            ConfigError: If a configured font file path is missing.
         """
         try:
             from md2pdf.assets._font_registry import (  # noqa: PLC0415
@@ -478,6 +481,8 @@ class Pipeline:
             theme = getattr(self.config, "theme_config", None)
             register_theme_fonts(theme)
             return build_default_stylesheet(theme)
+        except ConfigError:
+            raise
         except Exception:
             logger.debug("Could not build stylesheet; using empty styles dict", exc_info=True)
             return {}

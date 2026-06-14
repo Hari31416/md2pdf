@@ -160,7 +160,9 @@ Running headers are configurable and disabled by default. When enabled (via CLI 
 5. If the system is run with `--offline`, placeholders are rendered instead of downloading missing graphics.
 6. To disable emoji rendering completely, pass `--no-emoji` or set `emoji = false` in `md2pdf.toml`.
 
----
+### Download Timeout
+Each emoji PNG download enforces a **10-second timeout** by default. If the network hangs or a request exceeds the limit, the original emoji character is kept as a fallback — the pipeline never blocks indefinitely on a slow connection.
+
 
 ## Task Lists & Checkboxes
 
@@ -397,3 +399,14 @@ Supported Unicode blocks include:
 * **Box Drawing**: Vertical and horizontal rules used to build ASCII diagrams.
 * **Currency**: $ € £ ¥ ₹ ₽ ₩ ₺ ₿ ¢.
 * **Typographic Symbols**: Em dash (—), ellipses (…), curly quotes (“ ”), registered (®), trademark (™).
+
+### Custom Font Validation
+
+When you configure a custom TTF font via `font_file_body`, `font_file_heading`, or `font_file_mono` in the `[theme]` section, `md2pdf` performs a **pre-flight path check** before attempting to register the font with ReportLab. If the file does not exist on disk, a `ConfigError` is raised immediately with a clear diagnostic message:
+
+```
+ConfigError: [theme] font_file_body points to a missing font file: /path/to/MyFont.ttf
+Please verify the path exists and is a valid TrueType (.ttf) file.
+```
+
+This prevents the cryptic low-level ReportLab errors that would otherwise surface mid-pipeline when font registration fails.

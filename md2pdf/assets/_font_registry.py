@@ -31,6 +31,8 @@ import logging
 from importlib.resources import files
 from pathlib import Path
 
+from md2pdf.core.errors import ConfigError
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -131,6 +133,44 @@ def register_fonts() -> None:
     )
 
 
+def validate_font_paths(theme: object) -> None:
+    """Pre-flight validation of custom font file paths declared in a :class:`ThemeConfig`.
+
+    Inspects the ``font_file_body``, ``font_file_heading``, and ``font_file_mono``
+    fields from *theme*.  For each non-empty path, verifies that the file exists
+    on disk.  Raises :class:`~md2pdf.core.errors.ConfigError` on the first
+    missing file so that the error is surfaced early with a clear message before
+    any ReportLab registration is attempted.
+
+    Args:
+        theme: A :class:`~md2pdf.styles.theme.ThemeConfig` instance, or any
+               object exposing the same ``font_file_*`` attributes.
+               If *theme* is ``None`` the function is a no-op.
+
+    Raises:
+        ConfigError: If a configured font file path does not exist on disk.
+    """
+    if theme is None:
+        return
+
+    pairs: list[tuple[str, str]] = [
+        ("font_file_body", getattr(theme, "font_file_body", "")),
+        ("font_file_heading", getattr(theme, "font_file_heading", "")),
+        ("font_file_mono", getattr(theme, "font_file_mono", "")),
+    ]
+
+    for field_name, ttf_path_str in pairs:
+        if not ttf_path_str:
+            continue  # field not set — bundled font will be used
+
+        ttf_path = Path(ttf_path_str).expanduser().resolve()
+        if not ttf_path.is_file():
+            raise ConfigError(
+                f"[theme] {field_name} points to a missing font file: {ttf_path!s}\n"
+                "Please verify the path exists and is a valid TrueType (.ttf) file."
+            )
+
+
 def register_theme_fonts(theme: object) -> None:
     """Register any custom TTF fonts declared in a :class:`ThemeConfig`.
 
@@ -153,11 +193,15 @@ def register_theme_fonts(theme: object) -> None:
                If *theme* is ``None`` the function is a no-op.
 
     Raises:
-        Nothing — failures are logged as warnings so a bad font path never
-        aborts a conversion run.
+        ConfigError: If a configured font file path does not exist on disk.
+            Raised via :func:`validate_font_paths` before any ReportLab
+            registration is attempted.
     """
     if theme is None:
         return
+
+    # Pre-flight: raise ConfigError immediately on missing font files.
+    validate_font_paths(theme)
 
     try:
         from reportlab.pdfbase import pdfmetrics  # noqa: PLC0415
@@ -177,12 +221,6 @@ def register_theme_fonts(theme: object) -> None:
             continue  # no custom file specified for this slot
 
         ttf_path = Path(ttf_path_str).expanduser().resolve()
-        if not ttf_path.is_file():
-            logger.warning(
-                "Custom font file not found for '%s': %s — skipping.", logical_name, ttf_path
-            )
-            continue
-
         try:
             pdfmetrics.registerFont(TTFont(logical_name, str(ttf_path)))
             logger.debug("Registered custom font '%s' from %s", logical_name, ttf_path)

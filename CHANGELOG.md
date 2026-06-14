@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## WIP
 
 ### Added
+- **Font Path Validation**: Added pre-flight validation for `[theme]` custom font file paths (`font_file_body`, `font_file_heading`, `font_file_mono`). A new `validate_font_paths()` function in `_font_registry.py` raises a `ConfigError` with a clear message if any configured path does not exist on disk, preventing cryptic ReportLab registration crashes from surfacing mid-pipeline.
+- **Emoji Download Timeout**: Replaced `urlretrieve` with a `urlopen`-based download in `_fetch_emoji_png` to support a configurable network timeout. `EmojiPreProcessor` now accepts a `timeout` parameter (default `10.0` seconds) forwarded to every download call, and `PreProcessorRegistry` exposes a matching `emoji_timeout` constructor argument. Any timeout or network error is caught and treated as a graceful fallback (original emoji character is kept).
 - **Unified Documentation Manual**: Added `docs/user_manual.md` which aggregates all individual guides (`index.md`, `user-guide.md`, `themes.md`, `plugin-authoring.md`, `showcase.md`) into a single print-ready documentation manual with a Table of Contents.
 - **Example Suite**: Added `examples/` directory containing four production-grade markdown templates and rendered PDFs:
   - `academic_paper`: showcases abstract formatting, LaTeX math equation blocks, citations, and Mermaid flowcharting.

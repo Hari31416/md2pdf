@@ -21,12 +21,13 @@ from __future__ import annotations
 import logging
 import os
 import re
+import shutil
 import unicodedata
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-from urllib.request import urlretrieve
+from urllib.request import urlopen
 
 logger = logging.getLogger(__name__)
 
@@ -413,10 +414,20 @@ def _codepoints_to_slug(chars: str) -> str:
     return "-".join(result)
 
 
-def _fetch_emoji_png(slug: str, emoji_cache_dir: Path) -> Path | None:
+def _fetch_emoji_png(slug: str, emoji_cache_dir: Path, timeout: float = 10.0) -> Path | None:
     """Return path to a cached PNG for *slug*, downloading it on first use.
 
-    Returns ``None`` if the download fails (network unavailable, 404, etc.).
+    Args:
+        slug: Twemoji codepoint slug (e.g. ``"1f600"``).
+        emoji_cache_dir: Directory where PNG files are cached.
+        timeout: Network timeout in seconds for the download request.
+                 Defaults to ``10.0``.  A :class:`TimeoutError` or
+                 ``socket.timeout`` raised by :func:`urllib.request.urlopen`
+                 is caught and treated as a regular download failure.
+
+    Returns:
+        The :class:`~pathlib.Path` to the local PNG file, or ``None`` if the
+        download fails (network unavailable, 404, timeout, etc.).
     """
     dest = emoji_cache_dir / f"{slug}.png"
     if dest.exists():
@@ -425,7 +436,9 @@ def _fetch_emoji_png(slug: str, emoji_cache_dir: Path) -> Path | None:
     url = _TWEMOJI_BASE.format(slug=slug)
     try:
         emoji_cache_dir.mkdir(parents=True, exist_ok=True)
-        urlretrieve(url, dest)  # noqa: S310  (URL is a hard-coded CDN constant)
+        with urlopen(url, timeout=timeout) as response:  # noqa: S310
+            with open(dest, "wb") as fh:
+                shutil.copyfileobj(response, fh)
         logger.debug("Downloaded emoji PNG: %s → %s", url, dest)
         return dest
     except Exception as exc:
@@ -454,18 +467,24 @@ class EmojiPreProcessor(PreProcessor):
         cache_dir: Root cache directory (same as :attr:`~md2pdf.core.config.Config.cache_dir`).
         size: Pixel size used for both the ``width`` and ``height`` attributes.
               Defaults to ``14`` which is approximately one line-height at 10 pt.
+        timeout: Network timeout in seconds for each emoji PNG download.
+                 Defaults to ``10.0``.  If a download exceeds the timeout it
+                 is treated as a failure and the original emoji character is
+                 kept as a fallback.
     """
 
     def __init__(
         self,
         cache_dir: str = "",
         size: int = 14,
+        timeout: float = 10.0,
         progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
     ) -> None:
         self.emoji_cache_dir = (
             Path(cache_dir) / "emoji" if cache_dir else Path.home() / ".cache/pymd2pdf/emoji"
         )
         self.size = size
+        self.timeout = timeout
         self.progress_callback = progress_callback
 
     def process(self, raw_md: str) -> str:
@@ -523,7 +542,7 @@ class EmojiPreProcessor(PreProcessor):
                         "emoji_download_item",
                         {"slug": slug, "index": idx, "total": len(slugs_to_download)},
                     )
-                    _fetch_emoji_png(slug, self.emoji_cache_dir)
+                    _fetch_emoji_png(slug, self.emoji_cache_dir, self.timeout)
 
         while i < n:
             ch = text[i]
@@ -565,7 +584,7 @@ class EmojiPreProcessor(PreProcessor):
                     break
 
             slug = _codepoints_to_slug("".join(seq_chars))
-            png_path = _fetch_emoji_png(slug, self.emoji_cache_dir)
+            png_path = _fetch_emoji_png(slug, self.emoji_cache_dir, self.timeout)
             if png_path is not None:
                 img_tag = f'<img src="{png_path}" ' f'width="{self.size}" height="{self.size}"/>'
                 result.append(img_tag)
@@ -601,6 +620,7 @@ class PreProcessorRegistry:
         input_file: str = "",
         emoji: bool = True,
         cache_dir: str = "",
+        emoji_timeout: float = 10.0,
         progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
     ) -> None:
         # Each entry is a (priority, PreProcessor) tuple.
@@ -617,7 +637,11 @@ class PreProcessorRegistry:
             self.register(AdmonitionPreProcessor(), priority=30)
             if emoji:
                 self.register(
-                    EmojiPreProcessor(cache_dir=cache_dir, progress_callback=progress_callback),
+                    EmojiPreProcessor(
+                        cache_dir=cache_dir,
+                        timeout=emoji_timeout,
+                        progress_callback=progress_callback,
+                    ),
                     priority=35,
                 )
 

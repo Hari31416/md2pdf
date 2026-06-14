@@ -8,17 +8,15 @@ Planned features and known limitations for future releases. Items are loosely or
 
 ### Short-Term (Target: v0.5.0)
 
-- **Font Path Validation** — Perform pre-flight validation on user-configured font paths in `[theme]`. Raise a clear `ConfigError` if a font file is missing, preventing cryptic ReportLab crashes during registration.
-- **Emoji Download Timeout** — Implement a timeout for download requests in `EmojiPreProcessor` to prevent the compilation pipeline from hanging indefinitely on network issues.
-- **Structured JSON Validation Output** — Introduce a `--format json` CLI option for the `--validate-only` command to output structured validation results, making CI/CD automation integration easier.
 - **Page-Size & Orientation Configuration** — Expose page sizing (e.g., A4, Letter, A3) and page orientation (landscape/portrait) as configuration options in `md2pdf.toml` and as CLI flags.
 - **Image Captions** — Render image alt-text (`![Caption](image.png)`) as a small, styled, and centered caption paragraph below images, matching academic and technical document conventions.
+- **Cover Page Generation** — Add a `--cover` CLI flag to auto-generate and prepend a cover/title page using YAML front-matter metadata (`title`, `author`, `date`) before the table of contents.
 
 ---
 
 ### Medium-Term (Target: v0.6.0)
 
-- **Cover Page Generation** — Add a `--cover` CLI flag to auto-generate and prepend a cover/title page using YAML front-matter metadata (`title`, `author`, `date`) before the table of contents.
+- **Structured JSON Validation Output** — Introduce a `--format json` CLI option for the `--validate-only` command to output structured validation results, making CI/CD automation integration easier.
 - **Watch Mode** — Support live editing with `md2pdf --watch input.md`, automatically re-rendering the output PDF whenever changes are detected in the source file.
 - **Pre-Built Themes** — Bundle additional built-in themes (e.g., `academic`, `minimal`, `dark`) selectable via the `--theme` flag.
 - **Encoding Detection** — Add an `--encoding` CLI flag to support reading non-UTF-8 source files, along with optional auto-detection.
@@ -40,6 +38,8 @@ Planned features and known limitations for future releases. Items are loosely or
 
 | Version    | Feature                   | Description                                                                                                     |
 | :--------- | :------------------------ | :-------------------------------------------------------------------------------------------------------------- |
+| **WIP**    | Font Path Validation      | Pre-flight `ConfigError` for missing `[theme]` `font_file_*` paths before ReportLab registration. |
+|            | Emoji Download Timeout    | Configurable `timeout` for Twemoji PNG downloads; graceful fallback on network hang or error.      |
 | **v0.4.0** | Table Column Alignment    | Enabled column alignment parsing (`:---`, `:---:`, `---:`) mapping to ReportLab table cell styles.              |
 |            | Superscript & Subscript   | Support for inline `x^2^` and `H~2~O` syntax using native ReportLab `<sup>` and `<sub>` tags.                   |
 |            | Strikethrough & Highlight | Support for `~~strikethrough~~` (`<strike>`) and `==highlight==` (`<span backcolor="...">`) with custom colors. |
