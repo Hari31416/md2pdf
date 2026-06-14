@@ -14,3 +14,11 @@
 - **subject:** A brief description of the change (max 50 characters).
 - **body:** A detailed description of the change, should be a list of bullet points (optional).
 - **footer:** Any relevant issue numbers or breaking change notes (optional).
+
+## Instructions for Version Bump
+
+- Check the chnages done after last version bump using git tag or git log history
+- Decide the version bump type based on the changes done (major, minor, patch)
+- Update `__version__` in `md2pdf/__init__.py` and in `pyproject.toml` accordingly
+- Validate `CHANGELOG.md` and update it with the changes done since last version bump
+- Commit, tag and push the changes
