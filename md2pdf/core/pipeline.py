@@ -304,6 +304,7 @@ class Pipeline:
 
     def _map(self, tokens: list[dict]) -> list:
         """Stage 3 — dispatch each token to its handler and collect flowables."""
+        self._styles["_seen_slugs"] = set()
         # Collect footnote definitions first
         self.footnotes.clear()
         for token in tokens:

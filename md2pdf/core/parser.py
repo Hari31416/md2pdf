@@ -48,13 +48,15 @@ class FootnoteDefinition(BlockToken):
 
     @classmethod
     def start(cls, line):
-        cls.match_obj = cls.pattern.match(line)
-        return cls.match_obj is not None
+        return cls.pattern.match(line) is not None
 
     @classmethod
     def read(cls, lines):
-        next(lines)
-        content = [cls.match_obj.group(2).strip()]
+        line = next(lines)
+        match_obj = cls.pattern.match(line)
+        if match_obj is None:
+            return "", ""
+        content = [match_obj.group(2).strip()]
         next_line = lines.peek()
         while (
             next_line is not None
@@ -63,7 +65,7 @@ class FootnoteDefinition(BlockToken):
         ):
             content.append(next(lines).strip())
             next_line = lines.peek()
-        return cls.match_obj.group(1), " ".join(content)
+        return match_obj.group(1), " ".join(content)
 
 
 class Strikethrough(SpanToken):

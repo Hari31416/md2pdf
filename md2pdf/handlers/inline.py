@@ -181,8 +181,9 @@ def inline_render(
 
         elif t == "Link":
             href = child.get("attrs", {}).get("target", "")
+            safe_href = saxutils.escape(href, {'"': "&quot;"})
             label = inline_render(child.get("children", []), styles, parent_style)
-            parts.append(f'<a href="{href}" color="{link_color}">{label}</a>')
+            parts.append(f'<a href="{safe_href}" color="{link_color}">{label}</a>')
 
         elif t == "Image":
             # Inline images are represented by their alt text only.

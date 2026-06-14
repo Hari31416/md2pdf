@@ -200,6 +200,22 @@ class TestFrontMatterStripper:
         assert stripper.metadata["title"] == "Double Quotes"
         assert stripper.metadata["author"] == "Single Quotes"
 
+    def test_crlf_and_eof(self):
+        # Test CRLF
+        stripper = FrontMatterStripper()
+        raw_crlf = "---\r\ntitle: Test\r\nauthor: John\r\n---\r\n# Hello"
+        processed_crlf = stripper.process(raw_crlf)
+        assert processed_crlf == "# Hello"
+        assert stripper.metadata["title"] == "Test"
+        assert stripper.metadata["author"] == "John"
+
+        # Test EOF (no trailing newline)
+        stripper_eof = FrontMatterStripper()
+        raw_eof = "---\ntitle: EOF Test\n---"
+        processed_eof = stripper_eof.process(raw_eof)
+        assert processed_eof == ""
+        assert stripper_eof.metadata["title"] == "EOF Test"
+
 
 # ---------------------------------------------------------------------------
 # IncludeResolver (placeholder — should be a no-op)

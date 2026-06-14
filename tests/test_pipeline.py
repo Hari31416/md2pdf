@@ -403,3 +403,81 @@ def test_pipeline_defensive_registry_clobbering(tmp_path: Path) -> None:
     # The custom handler should not be overwritten by the default ParagraphHandler during register_builtins
     paragraph_handler = pipeline.registry.get("Paragraph")
     assert isinstance(paragraph_handler, CustomParagraphHandler)
+
+
+def test_preprocessor_code_fence_protection(tmp_path: Path) -> None:
+    """Verify preprocessors do not modify text inside fenced code blocks."""
+    cfg = Config(
+        input_file="",
+        output_file=str(tmp_path / "output.pdf"),
+        offline=True,
+        emoji=True,
+        cache_dir=str(tmp_path),
+    )
+    pipeline = Pipeline(cfg)
+
+    md_input = (
+        "smile: 😄\n\n"
+        "```\n"
+        "smile: 😄\n"
+        "\\pagebreak\n"
+        "$$\n"
+        "E = mc^2\n"
+        "$$\n"
+        "> [!NOTE]\n"
+        "This is an admonition\n"
+        "```\n\n"
+        "~~~\n"
+        "smile: 😄\n"
+        "~~~\n"
+    )
+
+    preprocessed = pipeline._pre_process(md_input)
+
+    assert "smile: <img" in preprocessed
+    assert "```\nsmile: 😄\n" in preprocessed
+    assert "\\pagebreak\n" in preprocessed
+    assert "$$\nE = mc^2\n$$" in preprocessed
+    assert "> [!NOTE]" in preprocessed
+    assert "~~~\nsmile: 😄\n~~~" in preprocessed
+
+
+def test_link_href_xml_escaping() -> None:
+    """Verify that href target attributes in links are XML-escaped."""
+    from md2pdf.handlers.inline import inline_render
+
+    styles = {"color_link": "#0366d6"}
+
+    token = {
+        "type": "Link",
+        "attrs": {"target": 'https://example.com/search?q=test&name="john"'},
+        "children": [{"type": "RawText", "raw": "Example Link"}],
+    }
+
+    rendered = inline_render([token], styles)
+    assert 'href="https://example.com/search?q=test&amp;name=&quot;john&quot;"' in rendered
+
+
+def test_heading_slug_uniquification(tmp_path: Path) -> None:
+    """Verify that duplicate headings generate unique bookmark destination slugs."""
+    cfg = Config(
+        input_file="",
+        output_file=str(tmp_path / "output.pdf"),
+        offline=True,
+        emoji=False,
+    )
+    pipeline = Pipeline(cfg)
+
+    md = "# Introduction\n\n" "# Introduction\n\n" "# Introduction\n\n"
+
+    tokens = pipeline._parse(md)
+    flowables = pipeline._map(tokens)
+
+    from md2pdf.core.flowables import BookmarkFlowable
+
+    bookmarks = [f for f in flowables if isinstance(f, BookmarkFlowable)]
+
+    assert len(bookmarks) == 3
+    assert bookmarks[0].key == "introduction"
+    assert bookmarks[1].key == "introduction-2"
+    assert bookmarks[2].key == "introduction-3"

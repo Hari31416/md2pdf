@@ -32,6 +32,80 @@ from urllib.request import urlopen
 logger = logging.getLogger(__name__)
 
 
+def process_outside_fenced_code_blocks(raw_md: str, processor: Callable[[str], str]) -> str:
+    """Replace fenced code blocks with unique placeholders, apply processor, then restore them.
+
+    Args:
+        raw_md: Raw Markdown string.
+        processor: Callable that transforms a string outside code fences.
+
+    Returns:
+        The processed Markdown string.
+    """
+    lines = raw_md.splitlines(keepends=True)
+
+    placeholders = []
+    new_lines = []
+
+    in_fence = False
+    fence_char = ""
+    fence_len = 0
+    current_fence_lines = []
+
+    start_pattern = re.compile(r"^[ \t]*(`{3,}|~{3,})")
+
+    for line in lines:
+        if in_fence:
+            current_fence_lines.append(line)
+            stripped_line = line.rstrip("\r\n")
+            close_pattern = rf"^[ \t]*{re.escape(fence_char)}{{{fence_len},}}[ \t]*$"
+            if re.match(close_pattern, stripped_line):
+                # End of fence
+                placeholder = f"<!--FENCE_PLACEHOLDER_{len(placeholders)}-->\n"
+                placeholders.append("".join(current_fence_lines))
+                new_lines.append(placeholder)
+                in_fence = False
+            else:
+                pass
+        else:
+            stripped_line = line.rstrip("\r\n")
+            m = start_pattern.match(stripped_line)
+            if m:
+                fence_str = m.group(1)
+                char = fence_str[0]
+                length = len(fence_str)
+
+                info_string = stripped_line[m.end() :]
+                if char in info_string:
+                    new_lines.append(line)
+                else:
+                    in_fence = True
+                    fence_char = char
+                    fence_len = length
+                    current_fence_lines = [line]
+            else:
+                new_lines.append(line)
+
+    if in_fence:
+        placeholder = f"<!--FENCE_PLACEHOLDER_{len(placeholders)}-->\n"
+        placeholders.append("".join(current_fence_lines))
+        new_lines.append(placeholder)
+
+    # Process the text with placeholders
+    modified_text = "".join(new_lines)
+    processed_text = processor(modified_text)
+
+    # Restore original fenced blocks
+    for i, original in enumerate(placeholders):
+        processed_text = re.sub(
+            rf"<!--FENCE_PLACEHOLDER_{i}-->\r?\n?",
+            lambda m, orig=original: orig,
+            processed_text,
+        )
+
+    return processed_text
+
+
 class PreProcessor(ABC):
     """Abstract base class for all pre-processors.
 
@@ -73,7 +147,7 @@ class FrontMatterStripper(PreProcessor):
     """
 
     _PATTERN: re.Pattern[str] = re.compile(
-        r"^---\n.*?\n---\n",
+        r"^---\r?\n.*?\r?\n---\r?(?:\n|$)",
         re.DOTALL,
     )
 
@@ -199,9 +273,12 @@ class AdmonitionPreProcessor(PreProcessor):
     """
 
     def process(self, raw_md: str) -> str:
-        md = self._process_github_alerts(raw_md)
-        md = self._process_fenced_containers(md)
-        return md
+        def do_process(text: str) -> str:
+            md = self._process_github_alerts(text)
+            md = self._process_fenced_containers(md)
+            return md
+
+        return process_outside_fenced_code_blocks(raw_md, do_process)
 
     def _process_github_alerts(self, raw_md: str) -> str:
         lines = raw_md.splitlines()
@@ -306,12 +383,15 @@ class LatexBlockPreProcessor(PreProcessor):
             formula = match.group(1).strip()
             return f"\n\n```latex\n{formula}\n```\n\n"
 
-        return re.sub(
-            r"^[ \t]*\$\$(.*?)\$\$[ \t]*$",
-            replace_math,
-            raw_md,
-            flags=re.MULTILINE | re.DOTALL,
-        )
+        def do_process(text: str) -> str:
+            return re.sub(
+                r"^[ \t]*\$\$(.*?)\$\$[ \t]*$",
+                replace_math,
+                text,
+                flags=re.MULTILINE | re.DOTALL,
+            )
+
+        return process_outside_fenced_code_blocks(raw_md, do_process)
 
 
 class PageBreakPreProcessor(PreProcessor):
@@ -324,21 +404,24 @@ class PageBreakPreProcessor(PreProcessor):
     """
 
     def process(self, raw_md: str) -> str:
-        # Replace <!-- pagebreak -->
-        md = re.sub(
-            r"^[ \t]*<!--[ \t]*pagebreak[ \t]*-->[ \t]*$",
-            r'<div class="pagebreak"></div>',
-            raw_md,
-            flags=re.MULTILINE | re.IGNORECASE,
-        )
-        # Replace \pagebreak
-        md = re.sub(
-            r"^[ \t]*\\pagebreak[ \t]*$",
-            r'<div class="pagebreak"></div>',
-            md,
-            flags=re.MULTILINE | re.IGNORECASE,
-        )
-        return md
+        def do_process(text: str) -> str:
+            # Replace <!-- pagebreak -->
+            md = re.sub(
+                r"^[ \t]*<!--[ \t]*pagebreak[ \t]*-->[ \t]*$",
+                r'<div class="pagebreak"></div>',
+                text,
+                flags=re.MULTILINE | re.IGNORECASE,
+            )
+            # Replace \pagebreak
+            md = re.sub(
+                r"^[ \t]*\\pagebreak[ \t]*$",
+                r'<div class="pagebreak"></div>',
+                md,
+                flags=re.MULTILINE | re.IGNORECASE,
+            )
+            return md
+
+        return process_outside_fenced_code_blocks(raw_md, do_process)
 
 
 # ---------------------------------------------------------------------------
@@ -495,32 +578,77 @@ class EmojiPreProcessor(PreProcessor):
 
     def process(self, raw_md: str) -> str:
         """Scan *raw_md* for emoji and replace them with ``<img>`` references."""
-        result: list[str] = []
-        i = 0
-        text = raw_md
-        n = len(text)
 
-        # Pre-scan to identify unique emojis that need downloading
-        if self.progress_callback:
-            slugs_to_download = []
-            seen_slugs = set()
+        def do_process(text: str) -> str:
+            result = []
+            i = 0
+            n = len(text)
+
+            # Pre-scan to identify unique emojis that need downloading
+            if self.progress_callback:
+                slugs_to_download = []
+                seen_slugs = set()
+                while i < n:
+                    ch = text[i]
+                    if ch == "`":
+                        end = text.find("`", i + 1)
+                        if end == -1:
+                            break
+                        i = end + 1
+                        continue
+                    if not _is_emoji_char(ch):
+                        i += 1
+                        continue
+                    seq_chars = [ch]
+                    j = i + 1
+                    while j < n:
+                        next_cp = ord(text[j])
+                        if next_cp in (_ZWJ, _VARIATION_SELECTOR_16) or _is_emoji_char(text[j]):
+                            seq_chars.append(text[j])
+                            j += 1
+                        else:
+                            break
+                    slug = _codepoints_to_slug("".join(seq_chars))
+                    if slug not in seen_slugs:
+                        seen_slugs.add(slug)
+                        dest = self.emoji_cache_dir / f"{slug}.png"
+                        if not dest.exists():
+                            slugs_to_download.append(slug)
+                    i = j
+
+                # Reset scanning pointer
+                i = 0
+
+                if slugs_to_download:
+                    self.progress_callback(
+                        "emoji_download_start", {"total": len(slugs_to_download)}
+                    )
+                    for idx, slug in enumerate(slugs_to_download, 1):
+                        self.progress_callback(
+                            "emoji_download_item",
+                            {"slug": slug, "index": idx, "total": len(slugs_to_download)},
+                        )
+                        _fetch_emoji_png(slug, self.emoji_cache_dir, self.timeout)
+
             while i < n:
                 ch = text[i]
-                if text[i : i + 3] == "```":
-                    end = text.find("```", i + 3)
-                    if end == -1:
-                        break
-                    i = end + 3
-                    continue
+
+                # --- skip inline code spans ---
                 if ch == "`":
                     end = text.find("`", i + 1)
                     if end == -1:
+                        result.append(text[i:])
                         break
+                    result.append(text[i : end + 1])
                     i = end + 1
                     continue
+
                 if not _is_emoji_char(ch):
+                    result.append(ch)
                     i += 1
                     continue
+
+                # Collect a full ZWJ / variation-selector sequence
                 seq_chars = [ch]
                 j = i + 1
                 while j < n:
@@ -530,77 +658,21 @@ class EmojiPreProcessor(PreProcessor):
                         j += 1
                     else:
                         break
+
                 slug = _codepoints_to_slug("".join(seq_chars))
-                if slug not in seen_slugs:
-                    seen_slugs.add(slug)
-                    dest = self.emoji_cache_dir / f"{slug}.png"
-                    if not dest.exists():
-                        slugs_to_download.append(slug)
+                png_path = _fetch_emoji_png(slug, self.emoji_cache_dir, self.timeout)
+                if png_path is not None:
+                    img_tag = f'<img src="{png_path}" width="{self.size}" height="{self.size}"/>'
+                    result.append(img_tag)
+                else:
+                    # Fallback: keep the original emoji characters
+                    result.append("".join(seq_chars))
+
                 i = j
 
-            # Reset scanning pointer
-            i = 0
+            return "".join(result)
 
-            if slugs_to_download:
-                self.progress_callback("emoji_download_start", {"total": len(slugs_to_download)})
-                for idx, slug in enumerate(slugs_to_download, 1):
-                    self.progress_callback(
-                        "emoji_download_item",
-                        {"slug": slug, "index": idx, "total": len(slugs_to_download)},
-                    )
-                    _fetch_emoji_png(slug, self.emoji_cache_dir, self.timeout)
-
-        while i < n:
-            ch = text[i]
-
-            # --- skip fenced code blocks verbatim ---
-            if text[i : i + 3] == "```":
-                end = text.find("```", i + 3)
-                if end == -1:
-                    result.append(text[i:])
-                    break
-                result.append(text[i : end + 3])
-                i = end + 3
-                continue
-
-            # --- skip inline code spans ---
-            if ch == "`":
-                end = text.find("`", i + 1)
-                if end == -1:
-                    result.append(text[i:])
-                    break
-                result.append(text[i : end + 1])
-                i = end + 1
-                continue
-
-            if not _is_emoji_char(ch):
-                result.append(ch)
-                i += 1
-                continue
-
-            # Collect a full ZWJ / variation-selector sequence
-            seq_chars = [ch]
-            j = i + 1
-            while j < n:
-                next_cp = ord(text[j])
-                if next_cp in (_ZWJ, _VARIATION_SELECTOR_16) or _is_emoji_char(text[j]):
-                    seq_chars.append(text[j])
-                    j += 1
-                else:
-                    break
-
-            slug = _codepoints_to_slug("".join(seq_chars))
-            png_path = _fetch_emoji_png(slug, self.emoji_cache_dir, self.timeout)
-            if png_path is not None:
-                img_tag = f'<img src="{png_path}" ' f'width="{self.size}" height="{self.size}"/>'
-                result.append(img_tag)
-            else:
-                # Fallback: keep the original emoji characters
-                result.append("".join(seq_chars))
-
-            i = j
-
-        return "".join(result)
+        return process_outside_fenced_code_blocks(raw_md, do_process)
 
 
 class PreProcessorRegistry:

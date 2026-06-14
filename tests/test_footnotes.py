@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import threading
+
 from reportlab.platypus import SimpleDocTemplate
 
 from md2pdf.core.config import Config
 from md2pdf.core.flowables import FootnoteFlowable
-from md2pdf.core.parser import MarkdownParser
+from md2pdf.core.parser import FootnoteDefinition, MarkdownParser
 from md2pdf.core.pipeline import Pipeline
 from md2pdf.handlers.inline import inline_render
 from md2pdf.styles.default import build_default_stylesheet
@@ -118,3 +120,47 @@ def test_footnotes_pipeline_integration(tmp_path):
 
     assert pdf_path.exists()
     assert pdf_path.stat().st_size > 1000
+
+
+def test_footnote_definition_thread_safety() -> None:
+    """Verify FootnoteDefinition is thread-safe and doesn't rely on class-level state."""
+    results = []
+
+    def parse_worker(line: str, next_lines: list[str], thread_id: int) -> None:
+        class LinesMock:
+            def __init__(self, current_line: str, extra: list[str]) -> None:
+                self.lines = [current_line] + extra
+                self.idx = 0
+
+            def __next__(self) -> str:
+                if self.idx >= len(self.lines):
+                    raise StopIteration
+                val = self.lines[self.idx]
+                self.idx += 1
+                return val
+
+            def peek(self) -> str | None:
+                if self.idx < len(self.lines):
+                    return self.lines[self.idx]
+                return None
+
+        lines_iter = LinesMock(line, next_lines)
+        assert FootnoteDefinition.start(line) is True
+        label, content = FootnoteDefinition.read(lines_iter)
+        results.append((thread_id, label, content))
+
+    threads = []
+    for i in range(20):
+        line = f"[^fn-{i}]: Content for {i}"
+        next_lines = [f"extra line {i}"]
+        t = threading.Thread(target=parse_worker, args=(line, next_lines, i))
+        threads.append(t)
+        t.start()
+
+    for t in threads:
+        t.join()
+
+    for thread_id, label, content in results:
+        assert label == f"fn-{thread_id}"
+        assert f"Content for {thread_id}" in content
+        assert f"extra line {thread_id}" in content
