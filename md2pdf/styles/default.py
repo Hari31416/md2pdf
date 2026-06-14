@@ -8,6 +8,7 @@ literals or magic strings appear in this file.
 
 from __future__ import annotations
 
+from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 
 from md2pdf.styles.theme import ThemeConfig
@@ -187,6 +188,19 @@ def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
             fontSize=theme.font_size_small - 1,
             leading=10,
             textColor=theme.hex("color_body_text"),
+            allowWidows=0,
+            allowOrphans=0,
+        ),
+        "image_caption": ParagraphStyle(
+            "image_caption",
+            parent=base["Normal"],
+            fontName=theme.font_body,
+            fontSize=theme.font_size_small - 1,
+            leading=10,
+            textColor=theme.hex("color_body_text"),
+            alignment=TA_CENTER,
+            spaceBefore=theme.spacing_base // 2,
+            spaceAfter=theme.spacing_base,
             allowWidows=0,
             allowOrphans=0,
         ),

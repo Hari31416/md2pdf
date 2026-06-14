@@ -1,4 +1,5 @@
 - When adding new feature or making significant changes, update `CHANGELOG.md`, `docs/user-guide.md` and `docs/index.md` accordingly. Update `docs/showcase.md` as well and rerender it.
+- Always run `pre-commit run --all-files` before making a commit or doing significant changes to the codebase.
 - Do not commit changes unless explicitly asked to do so. When asked, use the following format for commit messages:
 
   ```txt

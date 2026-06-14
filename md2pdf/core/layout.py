@@ -124,9 +124,12 @@ class LayoutComposer:
         return style_name.startswith("h") if style_name else False
 
     def _is_image_block(self, f: Flowable) -> bool:
-        from reportlab.platypus import Image
+        from reportlab.platypus import Image, KeepTogether
 
         from md2pdf.assets.fallback import PlaceholderBox
+
+        if isinstance(f, KeepTogether):
+            return any(self._is_image_block(child) for child in f._content)
 
         return isinstance(f, Image) or isinstance(f, PlaceholderBox)
 

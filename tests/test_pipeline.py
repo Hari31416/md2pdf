@@ -194,11 +194,14 @@ def test_paragraph_handler_markdown_image(tmp_path: Path) -> None:
     styles = build_default_stylesheet()
     styles["_config"] = cfg
 
+    from reportlab.platypus import KeepTogether
+
     handler = ParagraphHandler()
     flowables = handler.render(token, styles)
 
     assert len(flowables) == 1
-    assert isinstance(flowables[0], ResizableImage)
+    assert isinstance(flowables[0], KeepTogether)
+    assert isinstance(flowables[0]._content[0], ResizableImage)
 
 
 def test_paragraph_handler_html_image(tmp_path: Path) -> None:
@@ -224,15 +227,19 @@ def test_paragraph_handler_html_image(tmp_path: Path) -> None:
     styles = build_default_stylesheet()
     styles["_config"] = cfg
 
+    from reportlab.platypus import KeepTogether
+
     handler = ParagraphHandler()
     flowables = handler.render(token, styles)
 
-    # Should split into: Paragraph ("Before"), ResizableImage, Paragraph ("After")
+    # Should split into: Paragraph ("Before"), KeepTogether(ResizableImage, Paragraph), Paragraph ("After")
     assert len(flowables) == 3
     assert flowables[0].text == "Before"
-    assert isinstance(flowables[1], ResizableImage)
-    assert flowables[1].drawWidth == 225.0
-    assert flowables[1].drawHeight == 100.0
+    assert isinstance(flowables[1], KeepTogether)
+    img = flowables[1]._content[0]
+    assert isinstance(img, ResizableImage)
+    assert img.drawWidth == 225.0
+    assert img.drawHeight == 100.0
     assert flowables[2].text == "After"
 
 

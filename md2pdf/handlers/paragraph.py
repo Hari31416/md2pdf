@@ -56,12 +56,14 @@ class ParagraphHandler(ElementHandler):
                         attrs = parse_attributes(part)
                         if "src" in attrs and _is_block_img(attrs):
                             # Large image → extract as a standalone block flowable
+                            from md2pdf.handlers.inline import escape_xml  # noqa: PLC0415
+
                             virtual_children.append(
                                 {
                                     "type": "HTMLImage",
                                     "attrs": {
                                         "target": attrs["src"],
-                                        "alt": attrs.get("alt", ""),
+                                        "alt": escape_xml(attrs.get("alt", "")),
                                         "width": attrs.get("width", ""),
                                         "height": attrs.get("height", ""),
                                     },
@@ -118,8 +120,17 @@ class ParagraphHandler(ElementHandler):
                     box = PlaceholderBox("image", f"Missing: {target}", width=400, height=80)
                     box.hAlign = "CENTER"
                     box.spaceBefore = 0
-                    box.spaceAfter = styles.get("spacing_base", 8)
-                    flowables.append(box)
+
+                    alt_text = child["attrs"].get("alt", "").strip()
+                    if alt_text:
+                        box.spaceAfter = styles.get("spacing_base", 8) // 2
+                        caption_p = Paragraph(alt_text, styles["image_caption"])
+                        from reportlab.platypus import KeepTogether
+
+                        flowables.append(KeepTogether([box, caption_p]))
+                    else:
+                        box.spaceAfter = styles.get("spacing_base", 8)
+                        flowables.append(box)
                     continue
 
                 # Load image dimensions using PIL
@@ -136,8 +147,17 @@ class ParagraphHandler(ElementHandler):
                     box = PlaceholderBox("image", f"Corrupt: {target}", width=400, height=80)
                     box.hAlign = "CENTER"
                     box.spaceBefore = 0
-                    box.spaceAfter = styles.get("spacing_base", 8)
-                    flowables.append(box)
+
+                    alt_text = child["attrs"].get("alt", "").strip()
+                    if alt_text:
+                        box.spaceAfter = styles.get("spacing_base", 8) // 2
+                        caption_p = Paragraph(alt_text, styles["image_caption"])
+                        from reportlab.platypus import KeepTogether
+
+                        flowables.append(KeepTogether([box, caption_p]))
+                    else:
+                        box.spaceAfter = styles.get("spacing_base", 8)
+                        flowables.append(box)
                     continue
 
                 # Determine display size
@@ -198,8 +218,17 @@ class ParagraphHandler(ElementHandler):
                 img = ResizableImage(resolved_path, width=display_width, height=display_height)
                 img.hAlign = "CENTER"
                 img.spaceBefore = 0
-                img.spaceAfter = styles.get("spacing_base", 8)
-                flowables.append(img)
+
+                alt_text = child["attrs"].get("alt", "").strip()
+                if alt_text:
+                    img.spaceAfter = styles.get("spacing_base", 8) // 2
+                    caption_p = Paragraph(alt_text, styles["image_caption"])
+                    from reportlab.platypus import KeepTogether
+
+                    flowables.append(KeepTogether([img, caption_p]))
+                else:
+                    img.spaceAfter = styles.get("spacing_base", 8)
+                    flowables.append(img)
             else:
                 current_text_run.append(child)
 
