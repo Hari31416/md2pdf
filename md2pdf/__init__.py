@@ -28,6 +28,7 @@ __all__ = [
 
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 
@@ -54,5 +55,5 @@ def convert(
         config.output_file = dst
 
     pipeline = Pipeline(config, registry, progress_callback=progress_callback)
-    raw_md = open(src, encoding="utf-8").read()  # noqa: WPS515
+    raw_md = Path(src).read_text(encoding="utf-8")
     pipeline.run(raw_md)

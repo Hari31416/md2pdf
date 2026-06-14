@@ -75,21 +75,25 @@ class PluginLoader:
         from md2pdf.handlers.table import TableHandler
         from md2pdf.handlers.thematic_break import ThematicBreakHandler
 
-        registry.register(HeadingHandler())
-        registry.register(ParagraphHandler())
-        registry.register(ListHandler())
-        registry.register(BlockQuoteHandler())
-        registry.register(TableHandler())
-        registry.register(ThematicBreakHandler())
-        registry.register(CodeFenceHandler())
-        registry.register(AdmonitionHandler())
-        registry.register(PageBreakHandler())
+        def reg(handler):
+            if registry.get(handler.token_type) is None:
+                registry.register(handler)
+
+        reg(HeadingHandler())
+        reg(ParagraphHandler())
+        reg(ListHandler())
+        reg(BlockQuoteHandler())
+        reg(TableHandler())
+        reg(ThematicBreakHandler())
+        reg(CodeFenceHandler())
+        reg(AdmonitionHandler())
+        reg(PageBreakHandler())
         # Register Mermaid and Latex handlers in offline mode by default
         import os
 
         default_cache = os.path.expanduser("~/.cache/pymd2pdf")
-        registry.register(MermaidHandler(KrokiClient(), AssetCache(default_cache), True))
-        registry.register(LatexHandler(KrokiClient(), AssetCache(default_cache), True))
+        reg(MermaidHandler(KrokiClient(), AssetCache(default_cache), True))
+        reg(LatexHandler(KrokiClient(), AssetCache(default_cache), True))
 
     def load_entry_points(self) -> None:
         """Auto-discover installed packages that declare ``md2pdf.*`` entry points.

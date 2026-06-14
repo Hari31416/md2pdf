@@ -79,14 +79,17 @@ class FrontMatterStripper(PreProcessor):
 
     def __init__(self, input_file: str = "") -> None:
         self.input_file = input_file
-        self.metadata: dict[str, str] = {
+        self.reset()
+
+    def reset(self) -> None:
+        self.metadata = {
             "title": "",
             "author": "pymd2pdf",
             "subject": "",
             "keywords": "",
             "date": "",
         }
-        self.parsed_keys: set[str] = set()
+        self.parsed_keys = set()
         if self.input_file:
             base_name = os.path.basename(self.input_file)
             title_default, _ = os.path.splitext(base_name)
@@ -684,3 +687,9 @@ class PreProcessorRegistry:
         for _, pp in self._processors:
             raw_md = pp.process(raw_md)
         return raw_md
+
+    def reset(self) -> None:
+        """Reset state of all registered pre-processors."""
+        for _, pp in self._processors:
+            if hasattr(pp, "reset"):
+                pp.reset()

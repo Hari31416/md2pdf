@@ -90,24 +90,13 @@ class Pipeline:
     ) -> None:
         self.config = config
         self.registry = HandlerRegistry()
+        if registry is not None:
+            self.registry._handlers.update(registry._handlers)
         self._progress_callback = None
         self.progress_callback = progress_callback
 
-        self.metadata: dict[str, str] = {
-            "title": "",
-            "author": "pymd2pdf",
-            "subject": "",
-            "keywords": "",
-            "date": "",
-        }
-        self.parsed_metadata_keys: set[str] = set()
         self.footnotes: dict[str, tuple[str, str]] = {}
-        if self.config.input_file:
-            import os
-
-            base_name = os.path.basename(self.config.input_file)
-            title_default, _ = os.path.splitext(base_name)
-            self.metadata["title"] = title_default
+        self._reset_metadata()
 
         # Stage 1 — pre-processor registry (built-ins auto-registered).
         self._pre_registry = PreProcessorRegistry(
@@ -161,6 +150,24 @@ class Pipeline:
         self._styles["_config"] = self.config
         self._styles["_registry"] = self.registry
 
+    def _reset_metadata(self) -> None:
+        self.metadata = {
+            "title": "",
+            "author": "pymd2pdf",
+            "subject": "",
+            "keywords": "",
+            "date": "",
+        }
+        self.parsed_metadata_keys = set()
+        if self.config.input_file:
+            import os
+
+            base_name = os.path.basename(self.config.input_file)
+            title_default, _ = os.path.splitext(base_name)
+            self.metadata["title"] = title_default
+        if hasattr(self, "_pre_registry") and self._pre_registry:
+            self._pre_registry.reset()
+
     @property
     def progress_callback(self) -> Callable[[str, dict[str, Any]], None] | None:
         return getattr(self, "_progress_callback", None)
@@ -186,6 +193,8 @@ class Pipeline:
         """
         from md2pdf.core.validator import DocumentValidator
 
+        self._reset_metadata()
+        self._pre_registry.reset()
         md = self._pre_process(raw_md)
         tokens = self._parse(md)
         validator = DocumentValidator()
@@ -198,6 +207,8 @@ class Pipeline:
             raw_md: Raw markdown string read from the source file.
         """
         logger.debug("Pipeline.run: starting")
+        self._reset_metadata()
+        self._pre_registry.reset()
 
         # Temporarily suppress progress reporting during validation gate
         original_callback = self.progress_callback
@@ -252,8 +263,6 @@ class Pipeline:
             # Temporarily suppress sub-stage logs for the pass 2 rebuild
             self.progress_callback = None
             try:
-                md = self._pre_process(raw_md)
-                tokens = self._parse(md)
                 flowables = self._map(tokens)
             finally:
                 self.progress_callback = original_callback
@@ -518,8 +527,13 @@ class Pipeline:
             client = KrokiClient()
             offline = getattr(self.config, "offline", False)
 
-            self.registry.register(MermaidHandler(client, cache, offline))
-            self.registry.register(LatexHandler(client, cache, offline))
+            mermaid_handler = MermaidHandler(client, cache, offline)
+            if self.registry.get(mermaid_handler.token_type) is None:
+                self.registry.register(mermaid_handler)
+
+            latex_handler = LatexHandler(client, cache, offline)
+            if self.registry.get(latex_handler.token_type) is None:
+                self.registry.register(latex_handler)
         except Exception:
             logger.debug("Could not register asset handlers", exc_info=True)
 

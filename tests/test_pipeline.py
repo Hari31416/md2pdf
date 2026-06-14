@@ -361,3 +361,45 @@ def test_pipeline_with_pagebreaks(tmp_path: Path) -> None:
     convert(str(input_file), str(output_file))
     assert output_file.exists()
     assert output_file.stat().st_size > 0
+
+
+def test_pipeline_metadata_leak_prevented(tmp_path: Path) -> None:
+    """Verify that metadata from one run does not leak into a subsequent run of the same Pipeline instance."""
+    cfg = Config(input_file="", output_file=str(tmp_path / "out1.pdf"), offline=True)
+    pipeline = Pipeline(cfg)
+
+    # Document 1 has YAML front matter
+    doc1 = "---\ntitle: Doc 1 Title\nauthor: Doc 1 Author\n---\n# Content"
+    pipeline.run(doc1)
+    assert pipeline.metadata["title"] == "Doc 1 Title"
+    assert pipeline.metadata["author"] == "Doc 1 Author"
+
+    # Document 2 has no front matter
+    cfg.output_file = str(tmp_path / "out2.pdf")
+    doc2 = "# Content Without Metadata"
+    pipeline.run(doc2)
+    assert pipeline.metadata["title"] == ""
+    assert pipeline.metadata["author"] == "pymd2pdf"
+
+
+def test_pipeline_defensive_registry_clobbering(tmp_path: Path) -> None:
+    """Verify that built-in handlers registered during Pipeline init do not clobber custom ones in the passed registry."""
+    from reportlab.platypus import Paragraph
+
+    from md2pdf.core.registry import ElementHandler, HandlerRegistry
+
+    class CustomParagraphHandler(ElementHandler):
+        token_type = "Paragraph"
+
+        def render(self, token: dict, styles: dict) -> list:
+            return [Paragraph("CUSTOM PARAGRAPH", styles["body"])]
+
+    custom_registry = HandlerRegistry()
+    custom_registry.register(CustomParagraphHandler())
+
+    cfg = Config(input_file="", output_file=str(tmp_path / "out.pdf"), offline=True)
+    pipeline = Pipeline(cfg, custom_registry)
+
+    # The custom handler should not be overwritten by the default ParagraphHandler during register_builtins
+    paragraph_handler = pipeline.registry.get("Paragraph")
+    assert isinstance(paragraph_handler, CustomParagraphHandler)
