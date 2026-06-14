@@ -30,11 +30,35 @@ jobs:
       - name: Build Package
         run: uv build
 
+      - name: Extract Changelog Section
+        id: extract_changelog
+        run: |
+          python -c '
+          import re
+          from pathlib import Path
+
+          changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          tag = "${{ github.ref_name }}".lstrip("v")
+          pattern = rf"##\s+\[{re.escape(tag)}\][\s\S]*?(?=\n##\s+\[|\Z)"
+          match = re.search(pattern, changelog)
+          if match:
+              content = match.group(0).strip()
+              content_lines = content.split("\n")[1:]
+              body = "\n".join(content_lines).strip()
+              with open(Path("${{ github.output }}"), "a", encoding="utf-8") as f:
+                  f.write("body<<EOF\n")
+                  f.write(body + "\n")
+                  f.write("EOF\n")
+          else:
+              with open(Path("${{ github.output }}"), "a", encoding="utf-8") as f:
+                  f.write("body=No changelog entry found for this version.\n")
+          '
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
-          generate_release_notes: true
+          body: ${{ steps.extract_changelog.outputs.body }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
