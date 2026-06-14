@@ -12,6 +12,7 @@ toc                  = false                 # true = generate a Table of Conten
 header               = "{title} | {section}" # Running header template (supports {title} and {section} placeholders)
 header_on_first_page = false                 # true = render running header on the first page
 emoji                = true                  # true = translate emoji codepoints into Twemoji images
+deterministic        = false                 # true = pin creation timestamps and ID hashes for byte-identical builds
 
 
 

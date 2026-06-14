@@ -17,6 +17,7 @@ Learn about all supported Markdown structures, features, and configuration param
 * **Colour Emoji (Twemoji)**: Automatically substituting emoji characters with high-res colour Twemoji images.
 * **Task Lists**: GFM-style checklists (`- [ ]` / `- [x]`) rendered using Twemoji images or Unicode symbols.
 * **Footnotes**: Reference link maps and automatic page layout positioning.
+* **Deterministic PDF Output**: Pinning timestamps and ID hashes for byte-identical builds.
 * **Inline Formatting**: Support for `~~strikethrough~~`, `==highlight==`, superscript `x^2^`, and subscript `H~2~O` spans.
 * **Tables**: Automatic column alignment parsing (`:---`, `:---:`, `---:`) and layout styling.
 * **Admonitions & GitHub Alerts**: Fenced admonition blocks and inline markdown alerts with distinct color themes.

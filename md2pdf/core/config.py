@@ -41,6 +41,7 @@ class Config:
     header: str = "{title} | {section}"
     header_on_first_page: bool = False
     emoji: bool = True
+    deterministic: bool = False
 
     # Structured plugin config from [plugins] TOML section.
     # Keys: "handlers", "preprocessors", "postprocessors" → list[str]

@@ -498,11 +498,20 @@ class Pipeline:
             is_first_page=False,
         )
 
-        doc.build(
-            safe_flowables,
-            onFirstPage=PageTemplateCallback(state_first),
-            onLaterPages=PageTemplateCallback(state_later),
-        )
+        from reportlab import rl_config
+
+        old_invariant = getattr(rl_config, "invariant", 0)
+        if getattr(self.config, "deterministic", False):
+            rl_config.invariant = 1
+
+        try:
+            doc.build(
+                safe_flowables,
+                onFirstPage=PageTemplateCallback(state_first),
+                onLaterPages=PageTemplateCallback(state_later),
+            )
+        finally:
+            rl_config.invariant = old_invariant
 
     def _build_doc(self):
         from reportlab.lib.pagesizes import A4

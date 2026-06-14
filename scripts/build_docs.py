@@ -27,7 +27,7 @@ except ImportError:
 def build_docs() -> None:
     """Compile documentation files in docs/ to PDFs."""
     docs_to_compile = [
-        ("docs/user_manual.md", "docs/user_manual.pdf", Config(toc=True)),
+        ("docs/user_manual.md", "docs/user_manual.pdf", Config(toc=True, deterministic=True)),
     ]
 
     logger.info("--- Compiling Documentation Suite ---")
@@ -71,12 +71,13 @@ def build_examples() -> None:
 
         logger.info("Compiling example %s...", item.name)
 
-        config = Config()
+        config = Config(deterministic=True)
         if toml_path.exists():
             toml_rel = os.path.relpath(toml_path, ROOT)
             logger.info("  Loading config from %s", toml_rel)
             try:
                 config = Config.from_toml(str(toml_path))
+                config.deterministic = True
             except Exception as exc:
                 logger.error("  Failed to load config %s: %s", toml_rel, exc)
 

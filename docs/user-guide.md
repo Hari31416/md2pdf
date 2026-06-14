@@ -41,6 +41,7 @@ The CLI is built with `typer` and supports the following options:
 | `--header-on-first-page` |              | Render the running header on the first page.                                |
 | `--emoji` / `--no-emoji` |              | Enable or disable colour Twemoji image substitution.                        |
 | `--progress` / `--no-progress` |        | Show or hide stage-level compilation progress on stderr (default: enabled). |
+| `--deterministic`        |              | Pin document creation timestamps and ID hashes, enabling byte-identical builds for CI caching. |
 
 ---
 
@@ -68,6 +69,7 @@ cover                = false                 # true = prepend an auto-generated 
 header               = "{title} | {section}" # Running header template (supports {title} and {section} placeholders)
 header_on_first_page = false                 # true = render running header on the first page
 emoji                = true                  # true = translate emoji codepoints into Twemoji images
+deterministic        = false                 # true = pin creation timestamps and ID hashes for byte-identical builds
 
 [theme]
 # Typography
@@ -328,6 +330,29 @@ def my_callback(event: str, data: dict):
 
 convert("input.md", "output.pdf", progress_callback=my_callback)
 ```
+
+---
+
+## Deterministic PDF Output
+
+When generating PDFs for automated build systems, documentation servers, or within Git-controlled repositories, minor changes in build time can cause file differences, even if the visual content remains identical.
+
+`md2pdf` provides a **deterministic mode** that pins PDF creation/modification dates and object identifier hashes.
+
+### Features of Deterministic Mode:
+1. **Pinned Metadata Timestamps:** Suppresses or pins dynamic document timestamps (such as creation and modification dates) in the PDF metadata header.
+2. **Stable ID Hashes:** Normalizes internal PDF cross-reference table identifiers and document IDs, ensuring they are identical on every compilation run for the same input.
+
+### Usage:
+* **CLI Flag:** Run with the `--deterministic` option:
+  ```bash
+  md2pdf input.md -o output.pdf --deterministic
+  ```
+* **Configuration File:** Set the `deterministic` property under the `[md2pdf]` table inside `md2pdf.toml`:
+  ```toml
+  [md2pdf]
+  deterministic = true
+  ```
 
 ---
 

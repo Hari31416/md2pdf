@@ -33,6 +33,11 @@ Run in offline mode to use placeholders for network-dependent elements (e.g. dia
 md2pdf docs/showcase.md -o docs/showcase.pdf --offline
 ```
 
+Compile a deterministic PDF (byte-identical builds for CI caching/reproducibility):
+```bash
+md2pdf docs/showcase.md -o docs/showcase.pdf --deterministic
+```
+
 ### Programmatic Python API
 
 ```python

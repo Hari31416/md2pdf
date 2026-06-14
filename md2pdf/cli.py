@@ -120,6 +120,11 @@ def convert(
         "--progress/--no-progress",
         help="Show compilation progress stages on stderr (default: enabled)",
     ),
+    deterministic: bool = typer.Option(  # noqa: B008
+        False,
+        "--deterministic",
+        help="Pin document creation timestamps and ID hashes, enabling byte-identical builds for CI caching.",
+    ),
 ) -> None:
     """Convert a Markdown file to a print-ready PDF."""
     _setup_logging(verbose)
@@ -211,6 +216,8 @@ def convert(
             cfg.header_on_first_page = True
         if not emoji:
             cfg.emoji = False
+        if deterministic:
+            cfg.deterministic = True
     else:
         resolved_output = output if output is not None else input.with_suffix(".pdf")
         cfg = Config(
@@ -223,6 +230,7 @@ def convert(
             header=header if header is not None else "{title} | {section}",
             header_on_first_page=header_on_first_page,
             emoji=emoji,
+            deterministic=deterministic,
         )
         if min_image_scale is not None:
             cfg.min_image_scale = min_image_scale
