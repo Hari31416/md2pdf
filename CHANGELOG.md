@@ -5,6 +5,24 @@ All notable changes to the `md2pdf` project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-06-14
+
+### Fixed
+- **Thread Safety**: Stored bookmark and footnote registries in document template instances and made footnote definition parsing thread-safe to support concurrent compilation runs.
+- **Robustness**: Resolved admonition styling `AttributeError` crashes by fetching settings defensively, and XML-escaped custom admonition titles to prevent ReportLab parsing crashes.
+- **Ordered Lists**: Respected explicit starting index numbers in ordered lists.
+- **Table Columns**: Calculated table column widths dynamically using stylesheet page width and margins instead of hardcoded margins.
+- **Theme Name Validation**: Validated pre-built theme names and raised `ConfigError` for unknown themes.
+- **Front Matter Parsing**: Supported CRLF and EOF scenarios in YAML front matter parsing.
+- **Preprocessing Isolation**: Prevented preprocessors from modifying content inside fenced code blocks.
+- **Link XML Escaping**: Escaped XML special characters in link `href` values.
+- **Duplicate Headings**: Uniquified duplicate heading slugs per conversion run.
+- **Dependency Management**: Added missing `pillow` and `pygments` dependencies to `pyproject.toml`.
+- **File Descriptor Leak**: Replaced open-file handle reads with `Path.read_text()` in `convert()` to resolve leaks.
+- **Performance**: Avoided duplicate pre-processing and parsing in the two-pass layout engine.
+- **State Leaks**: Cleared metadata state between pipeline runs.
+- **Registry Loading**: Copied custom registry handlers to pipeline registry and registered built-ins defensively.
+
 ## [0.5.0] - 2026-06-14
 
 ### Added
