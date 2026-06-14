@@ -19,7 +19,7 @@ Learn about all supported Markdown structures, features, and configuration param
 * **Strikethrough & Highlight**: Support for inline `~~strikethrough~~` and `==highlight==` spans.
 * **Admonitions & GitHub Alerts**: Fenced admonition blocks and inline markdown alerts with distinct color themes.
 * **Page Breaks**: Manual pagination using comment directives and backslash syntax.
-* **Mermaid & LaTeX**: Diagram and math rendering via the Kroki API with local caching and offline fallbacks.
+* **Mermaid & LaTeX**: Diagram and math rendering via the Kroki API, with concurrent pre-fetching, local caching, offline fallbacks, and optional fast local rendering via Matplotlib.
 
 ### 2. [Styling & Themes](./themes.md)
 Understand how to customize fonts, colors, and layout metrics using `ThemeConfig` blocks inside your configuration files, and how to write stylesheet override plugins.

@@ -74,12 +74,16 @@ def test_unimplemented_token_fallback(tmp_pdf: Path, default_registry: HandlerRe
     cfg = Config(input_file="", output_file=str(tmp_pdf), offline=True)
     pipeline = Pipeline(cfg, default_registry)
 
-    # BlockCode token is parsed for indented code blocks, and has no registered handler.
-    unimplemented_md = "    indented code block\n    line 2"
-    pipeline.run(unimplemented_md)
+    # Directly run pipeline._map on a dummy unregistered token
+    tokens = [{"type": "DummyUnimplementedToken", "raw": "unimplemented raw content"}]
+    flowables = pipeline._map(tokens)
 
-    assert tmp_pdf.exists()
-    assert tmp_pdf.stat().st_size > 1000
+    # It should fall back to rendering as Preformatted code block containing the fallback text
+    from reportlab.platypus import Preformatted
+
+    assert len(flowables) == 1
+    assert isinstance(flowables[0], Preformatted)
+    assert any("DummyUnimplementedToken block" in line for line in flowables[0].lines)
 
 
 def test_pipeline_optional_registry(tmp_pdf: Path) -> None:

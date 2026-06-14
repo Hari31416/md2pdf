@@ -382,7 +382,16 @@ Tags like `<br>`, `<br />`, or `<BR/>` are automatically normalized into PDF-com
 
 ## Diagrams (Mermaid) & Math (LaTeX)
 
-Diagrams and complex equations render dynamically via the **Kroki API** and are embedded as static graphics in the PDF.
+Diagrams and complex equations can be compiled locally or remotely, and are embedded as cropped high-resolution graphics in the PDF.
+
+### Optional Local LaTeX Rendering (Matplotlib)
+By default, the engine compiles LaTeX equations remotely via the Kroki API. However, you can opt-in to fast, 100% offline local rendering using Matplotlib's MathText engine:
+1. Install the optional dependency extra:
+   ```bash
+   pip install "pymd2pdf[matplotlib]"
+   ```
+2. When installed, `md2pdf` automatically renders standard math equations (like `$E = mc^2$`) locally in milliseconds, with no network requests.
+3. If the formula contains unsupported environments (like `\begin{cases}` or TikZ code) or if Matplotlib is not installed, it automatically and gracefully falls back to Kroki.
 
 ### Mermaid Syntax
 ```mermaid
@@ -401,9 +410,11 @@ $$
 $$
 
 ### Caching and Layout Protection:
+* **Concurrent Pre-fetching**: To avoid sequential request bottlenecks on formula-heavy documents, the pipeline scans the parsed AST and pre-populates the cache for all diagrams and math formulas concurrently in a thread pool of 5 workers before document mapping.
 * **SHA-256 Caching**: Script inputs are hashed using SHA-256. If a diagram has already been compiled, it is read directly from disk with zero network latency.
-* **Margin Trimming**: Kroki graphics are automatically cropped to eliminate unnecessary white margins before embedding.
-* **Offline Placeholders**: In `--offline` mode, diagrams and equations show placeholder boxes containing the raw script content.
+* **Margin Trimming**: Graphics are automatically cropped to eliminate unnecessary white margins before embedding.
+* **1-Retry Limit**: Remote Kroki compilation requests will retry exactly once on failure (2 attempts total).
+* **Robust Fallback**: If math rendering fails or is offline, inline math falls back to showing raw LaTeX inline, and block math falls back to displaying the raw LaTeX within a monospace block (`Preformatted`) instead of a generic gray placeholder box.
 * **KeepTogether Bond**: Elements are bound to their preceding heading. If the graphic cannot fit at the bottom of the page, the header and the graphic move together, avoiding orphans.
 
 ---

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import re
 import xml.sax.saxutils as saxutils
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Inline-image helpers (used for emoji substitution)
@@ -90,7 +91,11 @@ def escape_xml(text: str) -> str:
     return saxutils.escape(text)
 
 
-def inline_render(children: list[dict], styles: dict | None = None) -> str:
+def inline_render(
+    children: list[dict],
+    styles: dict | None = None,
+    parent_style: Any | None = None,
+) -> str:
     """Convert inline token children to a ReportLab XML markup string.
 
     Args:
@@ -98,6 +103,8 @@ def inline_render(children: list[dict], styles: dict | None = None) -> str:
                   :class:`~md2pdf.core.parser.MarkdownParser`.
         styles:   Optional stylesheet dict; used to look up ``color_link``.
                   Pass ``None`` (or omit) to use the default link colour.
+        parent_style: The stylesheet paragraph style (or style name) of the
+                      containing block.
 
     Returns:
         A string of ReportLab paragraph markup, e.g.
@@ -122,39 +129,51 @@ def inline_render(children: list[dict], styles: dict | None = None) -> str:
                 parts.append(escape_xml(raw))
 
         elif t == "Strong":
-            inner = inline_render(child.get("children", []), styles)
+            inner = inline_render(child.get("children", []), styles, parent_style)
             parts.append(f"<b>{inner}</b>")
 
         elif t == "Emphasis":
-            inner = inline_render(child.get("children", []), styles)
+            inner = inline_render(child.get("children", []), styles, parent_style)
             parts.append(f"<i>{inner}</i>")
 
         elif t == "Strikethrough":
-            inner = inline_render(child.get("children", []), styles)
+            inner = inline_render(child.get("children", []), styles, parent_style)
             parts.append(f"<strike>{inner}</strike>")
 
         elif t == "Highlight":
-            inner = inline_render(child.get("children", []), styles)
+            inner = inline_render(child.get("children", []), styles, parent_style)
             highlight_color = (styles or {}).get("color_highlight", "#ffff00")
             parts.append(f'<span backcolor="{highlight_color}">{inner}</span>')
 
         elif t == "InlineCode":
-            inner = inline_render(child.get("children", []), styles) or escape_xml(raw)
+            inner = inline_render(child.get("children", []), styles, parent_style) or escape_xml(
+                raw
+            )
             parts.append(f"<font name='Courier'>{inner}</font>")
 
         elif t == "Math":
             config = styles.get("_config") if styles else None
             from md2pdf.handlers.latex import get_latex_image
 
-            path, w, h = get_latex_image(raw, config)
+            fontsize = 10
+            if parent_style:
+                if isinstance(parent_style, str) and styles and parent_style in styles:
+                    fontsize = getattr(styles[parent_style], "fontSize", 10)
+                elif hasattr(parent_style, "fontSize"):
+                    fontsize = getattr(parent_style, "fontSize", 10)
+            elif styles and "body" in styles:
+                fontsize = getattr(styles["body"], "fontSize", 10)
+
+            path, w, h, depth = get_latex_image(raw, config, fontsize=fontsize)
             if path:
-                parts.append(f'<img src="{path}" width="{w}" height="{h}" valign="middle"/>')
+                valign = -depth
+                parts.append(f'<img src="{path}" width="{w}" height="{h}" valign="{valign}"/>')
             else:
                 parts.append(escape_xml(raw))
 
         elif t == "Link":
             href = child.get("attrs", {}).get("target", "")
-            label = inline_render(child.get("children", []), styles)
+            label = inline_render(child.get("children", []), styles, parent_style)
             parts.append(f'<a href="{href}" color="{link_color}">{label}</a>')
 
         elif t == "Image":
@@ -174,7 +193,7 @@ def inline_render(children: list[dict], styles: dict | None = None) -> str:
         else:
             # Fallback: render whatever raw text is available.
             if child.get("children"):
-                parts.append(inline_render(child["children"], styles))
+                parts.append(inline_render(child["children"], styles, parent_style))
             else:
                 parts.append(escape_xml(raw))
 

@@ -54,6 +54,12 @@ class ReportLabFormatter(Formatter):
             outfile.write(wrapped)
 
 
+def is_latex_formula(text: str) -> bool:
+    """Detect if a block of code contains a LaTeX math formula."""
+    text = text.strip()
+    return text.startswith("$$") or (text.startswith("$") and not text.startswith("$ "))
+
+
 class CodeFenceHandler(ElementHandler):
     """Render ``CodeFence`` block tokens as monospaced, styled code blocks."""
 
@@ -82,3 +88,40 @@ class CodeFenceHandler(ElementHandler):
         style = styles.get("code_block") or styles.get("code_inline")
         flowable = XPreformatted(highlighted, style)
         return [flowable]
+
+
+class BlockCodeHandler(ElementHandler):
+    """Render ``BlockCode`` block tokens.
+
+    If the content contains a LaTeX formula, it delegates rendering to ``LatexHandler``.
+    Otherwise, it delegates rendering to ``CodeFenceHandler``.
+    """
+
+    token_type: str = "BlockCode"
+
+    def render(self, token: dict, styles: dict) -> list[Flowable]:
+        raw: str = token.get("raw", "")
+        if is_latex_formula(raw):
+            from md2pdf.handlers.latex import LatexHandler
+
+            config = styles.get("_config")
+            client = None
+            cache = None
+            offline = False
+            if config:
+                from md2pdf.assets.cache import AssetCache
+                from md2pdf.assets.kroki import KrokiClient
+
+                offline = getattr(config, "offline", False)
+                cache = AssetCache(config.cache_dir)
+                client = KrokiClient()
+
+            latex_handler = LatexHandler(client=client, cache=cache, offline=offline)
+            latex_token = token.copy()
+            latex_token["type"] = "LatexBlock"
+            return latex_handler.render(latex_token, styles)
+        else:
+            code_handler = CodeFenceHandler()
+            code_token = token.copy()
+            code_token["type"] = "CodeFence"
+            return code_handler.render(code_token, styles)

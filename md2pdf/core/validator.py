@@ -16,6 +16,7 @@ class DocumentValidator:
         "Table",
         "BlockQuote",
         "CodeFence",
+        "BlockCode",
         "Mermaid",
         "LatexBlock",
         "ThematicBreak",

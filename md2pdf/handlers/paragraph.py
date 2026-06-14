@@ -75,7 +75,7 @@ class ParagraphHandler(ElementHandler):
 
             elif t == "Image":
                 target = child.get("attrs", {}).get("target", "")
-                alt = inline_render(child.get("children", []), styles)
+                alt = inline_render(child.get("children", []), styles, parent_style="body")
                 virtual_children.append(
                     {
                         "type": "MarkdownImage",
@@ -90,7 +90,7 @@ class ParagraphHandler(ElementHandler):
 
         def flush_text_run() -> None:
             if current_text_run:
-                text = inline_render(current_text_run, styles)
+                text = inline_render(current_text_run, styles, parent_style="body")
                 if text.strip():
                     flowables.append(Paragraph(text, styles["body"]))
                 current_text_run.clear()

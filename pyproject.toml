@@ -15,6 +15,12 @@ dependencies = [
     "typer>=0.12",
 ]
 
+[project.optional-dependencies]
+matplotlib = [
+    "matplotlib>=3.8",
+]
+
+
 [project.scripts]
 md2pdf = "md2pdf.cli:app"
 
@@ -30,6 +36,7 @@ ThematicBreak = "md2pdf.handlers.thematic_break:ThematicBreakHandler"
 Mermaid       = "md2pdf.handlers.mermaid:MermaidHandler"
 LatexBlock    = "md2pdf.handlers.latex:LatexHandler"
 CodeFence     = "md2pdf.handlers.code:CodeFenceHandler"
+BlockCode     = "md2pdf.handlers.code:BlockCodeHandler"
 Admonition    = "md2pdf.handlers.admonition:AdmonitionHandler"
 PageBreak     = "md2pdf.handlers.pagebreak:PageBreakHandler"
 

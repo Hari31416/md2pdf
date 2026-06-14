@@ -27,10 +27,12 @@ class BlockQuoteHandler(ElementHandler):
             child_type = child.get("type", "")
 
             if child_type == "Paragraph":
-                text = inline_render(child.get("children", []), styles)
+                text = inline_render(child.get("children", []), styles, parent_style=bq_style)
             else:
                 # Non-paragraph children: render raw text as a fallback
-                text = inline_render(child.get("children", []), styles) or child.get("raw", "")
+                text = inline_render(
+                    child.get("children", []), styles, parent_style=bq_style
+                ) or child.get("raw", "")
 
             if not text:
                 continue

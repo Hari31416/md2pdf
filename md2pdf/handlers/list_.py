@@ -143,7 +143,7 @@ class ListHandler(ElementHandler):
             if child_type == "List":
                 # Flush buffered inline children as a Paragraph first
                 if inline_children:
-                    text = inline_render(inline_children, styles)
+                    text = inline_render(inline_children, styles, parent_style="list_item")
                     contents.append(Paragraph(text, styles["list_item"]))
                     inline_children = []
                 # Recurse into the nested list
@@ -151,7 +151,7 @@ class ListHandler(ElementHandler):
 
             elif child_type == "Paragraph":
                 # Loose list items wrap their content in a Paragraph token
-                text = inline_render(child.get("children", []), styles)
+                text = inline_render(child.get("children", []), styles, parent_style="list_item")
                 contents.append(Paragraph(text, styles["list_item"]))
 
             else:
@@ -160,7 +160,7 @@ class ListHandler(ElementHandler):
 
         # Flush any remaining inline content
         if inline_children:
-            text = inline_render(inline_children, styles)
+            text = inline_render(inline_children, styles, parent_style="list_item")
             contents.append(Paragraph(text, styles["list_item"]))
 
         # ListItem requires at least one flowable

@@ -515,14 +515,14 @@ class TestSpacingProperties:
 class TestInlineMathRender:
     @patch("md2pdf.handlers.latex.get_latex_image")
     def test_math_inline_render_success(self, mock_get, styles):
-        mock_get.return_value = ("/path/to/img.png", 20.0, 10.0)
+        mock_get.return_value = ("/path/to/img.png", 20.0, 10.0, 2.0)
         tokens = [{"type": "Math", "raw": "$x^2$", "children": [], "attrs": {}}]
         result = inline_render(tokens, styles)
-        assert '<img src="/path/to/img.png" width="20.0" height="10.0" valign="middle"/>' in result
+        assert '<img src="/path/to/img.png" width="20.0" height="10.0" valign="-2.0"/>' in result
 
     @patch("md2pdf.handlers.latex.get_latex_image")
     def test_math_inline_render_fallback(self, mock_get, styles):
-        mock_get.return_value = (None, 0.0, 0.0)
+        mock_get.return_value = (None, 0.0, 0.0, 0.0)
         tokens = [{"type": "Math", "raw": "$x^2$", "children": [], "attrs": {}}]
         result = inline_render(tokens, styles)
         assert result == "$x^2$"

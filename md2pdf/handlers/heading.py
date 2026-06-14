@@ -33,7 +33,7 @@ class HeadingHandler(ElementHandler):
     def render(self, token: dict, styles: dict) -> list:
         level: int = token.get("attrs", {}).get("level", 1)
         style_key = f"h{min(level, 4)}"
-        text = inline_render(token.get("children", []), styles)
+        text = inline_render(token.get("children", []), styles, parent_style=style_key)
 
         slug = slugify(text)
         if not slug:

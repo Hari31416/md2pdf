@@ -194,12 +194,16 @@ class TestMermaidHandler:
 
 
 class TestLatexHandler:
-    def test_offline_returns_placeholder(self, tmp_path: Path) -> None:
+    @patch.dict("sys.modules", {"matplotlib": None})
+    def test_offline_returns_raw_latex(self, tmp_path: Path) -> None:
+        from reportlab.platypus import Preformatted
+
         cache = AssetCache(str(tmp_path / "cache"))
         client = MagicMock(spec=KrokiClient)
         handler = LatexHandler(client=client, cache=cache, offline=True)
         result = handler.render({"type": "LatexBlock", "raw": "x^2"}, {})
-        assert isinstance(result[0], PlaceholderBox)
+        assert isinstance(result[0], Preformatted)
+        assert "x^2" in "".join(result[0].lines)
 
     def test_wrap_latex_produces_document(self) -> None:
         wrapped = _wrap_latex("x^2")
@@ -214,15 +218,18 @@ class TestLatexHandler:
         assert "$" not in wrapped
         assert r"\begin{align*}" in wrapped
 
-    def test_http_error_returns_placeholder(self, tmp_path: Path) -> None:
+    @patch.dict("sys.modules", {"matplotlib": None})
+    def test_http_error_returns_raw_latex(self, tmp_path: Path) -> None:
         import requests
+        from reportlab.platypus import Preformatted
 
         cache = AssetCache(str(tmp_path / "cache"))
         client = MagicMock(spec=KrokiClient)
         client.render.side_effect = requests.HTTPError("500")
         handler = LatexHandler(client=client, cache=cache, offline=False)
         result = handler.render({"type": "LatexBlock", "raw": "x^2"}, {})
-        assert isinstance(result[0], PlaceholderBox)
+        assert isinstance(result[0], Preformatted)
+        assert "x^2" in "".join(result[0].lines)
 
 
 # ===========================================================================

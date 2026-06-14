@@ -287,6 +287,21 @@ class AdmonitionPreProcessor(PreProcessor):
         return "\n".join(processed_lines)
 
 
+class LatexBlockPreProcessor(PreProcessor):
+    """Pre-process display/block math delimited by $$ ... $$ into ```latex ... ``` fences.
+
+    This prevents the markdown parser from splitting equations containing escaped
+    dollar signs ($) or nested syntax into fragments.
+    """
+
+    def process(self, raw_md: str) -> str:
+        def replace_math(match):
+            formula = match.group(1).strip()
+            return f"\n\n```latex\n{formula}\n```\n\n"
+
+        return re.sub(r"\$\$(.*?)\$\$", replace_math, raw_md, flags=re.DOTALL)
+
+
 class PageBreakPreProcessor(PreProcessor):
     r"""Pre-processor to translate pagebreak comments and directives into HTML blocks.
 
@@ -592,6 +607,7 @@ class PreProcessorRegistry:
             self.register(
                 IncludeResolver(input_file, progress_callback=progress_callback), priority=20
             )
+            self.register(LatexBlockPreProcessor(), priority=22)
             self.register(PageBreakPreProcessor(), priority=25)
             self.register(AdmonitionPreProcessor(), priority=30)
             if emoji:

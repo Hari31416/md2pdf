@@ -15,6 +15,11 @@ from md2pdf.core.preprocessors import PreProcessorRegistry
 from md2pdf.core.registry import HandlerRegistry
 from md2pdf.core.styles import StyleRegistry
 
+try:
+    import numpy as np
+except ImportError:
+    np = None
+
 logger = logging.getLogger(__name__)
 
 
@@ -250,6 +255,9 @@ class Pipeline:
                 text = token.get("raw", "")
                 self.footnotes[f"^{label}"] = (text, "")
 
+        # Concurrent pre-fetching of LaTeX and Mermaid assets
+        self._pre_fetch_assets(tokens)
+
         diagram_tokens = [t for t in tokens if t.get("type") in ("Mermaid", "LatexBlock")]
         num_diagrams = len(diagram_tokens)
         if self.progress_callback:
@@ -461,6 +469,176 @@ class Pipeline:
             self.registry.register(LatexHandler(client, cache, offline))
         except Exception:
             logger.debug("Could not register asset handlers", exc_info=True)
+
+    def _pre_fetch_assets(self, tokens: list[dict]) -> None:
+        """Scan AST for LaTeX and Mermaid assets and pre-render/pre-fetch them in parallel."""
+        assets = []
+
+        def find_assets(token: dict) -> None:
+            t_type = token.get("type", "")
+            if t_type == "BlockCode":
+                from md2pdf.handlers.code import is_latex_formula
+
+                if is_latex_formula(token.get("raw", "")):
+                    assets.append({"type": "LatexBlock", "raw": token.get("raw", "")})
+            elif t_type in ("LatexBlock", "Math", "Mermaid"):
+                assets.append({"type": t_type, "raw": token.get("raw", "")})
+            children = token.get("children")
+            if isinstance(children, list):
+                for child in children:
+                    find_assets(child)
+
+        for token in tokens:
+            find_assets(token)
+
+        if not assets:
+            return
+
+        # Get cache, client, and offline status
+        latex_handler = self.registry.get("LatexBlock")
+        if latex_handler:
+            client = latex_handler.client
+            cache = latex_handler.cache
+            offline = latex_handler.offline
+        else:
+            from md2pdf.assets.cache import AssetCache
+            from md2pdf.assets.kroki import KrokiClient
+
+            cache = AssetCache(self.config.cache_dir)
+            client = KrokiClient()
+            offline = getattr(self.config, "offline", False)
+
+        from PIL import Image as PILImage
+
+        from md2pdf.handlers.latex import _wrap_latex, clean_latex_source, make_image_transparent
+
+        # Deduplicate to avoid duplicate rendering work
+        unique_assets = {}
+        for asset in assets:
+            key = (asset["type"], asset["raw"])
+            if key not in unique_assets:
+                unique_assets[key] = asset
+
+        kroki_tasks = []
+
+        for asset_type, raw_source in unique_assets.keys():
+            if asset_type in ("LatexBlock", "Math"):
+                formula = clean_latex_source(raw_source)
+                wrapped = _wrap_latex(formula)
+                path = cache._path("tikz", wrapped)
+
+                if path.exists():
+                    continue
+                try:
+                    if np is None or r"\documentclass" in formula or r"\begin{" in formula:
+                        raise ValueError("Matplotlib does not support documentclass or begin")
+
+                    import matplotlib
+
+                    matplotlib.use("agg")
+                    from matplotlib.font_manager import FontProperties
+                    from matplotlib.mathtext import MathTextParser
+                    from PIL import Image as PILImage
+
+                    dpi = 200
+                    prop = FontProperties(size=10)
+                    parser = MathTextParser("agg")
+                    res = parser.parse(f"${formula}$", dpi=dpi, prop=prop)
+
+                    img_rgba = np.zeros((res.image.shape[0], res.image.shape[1], 4), dtype=np.uint8)
+                    img_rgba[..., 3] = res.image
+                    pil_img = PILImage.fromarray(img_rgba, mode="RGBA")
+
+                    nonzero = np.nonzero(res.image)
+                    if len(nonzero[0]) > 0:
+                        ymin, ymax = np.min(nonzero[0]), np.max(nonzero[0])
+                        xmin, xmax = np.min(nonzero[1]), np.max(nonzero[1])
+                        left, top, right, bottom = xmin, ymin, xmax + 1, ymax + 1
+                        pil_img = pil_img.crop((left, top, right, bottom))
+
+                    pil_img.save(path, format="PNG")
+                    logger.debug(
+                        "Pre-fetched and rendered LaTeX locally via matplotlib: %s", formula
+                    )
+                    continue
+                except (ImportError, Exception):
+                    pass
+
+                if not offline:
+                    kroki_tasks.append(("tikz", wrapped, path))
+
+            elif asset_type == "Mermaid":
+                path = cache._path("mermaid", raw_source)
+                if path.exists():
+                    continue
+                if not offline:
+                    kroki_tasks.append(("mermaid", raw_source, path))
+
+        if not kroki_tasks:
+            return
+
+        logger.info(
+            "Pre-fetching %d math/diagram assets from Kroki concurrently...", len(kroki_tasks)
+        )
+
+        import concurrent.futures
+
+        def fetch_and_cache(diagram_type: str, source: str, cache_path) -> None:
+            attempts = 2
+            png = None
+            for attempt in range(attempts):
+                try:
+                    png = client.render(diagram_type, source)
+                    break
+                except Exception as e:
+                    if attempt == attempts - 1:
+                        logger.warning(
+                            "Failed to pre-fetch %s asset from Kroki after %d attempts: %s",
+                            diagram_type,
+                            attempts,
+                            e,
+                        )
+                        return
+                    logger.debug(
+                        "Kroki pre-fetch attempt %d failed: %s. Retrying...", attempt + 1, e
+                    )
+                    import time
+
+                    time.sleep(1)
+
+            if not png:
+                return
+
+            try:
+                from io import BytesIO
+
+                from PIL import ImageChops
+
+                if diagram_type == "tikz":
+                    with PILImage.open(BytesIO(png)) as pil_img:
+                        gray = pil_img.convert("L")
+                        inverted = ImageChops.invert(gray)
+                        bbox = inverted.getbbox()
+                        if bbox:
+                            pil_img = pil_img.crop(bbox)
+                        pil_img = make_image_transparent(pil_img)
+                        pil_img.save(cache_path, format="PNG")
+                else:
+                    cache_path.write_bytes(png)
+                logger.debug("Successfully pre-fetched and cached %s asset", diagram_type)
+            except Exception as exc:
+                logger.warning("Failed to save pre-fetched asset to cache: %s", exc)
+                try:
+                    cache_path.write_bytes(png)
+                except Exception:
+                    pass
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [
+                executor.submit(fetch_and_cache, dtype, src, cpath)
+                for dtype, src, cpath in kroki_tasks
+            ]
+            concurrent.futures.wait(futures)
 
 
 class PageCallbackState:
