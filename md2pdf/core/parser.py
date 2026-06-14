@@ -76,6 +76,16 @@ class Highlight(SpanToken):
     parse_inner = True
 
 
+class Superscript(SpanToken):
+    pattern = re.compile(r"(?<!\^)\^(?!\^)(?=\S)(.+?)(?<=\S)(?<!\^)\^(?!\^)")
+    parse_inner = True
+
+
+class Subscript(SpanToken):
+    pattern = re.compile(r"(?<!~)~(?!~)(?=\S)(.+?)(?<=\S)(?<!~)~(?!~)")
+    parse_inner = True
+
+
 class _MathRegistrationRenderer(BaseRenderer):
     """Dummy renderer used solely as a context manager to register the Math span token.
 
@@ -90,6 +100,8 @@ class _MathRegistrationRenderer(BaseRenderer):
             FootnoteDefinition,
             Strikethrough,
             Highlight,
+            Superscript,
+            Subscript,
             *args,
             **kwargs,
         )
@@ -107,6 +119,12 @@ class _MathRegistrationRenderer(BaseRenderer):
         return ""
 
     def render_highlight(self, token: Any) -> str:
+        return ""
+
+    def render_superscript(self, token: Any) -> str:
+        return ""
+
+    def render_subscript(self, token: Any) -> str:
         return ""
 
 

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## WIP
 
+- **Table Column Alignment**: Enabled parsing and styling of column-level alignments (`left`, `center`, `right`) using `:---`, `:---:`, and `---:`. TableHandler now generates dynamically aligned ParagraphStyles for cell contents and appends matching `ALIGN` commands to the ReportLab `TableStyle`.
+- **Superscript & Subscript Support**: Added inline parsing support for superscript `x^2^` and subscript `H~2~O` syntax using custom mistletoe SpanTokens (with strict lookaround checks to avoid conflicts with Strikethrough or other markdown formatting) and rendering using ReportLab's native `<sup>` and `<sub>` tags.
 - **Strikethrough & Highlight Support**: Added inline parsing support for `~~strikethrough~~` (renders using `<strike>` ReportLab tags) and `==highlight==` (renders using `<span backcolor="...">` ReportLab tags). Added `color_highlight` config field to `ThemeConfig` to allow custom highlight color configuration.
 - **Progress Reporting**: Added stage-level compilation progress reports to `sys.stderr`. Emits details on pre-processing, includes resolving, parsing, diagram mapping and rendering, emoji assets batch download, and PDF layout passes. Added a new `--progress/--no-progress` CLI option and `progress_callback` to the top-level Python API.
 - **Task List Checkboxes**: Changed `ListHandler` to use a white square emoji (`U+25FB`) for unchecked tasks instead of the black ballot box emoji (`U+2610`). This ensures that unchecked tasks display correctly with the color emoji theme enabled (where only checked boxes use the specific `2611` PNG).

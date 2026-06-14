@@ -76,6 +76,8 @@ This section tests inline layout and inline style parsing:
 - Hyperlinks: Clickable links like the [md2pdf GitHub page](https://github.com/hari31416/md2pdf) are automatically colored.
 - **Strikethrough**: This is a ~~strikethrough text run~~ showing a horizontal line through text.
 - ==Highlight==: This is a ==highlighted text run== showcasing text with a yellow background.
+- **Superscript**: This is a superscript text run: x^2^ + y^2^ = r^2^.
+- **Subscript**: This is a subscript text run: H~2~O, CO~2~.
 - **Footnotes**: Clickable footnote references[^1] linked to their definitions[^2] at the bottom of the page.
 
 [^1]: This is the first footnote definition, explaining reference 1.
@@ -247,6 +249,15 @@ Tables split cleanly across page boundaries. Table columns automatically distrib
 | `font_heading` | `str` | `"DejaVuSans-Bold"` | Heading typeface.             |
 | `spacing_base` | `int` | `8`                 | Base vertical spacing metric. |
 | `color_link`   | `str` | `"#0366d6"`         | Hex color string for links.   |
+
+### Table Alignment Showcase
+
+Below is a table demonstrating left, center, right, and default column alignments:
+
+| Left Aligned   |  Center Aligned  |   Right Aligned | Default Aligned   |
+| :------------- | :--------------: | --------------: | ----------------- |
+| Text Left      |   Text Center    |      Text Right | Text Default      |
+| Left text long | Center text long | Right text long | Default text long |
 
 ---
 

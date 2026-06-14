@@ -47,13 +47,56 @@ class TableHandler(ElementHandler):
             logger.warning("TableHandler: table has no header row — skipping")
             return []
 
-        header_row = [Paragraph(cell, styles["table_header"]) for cell in header_texts]
-        data_rows = [
-            [Paragraph(cell, styles["table_cell"]) for cell in row] for row in data_rows_texts
-        ]
+        # Table alignment support
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+        from reportlab.lib.styles import ParagraphStyle
+
+        column_align = getattr(node, "column_align", [])
+        col_count = len(header_texts)
+        alignments = []
+        for i in range(col_count):
+            align_val = column_align[i] if i < len(column_align) else None
+            alignments.append(align_val)
+
+        # Create dynamically aligned paragraph styles
+        header_styles = {}
+        cell_styles = {}
+        for align_val in [None, 0, 1]:
+            if align_val == 0:
+                align_code = TA_CENTER
+                suffix = "center"
+            elif align_val == 1:
+                align_code = TA_RIGHT
+                suffix = "right"
+            else:
+                align_code = TA_LEFT
+                suffix = "left"
+
+            header_styles[align_val] = ParagraphStyle(
+                f"table_header_{suffix}",
+                parent=styles["table_header"],
+                alignment=align_code,
+            )
+            cell_styles[align_val] = ParagraphStyle(
+                f"table_cell_{suffix}",
+                parent=styles["table_cell"],
+                alignment=align_code,
+            )
+
+        header_row = []
+        for col_idx, cell in enumerate(header_texts):
+            align_val = alignments[col_idx]
+            header_row.append(Paragraph(cell, header_styles[align_val]))
+
+        data_rows = []
+        for row in data_rows_texts:
+            data_row = []
+            for col_idx, cell in enumerate(row):
+                align_val = alignments[col_idx]
+                data_row.append(Paragraph(cell, cell_styles[align_val]))
+            data_rows.append(data_row)
 
         all_rows = [header_row] + data_rows
-        col_count = len(header_row)
         col_widths = self._compute_col_widths(col_count)
 
         tbl = Table(
@@ -64,7 +107,19 @@ class TableHandler(ElementHandler):
         )
         tbl.spaceBefore = 0
         tbl.spaceAfter = styles.get("spacing_base", 8)
-        tbl.setStyle(TableStyle(styles["table_style"]))
+
+        # Add ALIGN commands to TableStyle
+        table_commands = list(styles.get("table_style", []))
+        for col_idx, align_val in enumerate(alignments):
+            if align_val == 0:
+                align_str = "CENTER"
+            elif align_val == 1:
+                align_str = "RIGHT"
+            else:
+                align_str = "LEFT"
+            table_commands.append(("ALIGN", (col_idx, 0), (col_idx, -1), align_str))
+
+        tbl.setStyle(TableStyle(table_commands))
         return [tbl]
 
     # ------------------------------------------------------------------ #

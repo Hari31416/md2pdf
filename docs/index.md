@@ -16,7 +16,8 @@ Learn about all supported Markdown structures, features, and configuration param
 * **Colour Emoji (Twemoji)**: Automatically substituting emoji characters with high-res colour Twemoji images.
 * **Task Lists**: GFM-style checklists (`- [ ]` / `- [x]`) rendered using Twemoji images or Unicode symbols.
 * **Footnotes**: Reference link maps and automatic page layout positioning.
-* **Strikethrough & Highlight**: Support for inline `~~strikethrough~~` and `==highlight==` spans.
+* **Inline Formatting**: Support for `~~strikethrough~~`, `==highlight==`, superscript `x^2^`, and subscript `H~2~O` spans.
+* **Tables**: Automatic column alignment parsing (`:---`, `:---:`, `---:`) and layout styling.
 * **Admonitions & GitHub Alerts**: Fenced admonition blocks and inline markdown alerts with distinct color themes.
 * **Page Breaks**: Manual pagination using comment directives and backslash syntax.
 * **Mermaid & LaTeX**: Diagram and math rendering via the Kroki API, with concurrent pre-fetching, local caching, offline fallbacks, and optional fast local rendering via Matplotlib.

@@ -145,6 +145,14 @@ def inline_render(
             highlight_color = (styles or {}).get("color_highlight", "#ffff00")
             parts.append(f'<span backcolor="{highlight_color}">{inner}</span>')
 
+        elif t == "Superscript":
+            inner = inline_render(child.get("children", []), styles, parent_style)
+            parts.append(f"<sup>{inner}</sup>")
+
+        elif t == "Subscript":
+            inner = inline_render(child.get("children", []), styles, parent_style)
+            parts.append(f"<sub>{inner}</sub>")
+
         elif t == "InlineCode":
             inner = inline_render(child.get("children", []), styles, parent_style) or escape_xml(
                 raw

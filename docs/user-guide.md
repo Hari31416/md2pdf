@@ -22,7 +22,7 @@ This guide provides a comprehensive reference to all features, configuration set
   - [Footnotes](#footnotes)
     - [Syntax:](#syntax)
     - [Layout Logic:](#layout-logic)
-  - [Strikethrough \& Highlight](#strikethrough--highlight)
+  - [Inline Formatting](#inline-formatting)
   - [File Inclusion (!include)](#file-inclusion-include)
     - [Key Behaviors:](#key-behaviors)
   - [Admonitions \& GitHub Alerts](#admonitions--github-alerts)
@@ -38,6 +38,7 @@ This guide provides a comprehensive reference to all features, configuration set
   - [Tables \& Layout Safeguards](#tables--layout-safeguards)
     - [Repeating Headers \& Row Protection](#repeating-headers--row-protection)
     - [Heading-to-Table Bonding (`KeepTogetherParts`)](#heading-to-table-bonding-keeptogetherparts)
+    - [Table Column Alignment](#table-column-alignment)
   - [HTML Line Breaks ()](#html-line-breaks-)
   - [Diagrams (Mermaid) \& Math (LaTeX)](#diagrams-mermaid--math-latex)
     - [Mermaid Syntax](#mermaid-syntax)
@@ -242,9 +243,9 @@ Here is a paragraph with a footnote reference[^1] and a second one[^detail].
 
 ---
 
-## Strikethrough & Highlight
+## Inline Formatting
 
-`md2pdf` supports inline formatting for strikethrough and highlighted text spans:
+`md2pdf` supports standard and extended inline formatting options:
 
 * **Strikethrough**: Wrap text in double tildes (`~~strikethrough~~`) to draw a line over it. This compiles to ReportLab `<strike>` tags.
 * **Highlight**: Wrap text in double equals (`==highlight==`) to draw a filled background rectangle behind the text. This compiles to ReportLab `<span backcolor="...">` tags.
@@ -253,6 +254,8 @@ Here is a paragraph with a footnote reference[^1] and a second one[^detail].
   [theme]
   color_highlight = "#ffff00"  # Hex color code for text highlights
   ```
+* **Superscript**: Wrap text in single carets (`x^2^`) to raise it above the baseline. This compiles to ReportLab `<sup>` tags natively.
+* **Subscript**: Wrap text in single tildes (`H~2~O`) to lower it below the baseline. This compiles to ReportLab `<sub>` tags natively.
 
 ---
 
@@ -369,6 +372,14 @@ If a section heading is followed immediately by a table, standard PDF layout eng
 * It calculates the height of the heading plus the height of the table's header and first data row.
 * If that minimum subset fits at the bottom of the current page, it lets the table start printing there and flow/break naturally to the next page.
 * If it does not fit, it moves the heading along with the start of the table to the next page, preventing orphaned headings.
+
+### Table Column Alignment
+You can control the alignment of table columns using standard Markdown syntax in the separator row:
+* **Left Aligned**: `:---` (or default `---`)
+* **Center Aligned**: `:---:`
+* **Right Aligned**: `---:`
+
+The alignment settings are automatically parsed and passed through to both the ReportLab `TableStyle` cell properties (via `ALIGN` commands) and individual cell `Paragraph` styles, ensuring text wraps and aligns correctly.
 
 ---
 
