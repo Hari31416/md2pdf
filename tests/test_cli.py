@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -11,17 +12,23 @@ from md2pdf.cli import app
 runner = CliRunner()
 
 
+def strip_ansi(text: str) -> str:
+    """Strip ANSI escape sequences from CLI output before asserting."""
+    return re.sub(r"\x1b\[[0-9;]*[a-zA-Z]", "", text)
+
+
 def test_help() -> None:
     """Verify that --help options are correctly listed and parsed."""
     result = runner.invoke(app, ["--help"])
+    out = strip_ansi(result.output)
     assert result.exit_code == 0
-    assert "Convert" in result.output
-    assert "--output" in result.output
-    assert "--config" in result.output
-    assert "--theme" in result.output
-    assert "--offline" in result.output
-    assert "--validate-only" in result.output
-    assert "--min-image-scale" in result.output
+    assert "Convert" in out
+    assert "--output" in out
+    assert "--config" in out
+    assert "--theme" in out
+    assert "--offline" in out
+    assert "--validate-only" in out
+    assert "--min-image-scale" in out
 
 
 def test_missing_file() -> None:
