@@ -57,6 +57,12 @@ class Config:
             else:
                 self.output_file = "output.pdf"
 
+        if self.theme_config is None:
+            from md2pdf.styles.theme import PREBUILT_THEMES, ThemeConfig  # noqa: PLC0415
+
+            base_theme_data = PREBUILT_THEMES.get(self.theme, {})
+            self.theme_config = ThemeConfig.from_dict(base_theme_data)
+
     @classmethod
     def from_toml(cls, path: str) -> Config:
         """Load configuration from a TOML file.
@@ -88,12 +94,20 @@ class Config:
         # Load [theme] section into a ThemeConfig (import here to avoid
         # circular imports / hard reportlab dependency at module load time).
         try:
-            from md2pdf.styles.theme import ThemeConfig  # noqa: PLC0415
+            from dataclasses import asdict  # noqa: PLC0415
+
+            from md2pdf.styles.theme import PREBUILT_THEMES, ThemeConfig  # noqa: PLC0415
 
             theme_data: dict = data.get("theme", {})
-            cfg.theme_config = ThemeConfig.from_dict(theme_data)
+            base_dict = (
+                asdict(cfg.theme_config)
+                if cfg.theme_config is not None
+                else dict(PREBUILT_THEMES.get(cfg.theme, {}))
+            )
+            merged_dict = {**base_dict, **theme_data}
+            cfg.theme_config = ThemeConfig.from_dict(merged_dict)
         except Exception:
-            cfg.theme_config = None
+            pass
 
         # Load [plugins] section into plugins_dict.
         cfg.plugins_dict = data.get("plugins", {})

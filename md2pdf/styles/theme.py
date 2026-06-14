@@ -11,6 +11,7 @@ The entire section is optional — omitting it produces the built-in defaults.
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
+from typing import Any
 
 from md2pdf.assets._font_registry import FONT_MONO, FONT_SANS, FONT_SANS_BOLD
 
@@ -82,6 +83,9 @@ class ThemeConfig:
     color_code_bg: str = "#f5f5f5"
     syntax_style: str = "default"
 
+    # --- Page background ---
+    color_page_bg: str = "#ffffff"
+
     # ------------------------------------------------------------------ #
     # Class methods
     # ------------------------------------------------------------------ #
@@ -118,3 +122,68 @@ class ThemeConfig:
         from reportlab.lib import colors  # noqa: PLC0415
 
         return colors.HexColor(getattr(self, attr))
+
+
+# ---------------------------------------------------------------------------
+# Pre-built themes definitions
+# ---------------------------------------------------------------------------
+
+PREBUILT_THEMES: dict[str, dict[str, Any]] = {
+    "academic": {
+        "font_body": "Times-Roman",
+        "font_heading": "Times-Bold",
+        "font_mono": "Courier",
+        "font_size_body": 11,
+        "font_size_small": 10,
+        "spacing_base": 10,
+        "color_body_text": "#111111",
+        "color_blockquote_text": "#444444",
+        "color_link": "#0000ee",
+        "color_hr": "#666666",
+        "color_table_header_bg": "#222222",
+        "color_table_header_text": "#ffffff",
+        "color_table_grid": "#777777",
+        "color_table_row_odd": "#ffffff",
+        "color_table_row_even": "#f9f9f9",
+        "color_blockquote_bar": "#666666",
+        "color_code_bg": "#fcfcfc",
+        "syntax_style": "emacs",
+        "color_page_bg": "#ffffff",
+    },
+    "minimal": {
+        "font_body": "Helvetica",
+        "font_heading": "Helvetica-Bold",
+        "font_mono": "Courier",
+        "font_size_body": 10,
+        "font_size_small": 9,
+        "spacing_base": 10,
+        "color_body_text": "#222222",
+        "color_blockquote_text": "#555555",
+        "color_link": "#333333",
+        "color_hr": "#e0e0e0",
+        "color_table_header_bg": "#ffffff",
+        "color_table_header_text": "#000000",
+        "color_table_grid": "#e0e0e0",
+        "color_table_row_odd": "#ffffff",
+        "color_table_row_even": "#ffffff",
+        "color_blockquote_bar": "#000000",
+        "color_code_bg": "#fafafa",
+        "syntax_style": "tango",
+        "color_page_bg": "#ffffff",
+    },
+    "dark": {
+        "color_page_bg": "#1e1e1e",
+        "color_body_text": "#e0e0e0",
+        "color_blockquote_text": "#a0a0a0",
+        "color_link": "#8ab4f8",
+        "color_hr": "#444444",
+        "color_table_header_bg": "#2d2d2d",
+        "color_table_header_text": "#ffffff",
+        "color_table_grid": "#444444",
+        "color_table_row_odd": "#1e1e1e",
+        "color_table_row_even": "#252525",
+        "color_blockquote_bar": "#8ab4f8",
+        "color_code_bg": "#2d2d2d",
+        "syntax_style": "monokai",
+    },
+}

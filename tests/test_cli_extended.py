@@ -385,3 +385,44 @@ def test_validate_only_warnings_exit_zero(tmp_path: Path) -> None:
 
     result = runner.invoke(app, [str(src), "--validate-only"])
     assert result.exit_code == 0
+
+
+# ---------------------------------------------------------------------------
+# Pre-built themes CLI conversion tests
+# ---------------------------------------------------------------------------
+
+
+def test_cli_theme_academic(tmp_path: Path, simple_md: str) -> None:
+    """Verify that --theme academic runs successfully."""
+    src = tmp_path / "input.md"
+    src.write_text(simple_md, encoding="utf-8")
+    dest = tmp_path / "academic.pdf"
+
+    result = runner.invoke(app, [str(src), "-o", str(dest), "--theme", "academic", "--offline"])
+    assert result.exit_code == 0
+    assert dest.exists()
+    assert dest.stat().st_size > 1000
+
+
+def test_cli_theme_minimal(tmp_path: Path, simple_md: str) -> None:
+    """Verify that --theme minimal runs successfully."""
+    src = tmp_path / "input.md"
+    src.write_text(simple_md, encoding="utf-8")
+    dest = tmp_path / "minimal.pdf"
+
+    result = runner.invoke(app, [str(src), "-o", str(dest), "--theme", "minimal", "--offline"])
+    assert result.exit_code == 0
+    assert dest.exists()
+    assert dest.stat().st_size > 1000
+
+
+def test_cli_theme_dark(tmp_path: Path, simple_md: str) -> None:
+    """Verify that --theme dark runs successfully."""
+    src = tmp_path / "input.md"
+    src.write_text(simple_md, encoding="utf-8")
+    dest = tmp_path / "dark.pdf"
+
+    result = runner.invoke(app, [str(src), "-o", str(dest), "--theme", "dark", "--offline"])
+    assert result.exit_code == 0
+    assert dest.exists()
+    assert dest.stat().st_size > 1000

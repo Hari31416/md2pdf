@@ -35,6 +35,16 @@ class MD2PDFDocTemplate(SimpleDocTemplate):
         page_num = self.page
         from md2pdf.core.flowables import FootnoteFlowable
 
+        if hasattr(self, "_md2pdf_config") and self._md2pdf_config:
+            theme = self._md2pdf_config.theme_config
+            if theme is not None:
+                bg_color = getattr(theme, "color_page_bg", "#ffffff")
+                if bg_color and bg_color.lower() != "#ffffff":
+                    self.canv.saveState()
+                    self.canv.setFillColor(theme.hex("color_page_bg"))
+                    self.canv.rect(0, 0, self.pagesize[0], self.pagesize[1], fill=1, stroke=0)
+                    self.canv.restoreState()
+
         fns = FootnoteFlowable.page_footnotes.get(page_num, [])
         frame = self.frame
         if frame:

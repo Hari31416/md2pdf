@@ -181,6 +181,22 @@ def convert(
 
         if theme != "default":
             cfg.theme = theme
+            try:
+                import tomllib  # noqa: PLC0415
+
+                from md2pdf.styles.theme import PREBUILT_THEMES, ThemeConfig  # noqa: PLC0415
+
+                theme_data = {}
+                if active_config_file is not None:
+                    with open(active_config_file, "rb") as fh:
+                        toml_data = tomllib.load(fh)
+                    theme_data = toml_data.get("theme", {})
+
+                base_theme_data = PREBUILT_THEMES.get(theme, {})
+                merged_theme_data = {**base_theme_data, **theme_data}
+                cfg.theme_config = ThemeConfig.from_dict(merged_theme_data)
+            except Exception:
+                pass
         if offline:
             cfg.offline = True
         if min_image_scale is not None:

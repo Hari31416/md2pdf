@@ -72,12 +72,34 @@ class TestThemeConfig:
             "color_table_row_odd",
             "color_table_row_even",
             "color_blockquote_bar",
+            "color_page_bg",
         ],
     )
     def test_all_color_attrs_are_hex_strings(self, attr):
         theme = ThemeConfig()
         value = getattr(theme, attr)
         assert value.startswith("#"), f"{attr} = {value!r} doesn't start with '#'"
+
+    def test_prebuilt_themes(self):
+        from md2pdf.styles.theme import PREBUILT_THEMES
+
+        assert "academic" in PREBUILT_THEMES
+        assert "minimal" in PREBUILT_THEMES
+        assert "dark" in PREBUILT_THEMES
+
+        acad = PREBUILT_THEMES["academic"]
+        assert acad["font_body"] == "Times-Roman"
+        assert acad["font_heading"] == "Times-Bold"
+        assert acad["font_mono"] == "Courier"
+
+        min_theme = PREBUILT_THEMES["minimal"]
+        assert min_theme["font_body"] == "Helvetica"
+        assert min_theme["font_heading"] == "Helvetica-Bold"
+        assert min_theme["font_mono"] == "Courier"
+
+        dark = PREBUILT_THEMES["dark"]
+        assert dark["color_page_bg"] == "#1e1e1e"
+        assert dark["color_body_text"] == "#e0e0e0"
 
 
 # ---------------------------------------------------------------------------
@@ -164,6 +186,7 @@ class TestBuildDefaultStylesheet:
         assert "color_link" in ss
         assert "color_blockquote_bar" in ss
         assert "syntax_style" in ss
+        assert "color_page_bg" in ss
         assert ss["syntax_style"] == "default"
 
     def test_color_link_is_raw_string(self):

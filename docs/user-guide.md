@@ -59,7 +59,7 @@ All settings in the file are optional. If omitted, built-in defaults are used.
 ```toml
 [md2pdf]
 output_file          = "output.pdf"
-theme                = "default"
+theme                = "default"             # Theme name: default, academic, minimal, dark
 offline              = false                 # true = skip Kroki API calls, render placeholders instead
 cache_dir            = "~/.cache/pymd2pdf"
 min_image_scale      = 0.8                   # minimum image scale factor before deferring to a new page
@@ -86,6 +86,7 @@ color_body_text       = "#000000"
 color_blockquote_text = "#555555"
 color_link            = "#0366d6"
 color_hr              = "#cccccc"
+color_page_bg         = "#ffffff"             # Background color for document pages
 
 # Tables
 color_table_header_bg   = "#2c3e50"

@@ -7,16 +7,13 @@ Planned features and known limitations for future releases. Items are loosely or
 ## 🗺️ Future Roadmap
 
 ### Short-Term (Target: v0.5.0)
-
-- **Page-Size & Orientation Configuration** — Expose page sizing (e.g., A4, Letter, A3) and page orientation (landscape/portrait) as configuration options in `md2pdf.toml` and as CLI flags.
-
----
+- **Pre-Built Themes** — Bundle additional built-in themes (e.g., `academic`, `minimal`, `dark`) selectable via the `--theme` flag.
 
 ### Medium-Term (Target: v0.6.0)
 
+- **Page-Size & Orientation Configuration** — Expose page sizing (e.g., A4, Letter, A3) and page orientation (landscape/portrait) as configuration options in `md2pdf.toml` and as CLI flags.
 - **Structured JSON Validation Output** — Introduce a `--format json` CLI option for the `--validate-only` command to output structured validation results, making CI/CD automation integration easier.
 - **Watch Mode** — Support live editing with `md2pdf --watch input.md`, automatically re-rendering the output PDF whenever changes are detected in the source file.
-- **Pre-Built Themes** — Bundle additional built-in themes (e.g., `academic`, `minimal`, `dark`) selectable via the `--theme` flag.
 - **Encoding Detection** — Add an `--encoding` CLI flag to support reading non-UTF-8 source files, along with optional auto-detection.
 - **Deterministic PDF Output** — Introduce a `--deterministic` flag to pin document creation timestamps and ID hashes, enabling byte-identical builds for CI caching.
 - **Integration & Regression Testing** — Create end-to-end regression tests converting reference Markdown files to PDF and asserting text correctness (via PDF text extraction) to prevent visual or layout regressions.

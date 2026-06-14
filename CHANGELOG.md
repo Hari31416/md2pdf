@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Cover Page Generation**: Added a `--cover` CLI flag and `cover` config setting to auto-generate and prepend a cover/title page before the Table of Contents, using `title`, `author`, and `date` YAML front-matter metadata, while automatically suppressing page headers and footers on page 1.
 - **Image Captions**: Render markdown image alt-text as a small, styled, and centered caption paragraph below images in the generated PDF.
+- **Pre-Built Themes**: Bundled three additional built-in themes (`academic`, `minimal`, `dark`) selectable via the `--theme`/`-t` flag or the `theme` configuration setting in `md2pdf.toml`. Added support for custom page background color rendering (`color_page_bg`), utilized by the `dark` theme to fill the canvas with a charcoal background (`#1e1e1e`).
 
 ## [0.4.3] - 2026-06-14
 
