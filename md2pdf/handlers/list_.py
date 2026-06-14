@@ -36,8 +36,16 @@ class ListHandler(ElementHandler):
             _depth: Current nesting depth (0 = top-level).  Used internally
                     for recursive rendering to increase indentation.
         """
-        is_ordered: bool = token.get("attrs", {}).get("start") is not None
+        start_val = token.get("attrs", {}).get("start")
+        is_ordered: bool = start_val is not None
         bullet_type = "1" if is_ordered else "bullet"
+
+        kwargs = {}
+        if is_ordered:
+            try:
+                kwargs["start"] = int(start_val)
+            except (ValueError, TypeError):
+                kwargs["start"] = 1
 
         items: list[ListItem] = []
         for child in token.get("children", []):
@@ -52,6 +60,7 @@ class ListHandler(ElementHandler):
                 bulletFontSize=styles.get("list_item", styles.get("body")).fontSize,
                 spaceBefore=0,
                 spaceAfter=styles.get("spacing_base", 8) if _depth == 0 else 0,
+                **kwargs,
             )
         ]
 

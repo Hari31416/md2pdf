@@ -272,6 +272,13 @@ class TestListHandler:
         flowables = ListHandler().render(token, styles)
         assert isinstance(flowables[0], ListFlowable)
 
+    def test_ordered_list_start_custom(self, styles):
+        token = _make_list_token(["first", "second"], ordered=True)
+        token["attrs"]["start"] = 5
+        flowables = ListHandler().render(token, styles)
+        lf = flowables[0]
+        assert getattr(lf, "_start", None) == 5 or lf.start == 5
+
     def test_task_list_checkboxes_emoji_disabled(self, styles):
         from unittest.mock import MagicMock
 
@@ -566,6 +573,36 @@ class TestAdmonitionHandler:
         assert len(box.content) == 1
         assert isinstance(box.content[0], Paragraph)
         assert "Hello" in box.content[0].text
+
+    def test_admonition_defensive_styling(self):
+        from md2pdf.handlers.admonition import AdmonitionHandler
+
+        token = {
+            "type": "Admonition",
+            "attrs": {"type": "note", "title": "Test Title"},
+            "children": [],
+            "_node": None,
+        }
+        empty_styles: dict = {}
+        flowables = AdmonitionHandler().render(token, empty_styles)
+        assert len(flowables) == 1
+        assert flowables[0].title_flowable is not None
+        assert "Test Title" in flowables[0].title_flowable.text
+
+    def test_admonition_title_xml_escaping(self, styles):
+        from md2pdf.handlers.admonition import AdmonitionHandler
+
+        token = {
+            "type": "Admonition",
+            "attrs": {"type": "note", "title": "B&W < Color"},
+            "children": [],
+            "_node": None,
+        }
+        flowables = AdmonitionHandler().render(token, styles)
+        assert len(flowables) == 1
+        box = flowables[0]
+        assert box.title_flowable is not None
+        assert "B&amp;W &lt; Color" in box.title_flowable.text
 
 
 class TestPageBreakHandler:

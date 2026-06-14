@@ -29,7 +29,7 @@ def test_from_toml_basic(tmp_path) -> None:
     toml_content = textwrap.dedent("""\
         [md2pdf]
         output_file = "report.pdf"
-        theme = "legal"
+        theme = "minimal"
         offline = true
         min_image_scale = 0.65
     """)
@@ -39,7 +39,7 @@ def test_from_toml_basic(tmp_path) -> None:
     cfg = Config.from_toml(str(cfg_file))
 
     assert cfg.output_file == "report.pdf"
-    assert cfg.theme == "legal"
+    assert cfg.theme == "minimal"
     assert cfg.offline is True
     assert cfg.min_image_scale == 0.65
 
@@ -85,3 +85,13 @@ def test_from_toml_roundtrip_example(tmp_path) -> None:
     cfg = Config.from_toml(str(dest))
     assert cfg.output_file == "output.pdf"
     assert cfg.offline is False
+
+
+def test_invalid_theme_raises_config_error() -> None:
+    from md2pdf.core.errors import ConfigError
+
+    with pytest.raises(ConfigError) as exc_info:
+        Config(theme="academica")
+
+    assert "Unknown theme" in str(exc_info.value)
+    assert "academica" in str(exc_info.value)

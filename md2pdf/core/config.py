@@ -60,6 +60,14 @@ class Config:
         if self.theme_config is None:
             from md2pdf.styles.theme import PREBUILT_THEMES, ThemeConfig  # noqa: PLC0415
 
+            if self.theme != "default" and self.theme not in PREBUILT_THEMES:
+                from md2pdf.core.errors import ConfigError
+
+                raise ConfigError(
+                    f"Unknown theme: {self.theme!r}. Available themes: default, "
+                    f"{', '.join(PREBUILT_THEMES.keys())}"
+                )
+
             base_theme_data = PREBUILT_THEMES.get(self.theme, {})
             self.theme_config = ThemeConfig.from_dict(base_theme_data)
 

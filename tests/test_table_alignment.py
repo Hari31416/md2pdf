@@ -74,3 +74,25 @@ def test_table_column_alignment_parsing_and_style(styles):
     # Verify column 3 (default aligned -> left)
     assert header_cell_styles[3].alignment == "LEFT"
     assert data_cell_styles[3].alignment == "LEFT"
+
+
+def test_table_dynamic_margins(styles):
+    """Verify that TableHandler calculates column widths dynamically from styles."""
+    md = "| Header 1 | Header 2 |\n|---|---|\n| cell 1 | cell 2 |"
+    parser = MarkdownParser()
+    tokens = parser.parse(md)
+    table_token = next(t for t in tokens if t["type"] == "Table")
+
+    # Override margins and page width in styles
+    styles["_page_width"] = 500.0
+    styles["_left_margin"] = 50.0
+    styles["_right_margin"] = 50.0
+    # Expected available width: 500.0 - 50.0 - 50.0 = 400.0
+    # Expected column width for 2 columns: 200.0 each
+
+    flowables = TableHandler().render(table_token, styles)
+    assert len(flowables) == 1
+    tbl = flowables[0]
+    assert isinstance(tbl, Table)
+    # Check that column widths are correct
+    assert tbl._colWidths == [200.0, 200.0]

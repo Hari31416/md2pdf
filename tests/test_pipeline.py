@@ -282,7 +282,7 @@ def test_cli_config_auto_discovery(tmp_path: Path, monkeypatch) -> None:
     runner = CliRunner()
 
     # Create a config in tmp_path (which we will mock as CWD)
-    config_content = '[md2pdf]\noffline = true\ntheme = "legal"\n'
+    config_content = '[md2pdf]\noffline = true\ntheme = "minimal"\n'
     cfg_file = tmp_path / "md2pdf.toml"
     cfg_file.write_text(config_content, encoding="utf-8")
 
@@ -481,3 +481,36 @@ def test_heading_slug_uniquification(tmp_path: Path) -> None:
     assert bookmarks[0].key == "introduction"
     assert bookmarks[1].key == "introduction-2"
     assert bookmarks[2].key == "introduction-3"
+
+
+def test_pipeline_thread_safety(tmp_path: Path) -> None:
+    """Verify that concurrent Pipeline runs do not contaminate registries or crash."""
+    import concurrent.futures
+
+    num_threads = 5
+    md_templates = [
+        f"# Section {i}\n\nThis is thread {i} content.[^fn]\n\n[^fn]: Footnote for thread {i}"
+        for i in range(num_threads)
+    ]
+
+    outputs = [tmp_path / f"thread_{i}.pdf" for i in range(num_threads)]
+
+    def run_pipeline(index: int) -> bool:
+        md = md_templates[index]
+        output_file = outputs[index]
+        cfg = Config(
+            input_file="",
+            output_file=str(output_file),
+            toc=True,
+            header="{title} | {section}",
+            offline=True,
+        )
+        pipeline = Pipeline(cfg)
+        pipeline.run(md)
+        return output_file.exists() and output_file.stat().st_size > 1000
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(run_pipeline, i) for i in range(num_threads)]
+        results = [f.result() for f in futures]
+
+    assert all(results) is True

@@ -93,7 +93,11 @@ class BookmarkFlowable(Flowable):
 
     def draw(self) -> None:
         self.canv.bookmarkPage(self.key)
-        BookmarkFlowable.page_registry[self.key] = self.canv.getPageNumber()
+        doc = getattr(self.canv, "_doctemplate", None)
+        if doc is not None and hasattr(doc, "_bookmark_page_registry"):
+            doc._bookmark_page_registry[self.key] = self.canv.getPageNumber()
+        else:
+            BookmarkFlowable.page_registry[self.key] = self.canv.getPageNumber()
         if self.title:
             try:
                 self.canv.addOutlineEntry(
@@ -227,10 +231,25 @@ class FootnoteFlowable(Flowable):
         w, h = self.paragraph.wrap(availWidth, availHeight)
         self.width = w
 
-        page_num = FootnoteFlowable.page_registry.get(self.label)
+        doc = getattr(self, "_doc", None)
+        if doc is None:
+            doc = getattr(self.canv, "_doctemplate", None) if hasattr(self, "canv") else None
+
         is_first = False
+        if (
+            doc is not None
+            and hasattr(doc, "_footnote_page_registry")
+            and hasattr(doc, "_footnote_page_footnotes")
+        ):
+            page_registry = doc._footnote_page_registry
+            page_footnotes = doc._footnote_page_footnotes
+        else:
+            page_registry = FootnoteFlowable.page_registry
+            page_footnotes = FootnoteFlowable.page_footnotes
+
+        page_num = page_registry.get(self.label)
         if page_num is not None:
-            fns = FootnoteFlowable.page_footnotes.get(page_num, [])
+            fns = page_footnotes.get(page_num, [])
             if fns and fns[0] is self:
                 is_first = True
 
@@ -248,7 +267,11 @@ class FootnoteFlowable(Flowable):
     def draw(self) -> None:
         page_num = self.canv.getPageNumber()
         # Record the page number where this footnote flowable is drawn
-        FootnoteFlowable.page_registry[self.label] = page_num
+        doc = getattr(self.canv, "_doctemplate", None)
+        if doc is not None and hasattr(doc, "_footnote_page_registry"):
+            doc._footnote_page_registry[self.label] = page_num
+        else:
+            FootnoteFlowable.page_registry[self.label] = page_num
 
         is_final = getattr(self.canv._doctemplate, "_md2pdf_is_final", False)
         if not is_final:
@@ -256,7 +279,10 @@ class FootnoteFlowable(Flowable):
             return
 
         # Find all footnotes on this page to align properly
-        fns = FootnoteFlowable.page_footnotes.get(page_num, [])
+        if doc is not None and hasattr(doc, "_footnote_page_footnotes"):
+            fns = doc._footnote_page_footnotes.get(page_num, [])
+        else:
+            fns = FootnoteFlowable.page_footnotes.get(page_num, [])
         if not fns:
             return
 

@@ -45,7 +45,10 @@ class MD2PDFDocTemplate(SimpleDocTemplate):
                     self.canv.rect(0, 0, self.pagesize[0], self.pagesize[1], fill=1, stroke=0)
                     self.canv.restoreState()
 
-        fns = FootnoteFlowable.page_footnotes.get(page_num, [])
+        if hasattr(self, "_footnote_page_footnotes"):
+            fns = self._footnote_page_footnotes.get(page_num, [])
+        else:
+            fns = FootnoteFlowable.page_footnotes.get(page_num, [])
         frame = self.frame
         if frame:
             if not hasattr(frame, "_orig_y1"):
@@ -94,6 +97,10 @@ class Pipeline:
             self.registry._handlers.update(registry._handlers)
         self._progress_callback = None
         self.progress_callback = progress_callback
+
+        self.bookmark_page_registry: dict[str, int] = {}
+        self.footnote_page_registry: dict[str, int] = {}
+        self.footnote_page_footnotes: dict[int, list] = {}
 
         self.footnotes: dict[str, tuple[str, str]] = {}
         self._reset_metadata()
@@ -149,6 +156,12 @@ class Pipeline:
         self._styles: dict = self._style_registry.build()
         self._styles["_config"] = self.config
         self._styles["_registry"] = self.registry
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import mm
+
+        self._styles["_page_width"] = A4[0]
+        self._styles["_left_margin"] = 20 * mm
+        self._styles["_right_margin"] = 20 * mm
 
     def _reset_metadata(self) -> None:
         self.metadata = {
@@ -231,6 +244,10 @@ class Pipeline:
         BookmarkFlowable.page_registry.clear()
         FootnoteFlowable.page_registry.clear()
         FootnoteFlowable.page_footnotes.clear()
+
+        self.bookmark_page_registry.clear()
+        self.footnote_page_registry.clear()
+        self.footnote_page_footnotes.clear()
 
         if self.progress_callback:
             self.progress_callback("preprocess_start", {})
@@ -389,6 +406,10 @@ class Pipeline:
         safe_flowables = composer.compose(flowables)
 
         doc = self._build_doc()
+        doc._bookmark_page_registry = self.bookmark_page_registry
+        doc._footnote_page_registry = self.footnote_page_registry
+        doc._footnote_page_footnotes = self.footnote_page_footnotes
+
         doc._md2pdf_config = self.config
         doc._md2pdf_styles = self._styles
         doc._md2pdf_metadata = self.metadata
@@ -396,12 +417,12 @@ class Pipeline:
 
         doc._md2pdf_is_final = is_final
         if is_final:
-            doc._md2pdf_toc_page_numbers = BookmarkFlowable.page_registry.copy()
+            doc._md2pdf_toc_page_numbers = self.bookmark_page_registry.copy()
 
             # Populate page_footnotes for FootnoteFlowable
             from md2pdf.core.flowables import FootnoteFlowable
 
-            FootnoteFlowable.page_footnotes.clear()
+            self.footnote_page_footnotes.clear()
 
             def extract_fns(flowables_list):
                 from reportlab.platypus import KeepTogether
@@ -416,13 +437,27 @@ class Pipeline:
 
             all_fns = extract_fns(safe_flowables)
             for f in all_fns:
-                page_num = FootnoteFlowable.page_registry.get(f.label)
+                page_num = self.footnote_page_registry.get(f.label)
                 if page_num is not None:
-                    FootnoteFlowable.page_footnotes.setdefault(page_num, []).append(f)
+                    self.footnote_page_footnotes.setdefault(page_num, []).append(f)
         else:
             doc._md2pdf_toc_page_numbers = None
 
         safe_flowables = self._post_registry.run_all(doc, safe_flowables)
+
+        # Set doc reference on all FootnoteFlowables
+        from md2pdf.core.flowables import FootnoteFlowable
+
+        def set_doc_on_fns(flowables_list, doc_obj):
+            from reportlab.platypus import KeepTogether
+
+            for f in flowables_list:
+                if isinstance(f, FootnoteFlowable):
+                    f._doc = doc_obj
+                elif isinstance(f, KeepTogether):
+                    set_doc_on_fns(f._content, doc_obj)
+
+        set_doc_on_fns(safe_flowables, doc)
 
         # Collect bookmarks in order to determine running section headers
         bookmarks = []
@@ -430,7 +465,6 @@ class Pipeline:
         def find_bookmarks(items: list) -> list:
             res = []
             for item in items:
-                from md2pdf.core.flowables import BookmarkFlowable
 
                 if isinstance(item, BookmarkFlowable):
                     if item.title:
@@ -444,9 +478,7 @@ class Pipeline:
         if is_final:
             bookmarks = find_bookmarks(safe_flowables)
 
-        from md2pdf.core.flowables import BookmarkFlowable
-
-        page_registry = BookmarkFlowable.page_registry
+        page_registry = self.bookmark_page_registry
 
         state_first = PageCallbackState(
             header_template=self.config.header,

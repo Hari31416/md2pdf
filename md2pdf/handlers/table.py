@@ -97,7 +97,7 @@ class TableHandler(ElementHandler):
             data_rows.append(data_row)
 
         all_rows = [header_row] + data_rows
-        col_widths = self._compute_col_widths(col_count)
+        col_widths = self._compute_col_widths(col_count, styles)
 
         tbl = Table(
             all_rows,
@@ -159,9 +159,17 @@ class TableHandler(ElementHandler):
         child_tokens = [parser._normalize(c) for c in children]
         return inline_render(child_tokens, styles, parent_style)
 
-    def _compute_col_widths(self, col_count: int) -> list[float]:
+    def _compute_col_widths(self, col_count: int, styles: dict | None = None) -> list[float]:
         """Distribute available page width evenly across *col_count* columns."""
         if col_count <= 0:
             return []
-        width = _AVAILABLE_WIDTH / col_count
+        page_width = A4[0]
+        left_margin = 20 * mm
+        right_margin = 20 * mm
+        if styles:
+            page_width = styles.get("_page_width", page_width)
+            left_margin = styles.get("_left_margin", left_margin)
+            right_margin = styles.get("_right_margin", right_margin)
+        available_width = page_width - left_margin - right_margin
+        width = available_width / col_count
         return [width] * col_count

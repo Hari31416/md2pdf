@@ -56,19 +56,30 @@ class AdmonitionHandler(ElementHandler):
         # Determine title text
         title_text = title if title else admonition_type.capitalize()
 
+        from md2pdf.handlers.inline import escape_xml
+
+        escaped_title_text = escape_xml(title_text)
+
+        body_style = styles.get("body")
+        h4_style = styles.get("h4")
+
+        font_name = getattr(h4_style, "fontName", "Helvetica-Bold")
+        font_size = getattr(body_style, "fontSize", 10)
+        leading = getattr(body_style, "leading", 14)
+
         # Build title paragraph using bold heading font
         title_style = ParagraphStyle(
             "AdmonitionTitle",
-            parent=styles.get("body"),
-            fontName=styles.get("h4").fontName if "h4" in styles else "Helvetica-Bold",
-            fontSize=styles.get("body").fontSize,
-            leading=styles.get("body").leading,
+            parent=body_style,
+            fontName=font_name,
+            fontSize=font_size,
+            leading=leading,
             textColor=border_color,
             spaceBefore=0,
             spaceAfter=4,
         )
 
-        title_flowable = Paragraph(title_text, title_style) if title_text else None
+        title_flowable = Paragraph(escaped_title_text, title_style) if title_text else None
 
         # 3. Return a list containing one AdmonitionBox flowable wrapping the children
         return [
