@@ -88,7 +88,9 @@ class Pipeline:
             "author": "pymd2pdf",
             "subject": "",
             "keywords": "",
+            "date": "",
         }
+        self.parsed_metadata_keys: set[str] = set()
         self.footnotes: dict[str, tuple[str, str]] = {}
         if self.config.input_file:
             import os
@@ -108,10 +110,15 @@ class Pipeline:
 
         # Stage 4 — post-processor registry.
         self._post_registry = PostProcessorRegistry()
-        from md2pdf.core.postprocessors import MetadataPostProcessor, TableOfContentsPostProcessor
+        from md2pdf.core.postprocessors import (
+            CoverPagePostProcessor,
+            MetadataPostProcessor,
+            TableOfContentsPostProcessor,
+        )
 
         self._post_registry.register(MetadataPostProcessor())
         self._post_registry.register(TableOfContentsPostProcessor())
+        self._post_registry.register(CoverPagePostProcessor())
 
         # Stylesheet registry — base layer added immediately; plugins add more.
         self._style_registry = StyleRegistry()
@@ -269,6 +276,7 @@ class Pipeline:
         for _, pp in self._pre_registry._processors:
             if isinstance(pp, FrontMatterStripper):
                 self.metadata.update(pp.metadata)
+                self.parsed_metadata_keys = getattr(pp, "parsed_keys", set())
         return result
 
     def _parse(self, md: str) -> list[dict]:
@@ -364,6 +372,7 @@ class Pipeline:
         doc._md2pdf_config = self.config
         doc._md2pdf_styles = self._styles
         doc._md2pdf_metadata = self.metadata
+        doc._md2pdf_metadata_keys = getattr(self, "parsed_metadata_keys", set())
 
         doc._md2pdf_is_final = is_final
         if is_final:
@@ -738,6 +747,15 @@ def draw_page_number(canvas, doc, state: PageCallbackState | None = None) -> Non
     """Draw the 'Page X' footer centered/aligned on each page."""
     from reportlab.lib import colors
     from reportlab.lib.units import mm
+
+    has_cover = False
+    if state and hasattr(doc, "_md2pdf_config") and doc._md2pdf_config:
+        cover_val = getattr(doc._md2pdf_config, "cover", False)
+        if isinstance(cover_val, bool):
+            has_cover = cover_val
+
+    if has_cover and canvas.getPageNumber() == 1:
+        return
 
     canvas.saveState()
     canvas.setFont("Helvetica", 8)

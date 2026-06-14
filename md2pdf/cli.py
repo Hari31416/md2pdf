@@ -97,6 +97,9 @@ def convert(
     toc: bool = typer.Option(  # noqa: B008
         False, "--toc", help="Generate a Table of Contents page"
     ),
+    cover: bool = typer.Option(  # noqa: B008
+        False, "--cover", help="Generate a cover/title page before the table of contents"
+    ),
     header: str = typer.Option(  # noqa: B008
         None,
         "--header",
@@ -184,6 +187,8 @@ def convert(
             cfg.min_image_scale = min_image_scale
         if toc:
             cfg.toc = True
+        if cover:
+            cfg.cover = True
         if header is not None:
             cfg.header = header
         if header_on_first_page:
@@ -198,6 +203,7 @@ def convert(
             theme=theme,
             offline=offline,
             toc=toc,
+            cover=cover,
             header=header if header is not None else "{title} | {section}",
             header_on_first_page=header_on_first_page,
             emoji=emoji,

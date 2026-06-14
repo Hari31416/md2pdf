@@ -230,6 +230,67 @@ class PageNumberPostProcessor(PostProcessor):
         canvas.restoreState()
 
 
+class CoverPagePostProcessor(PostProcessor):
+    """Prepend a cover/title page using YAML front-matter metadata before Table of Contents."""
+
+    def process(self, doc: SimpleDocTemplate, flowables: list) -> list:
+        config = getattr(doc, "_md2pdf_config", None)
+        if not config or not getattr(config, "cover", False):
+            return flowables
+
+        metadata = getattr(doc, "_md2pdf_metadata", {})
+        metadata_keys = getattr(doc, "_md2pdf_metadata_keys", set())
+        styles = getattr(doc, "_md2pdf_styles", {})
+
+        title = metadata.get("title", "")
+        author = metadata.get("author", "")
+        date = metadata.get("date", "")
+
+        from reportlab.lib import colors
+        from reportlab.platypus import HRFlowable, PageBreak, Paragraph, Spacer
+
+        from md2pdf.handlers.inline import escape_xml
+
+        title_style = styles.get("cover_title")
+        author_style = styles.get("cover_author")
+        date_style = styles.get("cover_date")
+
+        if not title_style or not author_style or not date_style:
+            base_styles = getSampleStyleSheet()
+            title_style = title_style or base_styles["Heading1"]
+            author_style = author_style or base_styles["Normal"]
+            date_style = date_style or base_styles["Normal"]
+
+        cover_flowables = []
+        cover_flowables.append(Spacer(1, 150))
+        cover_flowables.append(Paragraph(escape_xml(title), title_style))
+
+        # Check if we should render author and/or date
+        has_author = "author" in metadata_keys and bool(author)
+        has_date = "date" in metadata_keys and bool(date)
+
+        if has_author or has_date:
+            accent_color = styles.get("color_hr", colors.grey)
+            cover_flowables.append(
+                HRFlowable(
+                    width="40%",
+                    thickness=1.5,
+                    color=accent_color,
+                    spaceBefore=20,
+                    spaceAfter=20,
+                    hAlign="CENTER",
+                )
+            )
+            if has_author:
+                cover_flowables.append(Paragraph(escape_xml(author), author_style))
+            if has_date:
+                cover_flowables.append(Paragraph(escape_xml(date), date_style))
+
+        cover_flowables.append(PageBreak())
+
+        return cover_flowables + flowables
+
+
 class PostProcessorRegistry:
     """Ordered registry of :class:`PostProcessor` instances.
 

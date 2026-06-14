@@ -1,6 +1,7 @@
 ---
 title: "md2pdf Feature Showcase & Rendering Test"
 author: "pymd2pdf"
+date: "June 2026"
 subject: "Comprehensive typesetting and rendering test suite"
 keywords: "markdown, pdf, reportlab, typesetting, testing"
 ---
@@ -475,3 +476,20 @@ You can manually control pagination using either the standard HTML comment direc
 \pagebreak
 ```
 Both directives must reside on their own line (leading/trailing whitespace is allowed, and they are case-insensitive).
+
+---
+
+## 16. Cover Page Generation
+
+You can automatically prepend a beautifully formatted cover/title page before the Table of Contents by passing the `--cover` CLI flag:
+
+```bash
+md2pdf docs/showcase.md -o docs/showcase.pdf --cover
+```
+
+The cover page is generated dynamically using keys declared in the document's YAML front-matter metadata:
+- `title`: Extracted and displayed in a large, bold format. Defaults to the source filename if not explicitly provided.
+- `author`: Rendered only if explicitly declared in the front-matter metadata (omitting the default library branding).
+- `date`: Rendered only if explicitly declared in the front-matter metadata.
+
+When a cover page is generated, page-level running headers, header rules, and footers (page numbers) are automatically suppressed on the first page.

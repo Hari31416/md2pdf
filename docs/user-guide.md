@@ -36,6 +36,7 @@ The CLI is built with `typer` and supports the following options:
 | `--validate-only`        |              | Runs DX-first pre-render validation checks and exits.                       |
 | `--min-image-scale`      |              | Minimum image scale factor (e.g. `0.8`) before moving images to a new page. |
 | `--toc`                  |              | Prepend a dynamically generated Table of Contents page.                     |
+| `--cover`                |              | Prepend an auto-generated cover/title page.                                 |
 | `--header`               |              | Header text/template. Supports `{title}` and `{section}` placeholders.      |
 | `--header-on-first-page` |              | Render the running header on the first page.                                |
 | `--emoji` / `--no-emoji` |              | Enable or disable colour Twemoji image substitution.                        |
@@ -63,6 +64,7 @@ offline              = false                 # true = skip Kroki API calls, rend
 cache_dir            = "~/.cache/pymd2pdf"
 min_image_scale      = 0.8                   # minimum image scale factor before deferring to a new page
 toc                  = false                 # true = generate a Table of Contents page
+cover                = false                 # true = prepend an auto-generated cover/title page
 header               = "{title} | {section}" # Running header template (supports {title} and {section} placeholders)
 header_on_first_page = false                 # true = render running header on the first page
 emoji                = true                  # true = translate emoji codepoints into Twemoji images
@@ -120,6 +122,20 @@ keywords: "finance, analytics, report, quarterly"
 If these fields are missing, the engine falls back to:
 * **Title**: The base name of the input file (e.g. `README`).
 * **Author**: `"pymd2pdf"`.
+
+---
+
+## Cover Page Generation
+
+When cover page generation is enabled (using CLI `--cover` or setting `cover = true` in `md2pdf.toml`), `md2pdf` automatically generates and prepends a clean, professionally formatted cover/title page.
+
+* **Front-Matter Metadata**: The cover page uses keys declared in the document's YAML front-matter metadata block (`title`, `author`, `date`).
+* **Defaults and Suppression**:
+  * The title automatically falls back to the input file name if it is not explicitly provided.
+  * To avoid generic library branding, the author name and date are **only** rendered on the cover page if they are explicitly declared in the front-matter.
+* **Layout Interaction**:
+  * If both Cover Page and Table of Contents (TOC) are enabled, the cover page will be page 1, followed by the TOC on page 2, with the main content starting on page 3.
+  * Running headers, header divider lines, and page numbers are automatically suppressed on the cover page (page 1).
 
 ---
 
@@ -344,6 +360,17 @@ The alignment settings are automatically parsed and passed through to both the R
 In addition to standard Markdown line breaks (two trailing spaces or a backslash), `md2pdf` natively processes raw HTML line breaks inside inline text (including paragraph content, headings, and table cells).
 
 Tags like `<br>`, `<br />`, or `<BR/>` are automatically normalized into PDF-compatible line breaks (`<br/>`), allowing explicit vertical spacing controls inside table cell text.
+
+---
+
+## Images & Captions
+
+`md2pdf` supports standard Markdown images (`![alt](path)`) and HTML `<img>` tags, implementing layout safeguards and styling enhancements:
+
+* **Image Auto-scaling**: Images are dynamically scaled down to fit within the printable page margins.
+* **Image Captions**: If an image includes an alt-text caption (e.g. `![Figure 1: Pipeline Flow](flow.png)`), the engine automatically extracts the alt-text and renders it as a small, centered, and styled caption paragraph immediately below the image.
+* **Layout Safeguards**: Tall images are scaled down automatically. If a block image cannot fit at the bottom of the current page, the layout engine shifts it to the top of the next page to prevent layout overlap or clipping.
+* **Missing Image Placeholders**: If an image path is corrupt or missing, a clean placeholder box is rendered instead of throwing a compiler error.
 
 ---
 

@@ -9,8 +9,6 @@ Planned features and known limitations for future releases. Items are loosely or
 ### Short-Term (Target: v0.5.0)
 
 - **Page-Size & Orientation Configuration** — Expose page sizing (e.g., A4, Letter, A3) and page orientation (landscape/portrait) as configuration options in `md2pdf.toml` and as CLI flags.
-- **Image Captions** — Render image alt-text (`![Caption](image.png)`) as a small, styled, and centered caption paragraph below images, matching academic and technical document conventions.
-- **Cover Page Generation** — Add a `--cover` CLI flag to auto-generate and prepend a cover/title page using YAML front-matter metadata (`title`, `author`, `date`) before the table of contents.
 
 ---
 
@@ -38,7 +36,9 @@ Planned features and known limitations for future releases. Items are loosely or
 
 | Version    | Feature                   | Description                                                                                                     |
 | :--------- | :------------------------ | :-------------------------------------------------------------------------------------------------------------- |
-| **WIP**    | Font Path Validation      | Pre-flight `ConfigError` for missing `[theme]` `font_file_*` paths before ReportLab registration. |
+| **WIP**    | Cover Page Generation     | Add a `--cover` CLI flag to auto-generate and prepend a cover page using YAML front-matter metadata before TOC. |
+|            | Image Captions            | Render image alt-text as a small, styled, and centered caption paragraph below images.                          |
+|            | Font Path Validation      | Pre-flight `ConfigError` for missing `[theme]` `font_file_*` paths before ReportLab registration. |
 |            | Emoji Download Timeout    | Configurable `timeout` for Twemoji PNG downloads; graceful fallback on network hang or error.      |
 | **v0.4.0** | Table Column Alignment    | Enabled column alignment parsing (`:---`, `:---:`, `---:`) mapping to ReportLab table cell styles.              |
 |            | Superscript & Subscript   | Support for inline `x^2^` and `H~2~O` syntax using native ReportLab `<sup>` and `<sub>` tags.                   |

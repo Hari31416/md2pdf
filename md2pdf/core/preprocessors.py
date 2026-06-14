@@ -84,7 +84,9 @@ class FrontMatterStripper(PreProcessor):
             "author": "pymd2pdf",
             "subject": "",
             "keywords": "",
+            "date": "",
         }
+        self.parsed_keys: set[str] = set()
         if self.input_file:
             base_name = os.path.basename(self.input_file)
             title_default, _ = os.path.splitext(base_name)
@@ -105,8 +107,9 @@ class FrontMatterStripper(PreProcessor):
                     or (val.startswith("'") and val.endswith("'"))
                 ):
                     val = val[1:-1]
-                if key in ("title", "author", "subject", "keywords"):
+                if key in ("title", "author", "subject", "keywords", "date"):
                     self.metadata[key] = val
+                    self.parsed_keys.add(key)
 
     def process(self, raw_md: str) -> str:
         match = self._PATTERN.match(raw_md)

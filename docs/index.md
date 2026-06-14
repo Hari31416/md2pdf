@@ -11,6 +11,7 @@ Use the guides below to learn about installing, configuring, styling, and extend
 ### 1. [User Guide & Feature Reference](./user-guide.md)
 Learn about all supported Markdown structures, features, and configuration parameters including:
 * **YAML Front Matter**: Metadata extraction to PDF properties.
+* **Cover Page**: Auto-generating and prepending cover/title pages using YAML metadata.
 * **Table of Contents (TOC)**: Auto-generating clickable tables of contents.
 * **Running Headers & Section Titles**: Document headers, templates, and page number footers.
 * **Colour Emoji (Twemoji)**: Automatically substituting emoji characters with high-res colour Twemoji images.
