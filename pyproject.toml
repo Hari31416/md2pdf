@@ -5,9 +5,19 @@ build-backend = "hatchling.build"
 [project]
 name = "pymd2pdf"
 version = "0.4.2"
-description = "Automated programmatic Markdown-to-PDF typesetting engine"
+description = "Convert Markdown to PDF in pure Python; no Pandoc, Node.js, or headless Chrome required"
 readme = "README.md"
+license = {file = "LICENSE"}
 requires-python = ">=3.11"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Text Processing :: Markup",
+    "Topic :: Utilities",
+]
 dependencies = [
     "reportlab>=4.0",
     "mistletoe>=1.3",
