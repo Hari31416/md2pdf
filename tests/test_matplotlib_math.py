@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from md2pdf.assets.cache import AssetCache
 from md2pdf.assets.kroki import KrokiClient
 from md2pdf.core.config import Config
@@ -10,6 +12,7 @@ from md2pdf.core.pipeline import Pipeline
 from md2pdf.handlers.latex import get_latex_image
 
 
+@pytest.mark.matplotlib
 def test_matplotlib_math_rendering_success(tmp_path: Path) -> None:
     """Verify that matplotlib local rendering successfully creates a cropped PNG and returns correct sizes."""
     cache = AssetCache(str(tmp_path / "cache"))
@@ -84,6 +87,7 @@ def test_matplotlib_math_rendering_fallback_on_unsupported_latex(tmp_path: Path)
     assert Path(path).exists()
 
 
+@pytest.mark.matplotlib
 def test_pipeline_pre_fetch_assets(tmp_path: Path) -> None:
     """Verify that Pipeline._pre_fetch_assets concurrently scans AST and pre-populates caches."""
     config = Config(cache_dir=str(tmp_path / "cache"), offline=False)
@@ -135,6 +139,7 @@ def test_pipeline_pre_fetch_assets(tmp_path: Path) -> None:
     assert p3.exists()
 
 
+@pytest.mark.matplotlib
 def test_latex_logo_macro_normalization(tmp_path: Path) -> None:
     """Verify that \\LaTeX and \\TeX commands render successfully using local matplotlib."""
     from md2pdf.handlers.latex import clean_latex_source

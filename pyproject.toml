@@ -63,8 +63,9 @@ dev = [
 testpaths = ["tests"]
 markers = [
     "network: marks tests that make real HTTP calls (deselect with -m 'not network')",
+    "matplotlib: marks tests that require the matplotlib optional dependency",
 ]
-addopts = "-v --tb=short -m 'not network'"
+addopts = "-v --tb=short -m 'not network and not matplotlib'"
 
 [tool.hatch.build.targets.wheel]
 packages = ["md2pdf"]
