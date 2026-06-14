@@ -17,8 +17,10 @@
 
 ## Instructions for Version Bump
 
-- Check the chnages done after last version bump using git tag or git log history
+- Check the changes done after last version bump using git tag or git log history
 - Decide the version bump type based on the changes done (major, minor, patch)
 - Update `__version__` in `md2pdf/__init__.py` and in `pyproject.toml` accordingly
+- Run `uv lock` to update the lockfile version
 - Validate `CHANGELOG.md` and update it with the changes done since last version bump
-- Commit, tag and push the changes
+- Run tests (`uv run pytest`) to ensure everything is stable
+- Commit, tag (e.g., `vX.Y.Z`), and push the changes (which will trigger the GitHub release workflow)
