@@ -1,0 +1,15 @@
+[md2pdf]
+output_file = "cv.pdf"
+
+[theme]
+# Elegant Minimalist Slate & Teal Theme
+color_table_header_bg = "#1e293b"
+color_table_header_text = "#ffffff"
+color_table_grid = "#f1f5f9"
+color_table_row_even = "#ffffff"
+color_table_row_odd = "#ffffff"
+color_link = "#0f766e"
+color_hr = "#e2e8f0"
+spacing_base = 6
+font_size_body = 10
+font_size_small = 9

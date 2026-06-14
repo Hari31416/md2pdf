@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: fmt fmt-check lint lint-fix check fix test test-cov help
+.PHONY: fmt fmt-check lint lint-fix check fix test test-cov docs help
 
 # ---------------------------------------------------------------------------
 # Formatting
@@ -39,6 +39,13 @@ test:  ## Run the test suite
 
 test-cov:  ## Run tests with coverage report
 	uv run pytest --cov=md2pdf --cov-report=term-missing
+
+# ---------------------------------------------------------------------------
+# Documentation
+# ---------------------------------------------------------------------------
+
+docs:  ## Build all documentation and examples as PDFs
+	uv run python scripts/build_docs.py
 
 # ---------------------------------------------------------------------------
 # Help

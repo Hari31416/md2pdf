@@ -6,6 +6,8 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
+from reportlab.platypus import SimpleDocTemplate
+
 from md2pdf.core.config import Config
 from md2pdf.core.errors import ValidationIssue
 from md2pdf.core.parser import MarkdownParser
@@ -21,6 +23,34 @@ except ImportError:
     np = None
 
 logger = logging.getLogger(__name__)
+
+
+class MD2PDFDocTemplate(SimpleDocTemplate):
+    """Custom document template that dynamically adjusts the page frame bottom margin
+    to accommodate footnotes without causing layouts to overlap.
+    """
+
+    def handle_pageBegin(self) -> None:
+        super().handle_pageBegin()
+        page_num = self.page
+        from md2pdf.core.flowables import FootnoteFlowable
+
+        fns = FootnoteFlowable.page_footnotes.get(page_num, [])
+        frame = self.frame
+        if frame:
+            if not hasattr(frame, "_orig_y1"):
+                frame._orig_y1 = frame.y1
+                frame._orig_height = frame.height
+
+            if fns:
+                total_H = sum(f.get_height(self.width, self.height) for f in fns)
+                frame.y1 = frame._orig_y1 + total_H
+                frame.height = frame._orig_height - total_H
+            else:
+                frame.y1 = frame._orig_y1
+                frame.height = frame._orig_height
+
+            frame._reset()
 
 
 class Pipeline:
@@ -416,9 +446,8 @@ class Pipeline:
     def _build_doc(self):
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.units import mm
-        from reportlab.platypus import SimpleDocTemplate
 
-        return SimpleDocTemplate(
+        return MD2PDFDocTemplate(
             self.config.output_file,
             pagesize=A4,
             leftMargin=20 * mm,

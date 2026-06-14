@@ -9,6 +9,8 @@ build/
 # md2pdf runtime artifacts
 .md2pdf_cache/
 *.pdf
+!docs/user_manual.pdf
+!examples/**/*.pdf
 
 # Testing / coverage
 .pytest_cache/

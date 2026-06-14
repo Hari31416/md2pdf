@@ -1,0 +1,15 @@
+[md2pdf]
+output_file = "roadmap.pdf"
+
+[theme]
+# Soft Slate & Purple Accent Theme
+color_table_header_bg = "#475569"
+color_table_header_text = "#ffffff"
+color_table_grid = "#cbd5e1"
+color_table_row_even = "#f8fafc"
+color_table_row_odd = "#ffffff"
+color_link = "#7c3aed"
+color_blockquote_bar = "#8b5cf6"
+color_code_bg = "#f8fafc"
+syntax_style = "friendly"
+spacing_base = 8

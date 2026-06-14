@@ -242,8 +242,8 @@ class FootnoteFlowable(Flowable):
         return self.height
 
     def wrap(self, availWidth: float, availHeight: float) -> tuple[float, float]:
-        h = self.get_height(availWidth, availHeight)
-        return self.width, h
+        self.get_height(availWidth, availHeight)
+        return 0.0, 0.0
 
     def draw(self) -> None:
         page_num = self.canv.getPageNumber()

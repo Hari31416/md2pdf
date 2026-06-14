@@ -2,7 +2,7 @@
 
 `md2pdf` converts structured Markdown documents into beautiful, print-ready PDFs. Unlike other conversion tools, it does not rely on heavy system dependencies like Pandoc, Node.js, or headless Chrome/Chromium browsers. It is written in pure Python and powered by ReportLab and mistletoe.
 
-For detailed guides on settings, styling, and features, see the [Comprehensive Documentation Suite](docs/index.md).
+For detailed guides on settings, styling, and features, see the [Comprehensive Documentation Suite](docs/index.md) (including a consolidated [User Manual](docs/user_manual.pdf)). You can also review real-world templates in the [Examples Suite](examples/).
 
 ---
 
@@ -58,18 +58,26 @@ graph TD
 
 ```txt
 md2pdf/
-├── docs/                   # Comprehensive documentation suite
+├── docs/                   # Comprehensive documentation suite (Markdown & consolidated PDF)
 │   ├── index.md            # Documentation index/landing page
 │   ├── user-guide.md       # Comprehensive User Guide & Features reference
 │   ├── themes.md           # Themes and stylesheet reference
 │   ├── plugin-authoring.md # Instructions for writing plugins
-│   └── showcase.md         # Visual feature showcase and rendering test
+│   ├── showcase.md         # Visual feature showcase and rendering test
+│   └── user_manual.md      # Consolidated user manual compiling all guides
+├── examples/               # Production-grade examples with rendered PDFs
+│   ├── academic_paper/     # Abstract, LaTeX equations, citations, Mermaid flowcharts
+│   ├── business_invoice/   # Billing-oriented tables, customized corporate blue theme
+│   ├── project_roadmap/    # Task lists, admonitions, gantt timelines, code highlights
+│   └── simple_cv/          # Modern resume layout using structural tables and clean margins
 ├── md2pdf/                 # Core source directory
 │   ├── assets/             # Kroki client, caching, and fallback elements
 │   ├── core/               # Engine pipeline, parser, validator, layout, registry
 │   ├── handlers/           # Element-specific flowable generators (headings, tables, etc.)
 │   ├── styles/             # Default stylesheet and theme configs
 │   └── cli.py              # CLI entry point
+├── scripts/                # Helper scripts
+│   └── build_docs.py       # Automation script to compile all docs and examples
 ├── tests/                  # Automated test suite
 │   ├── fixtures/           # Markdown and configuration test files
 │   ├── test_cli.py         # CLI integration tests
@@ -202,4 +210,17 @@ for issue in issues:
 
 # Render markdown
 pipeline.run(raw_md="# Document Title\n\nSome body text.")
+```
+
+---
+
+## Compiling Documentation and Examples
+
+We provide an automated script to rebuild all documentation PDFs and example documents. You can run it via the `Makefile` command:
+
+```bash
+make docs
+```
+
+This will run `scripts/build_docs.py` within your `uv` environment, automatically generating all documentation PDFs and resolving any customized configuration blocks defined for the examples.
 ```

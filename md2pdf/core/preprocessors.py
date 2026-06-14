@@ -299,7 +299,12 @@ class LatexBlockPreProcessor(PreProcessor):
             formula = match.group(1).strip()
             return f"\n\n```latex\n{formula}\n```\n\n"
 
-        return re.sub(r"\$\$(.*?)\$\$", replace_math, raw_md, flags=re.DOTALL)
+        return re.sub(
+            r"^[ \t]*\$\$(.*?)\$\$[ \t]*$",
+            replace_math,
+            raw_md,
+            flags=re.MULTILINE | re.DOTALL,
+        )
 
 
 class PageBreakPreProcessor(PreProcessor):

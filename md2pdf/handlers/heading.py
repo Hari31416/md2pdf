@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import html
 import re
 
 from reportlab.platypus import Paragraph
@@ -16,9 +17,13 @@ def slugify(text: str) -> str:
     # Strip HTML tags
     clean = re.sub(r"<[^>]+>", "", text)
     clean = clean.lower()
-    clean = re.sub(r"[^\w\s-]", "", clean)
-    clean = re.sub(r"[-\s]+", "-", clean)
-    return clean.strip("-")
+    # Unescape HTML entities (e.g. &amp; -> &) before processing
+    clean = html.unescape(clean)
+    # Replace spaces with hyphens
+    clean = re.sub(r"\s", "-", clean)
+    # Strip everything except letters, numbers, hyphens, and underscores
+    clean = re.sub(r"[^\w-]", "", clean)
+    return clean
 
 
 class HeadingHandler(ElementHandler):

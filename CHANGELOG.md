@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## WIP
 
+### Added
+- **Unified Documentation Manual**: Added `docs/user_manual.md` which aggregates all individual guides (`index.md`, `user-guide.md`, `themes.md`, `plugin-authoring.md`, `showcase.md`) into a single print-ready documentation manual with a Table of Contents.
+- **Example Suite**: Added `examples/` directory containing four production-grade markdown templates and rendered PDFs:
+  - `academic_paper`: showcases abstract formatting, LaTeX math equation blocks, citations, and Mermaid flowcharting.
+  - `business_invoice`: showcases clean table alignment, discount highlighting, and custom TOML stylesheet overrides (Corporate Blue theme).
+  - `project_roadmap`: showcases GFM task checklists, multi-level admonition boxes, Pygments syntax highlighting, and Mermaid Gantt charts.
+  - `simple_cv`: showcases clean personal resume alignments, contact emoji styling, structural tables, and custom margins.
+- **Documentation Build Tooling**: Added `scripts/build_docs.py` and a `make docs` Makefile target to automate rebuilding all docs and examples into high-resolution PDFs.
+
 ### Changed
 - **Release Workflow Testing**: Added automated testing step (`uv run pytest`) to the GitHub Actions release workflow to verify code correctness before initiating packaging and release publication.
 

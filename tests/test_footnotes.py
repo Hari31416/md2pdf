@@ -54,8 +54,8 @@ def test_footnote_flowable_wrap_and_draw(tmp_path):
 
     # Test wrap
     w, h = fn.wrap(400, 800)
-    assert w == 400
-    assert h > 0
+    assert w == 0.0
+    assert h == 0.0
 
     # Clean registries
     FootnoteFlowable.page_registry.clear()

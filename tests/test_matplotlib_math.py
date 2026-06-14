@@ -133,3 +133,29 @@ def test_pipeline_pre_fetch_assets(tmp_path: Path) -> None:
     assert p1.exists()
     assert p2.exists()
     assert p3.exists()
+
+
+def test_latex_logo_macro_normalization(tmp_path: Path) -> None:
+    """Verify that \\LaTeX and \\TeX commands render successfully using local matplotlib."""
+    from md2pdf.handlers.latex import clean_latex_source
+
+    # Check clean_latex_source output specifically to avoid tab character replacement bugs
+    assert clean_latex_source(r"\LaTeX") == r"\text{L}^{\text{A}}\text{T}_{\text{E}}\text{X}"
+    assert clean_latex_source(r"\TeX") == r"\text{T}_{\text{E}}\text{X}"
+
+    cache = AssetCache(str(tmp_path / "cache"))
+    config = Config(cache_dir=str(tmp_path / "cache"), offline=True)
+
+    # These should render locally without throwing ParseFatalException, thanks to normalization
+    path1, w1, h1, _ = get_latex_image(r"\LaTeX", config=config, cache=cache, offline=True)
+    path2, w2, h2, _ = get_latex_image(r"\TeX", config=config, cache=cache, offline=True)
+
+    assert path1 is not None
+    assert Path(path1).exists()
+    assert w1 > 0
+    assert h1 > 0
+
+    assert path2 is not None
+    assert Path(path2).exists()
+    assert w2 > 0
+    assert h2 > 0

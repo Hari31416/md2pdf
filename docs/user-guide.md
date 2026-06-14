@@ -2,52 +2,6 @@
 
 This guide provides a comprehensive reference to all features, configuration settings, syntax extensions, and layout rules in the `md2pdf` Markdown-to-PDF typesetting engine.
 
----
-
-## Table of Contents
-- [md2pdf User Guide \& Feature Reference](#md2pdf-user-guide--feature-reference)
-  - [Table of Contents](#table-of-contents)
-  - [Installation \& Setup](#installation--setup)
-  - [CLI Flag Reference](#cli-flag-reference)
-  - [Configuration File (md2pdf.toml)](#configuration-file-md2pdftoml)
-    - [Configuration Schema Reference](#configuration-schema-reference)
-  - [YAML Front Matter \& PDF Metadata](#yaml-front-matter--pdf-metadata)
-    - [Example Markdown:](#example-markdown)
-  - [Table of Contents (TOC)](#table-of-contents-toc)
-  - [Running Headers \& Footers](#running-headers--footers)
-    - [Page Footers](#page-footers)
-    - [Page Headers](#page-headers)
-  - [Colour Emoji Support (Twemoji)](#colour-emoji-support-twemoji)
-  - [Task Lists \& Checkboxes](#task-lists--checkboxes)
-  - [Footnotes](#footnotes)
-    - [Syntax:](#syntax)
-    - [Layout Logic:](#layout-logic)
-  - [Inline Formatting](#inline-formatting)
-  - [File Inclusion (!include)](#file-inclusion-include)
-    - [Key Behaviors:](#key-behaviors)
-  - [Admonitions \& GitHub Alerts](#admonitions--github-alerts)
-    - [1. Fenced Container Admonitions (Obsidian/MkDocs style)](#1-fenced-container-admonitions-obsidianmkdocs-style)
-    - [2. Markdown Blockquote Alerts (GitHub-style)](#2-markdown-blockquote-alerts-github-style)
-    - [Supported Styles and Severity Levels](#supported-styles-and-severity-levels)
-  - [Explicit Page Breaks](#explicit-page-breaks)
-    - [HTML Comment Syntax](#html-comment-syntax)
-    - [Backslash Syntax](#backslash-syntax)
-  - [Progress Reporting](#progress-reporting)
-    - [Stages reported:](#stages-reported)
-    - [Disabling Progress Reporting:](#disabling-progress-reporting)
-  - [Tables \& Layout Safeguards](#tables--layout-safeguards)
-    - [Repeating Headers \& Row Protection](#repeating-headers--row-protection)
-    - [Heading-to-Table Bonding (`KeepTogetherParts`)](#heading-to-table-bonding-keeptogetherparts)
-    - [Table Column Alignment](#table-column-alignment)
-  - [HTML Line Breaks ()](#html-line-breaks-)
-  - [Diagrams (Mermaid) \& Math (LaTeX)](#diagrams-mermaid--math-latex)
-    - [Mermaid Syntax](#mermaid-syntax)
-    - [LaTeX Math Syntax](#latex-math-syntax)
-    - [Caching and Layout Protection:](#caching-and-layout-protection)
-  - [Unicode \& Fonts](#unicode--fonts)
-
----
-
 ## Installation & Setup
 
 Install the library using `uv` (recommended) or `pip`:

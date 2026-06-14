@@ -42,6 +42,8 @@ def clean_latex_source(source: str) -> str:
     # Normalize LaTeX shorthand commands to full commands for matplotlib support
     formula = re.sub(r"\\le(?![a-zA-Z])", r"\\leq", formula)
     formula = re.sub(r"\\ge(?![a-zA-Z])", r"\\geq", formula)
+    formula = re.sub(r"\\LaTeX\b", r"\\text{L}^{\\text{A}}\\text{T}_{\\text{E}}\\text{X}", formula)
+    formula = re.sub(r"\\TeX\b", r"\\text{T}_{\\text{E}}\\text{X}", formula)
     return formula
 
 
