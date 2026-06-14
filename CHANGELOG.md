@@ -5,7 +5,7 @@ All notable changes to the `md2pdf` project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [WIP]
+## [0.5.0] - 2026-06-14
 
 ### Added
 - **Cover Page Generation**: Added a `--cover` CLI flag and `cover` config setting to auto-generate and prepend a cover/title page before the Table of Contents, using `title`, `author`, and `date` YAML front-matter metadata, while automatically suppressing page headers and footers on page 1.

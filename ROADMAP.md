@@ -6,10 +6,7 @@ Planned features and known limitations for future releases. Items are loosely or
 
 ## 🗺️ Future Roadmap
 
-### Short-Term (Target: v0.5.0)
-- **Pre-Built Themes** — Bundle additional built-in themes (e.g., `academic`, `minimal`, `dark`) selectable via the `--theme` flag.
-
-### Medium-Term (Target: v0.6.0)
+### Short-Term (Target: v0.6.0)
 
 - **Page-Size & Orientation Configuration** — Expose page sizing (e.g., A4, Letter, A3) and page orientation (landscape/portrait) as configuration options in `md2pdf.toml` and as CLI flags.
 - **Structured JSON Validation Output** — Introduce a `--format json` CLI option for the `--validate-only` command to output structured validation results, making CI/CD automation integration easier.
@@ -33,9 +30,10 @@ Planned features and known limitations for future releases. Items are loosely or
 
 | Version    | Feature                   | Description                                                                                                     |
 | :--------- | :------------------------ | :-------------------------------------------------------------------------------------------------------------- |
-| **WIP**    | Cover Page Generation     | Add a `--cover` CLI flag to auto-generate and prepend a cover page using YAML front-matter metadata before TOC. |
+| **v0.5.0** | Pre-Built Themes          | Bundle built-in themes (`academic`, `minimal`, `dark`) selectable via the `--theme`/`-t` flag or configuration. |
+|            | Cover Page Generation     | Add a `--cover` CLI flag to auto-generate and prepend a cover page using YAML front-matter metadata before TOC. |
 |            | Image Captions            | Render image alt-text as a small, styled, and centered caption paragraph below images.                          |
-|            | Font Path Validation      | Pre-flight `ConfigError` for missing `[theme]` `font_file_*` paths before ReportLab registration. |
+| **v0.4.3** | Font Path Validation      | Pre-flight `ConfigError` for missing `[theme]` `font_file_*` paths before ReportLab registration. |
 |            | Emoji Download Timeout    | Configurable `timeout` for Twemoji PNG downloads; graceful fallback on network hang or error.      |
 | **v0.4.0** | Table Column Alignment    | Enabled column alignment parsing (`:---`, `:---:`, `---:`) mapping to ReportLab table cell styles.              |
 |            | Superscript & Subscript   | Support for inline `x^2^` and `H~2~O` syntax using native ReportLab `<sup>` and `<sub>` tags.                   |
