@@ -59,6 +59,7 @@ dev = [
     "black>=24",
     "ruff>=0.4",
     "pre-commit>=4.0",
+    "pypdf>=4.0.0",
 ]
 
 [tool.pytest.ini_options]

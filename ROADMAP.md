@@ -13,7 +13,6 @@ Planned features and known limitations for future releases. Items are loosely or
 - **Watch Mode** — Support live editing with `md2pdf --watch input.md`, automatically re-rendering the output PDF whenever changes are detected in the source file.
 - **Encoding Detection** — Add an `--encoding` CLI flag to support reading non-UTF-8 source files, along with optional auto-detection.
 - **Deterministic PDF Output** — Introduce a `--deterministic` flag to pin document creation timestamps and ID hashes, enabling byte-identical builds for CI caching.
-- **Integration & Regression Testing** — Create end-to-end regression tests converting reference Markdown files to PDF and asserting text correctness (via PDF text extraction) to prevent visual or layout regressions.
 
 ---
 
@@ -30,6 +29,7 @@ Planned features and known limitations for future releases. Items are loosely or
 
 | Version    | Feature                   | Description                                                                                                     |
 | :--------- | :------------------------ | :-------------------------------------------------------------------------------------------------------------- |
+| **v0.6.0** | Integration Testing      | Create end-to-end regression tests converting reference Markdown files to PDF and asserting text correctness (via PDF text extraction) to prevent visual or layout regressions. |
 | **v0.5.0** | Pre-Built Themes          | Bundle built-in themes (`academic`, `minimal`, `dark`) selectable via the `--theme`/`-t` flag or configuration. |
 |            | Cover Page Generation     | Add a `--cover` CLI flag to auto-generate and prepend a cover page using YAML front-matter metadata before TOC. |
 |            | Image Captions            | Render image alt-text as a small, styled, and centered caption paragraph below images.                          |

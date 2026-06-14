@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Deterministic PDF Output**: Introduced a `--deterministic` CLI flag and `deterministic` configuration option to enable byte-identical PDF builds. This pins document creation timestamps and ID hashes, suppressing dynamic PDF metadata variance to support CI/CD caching and clean git histories.
+- **Integration & Regression Testing**: Added an end-to-end integration and regression testing suite using `pypdf` for text and layout structure extraction. Converts Markdown source (incorporating headings, styled text, lists, tables, admonitions, page breaks, and footnotes) to PDF in deterministic mode, asserting correct page counts, section-based headers, footnote page-locations, and body text layout properties.
 
 ## [0.5.1] - 2026-06-14
 
