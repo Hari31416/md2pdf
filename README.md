@@ -223,4 +223,3 @@ make docs
 ```
 
 This will run `scripts/build_docs.py` within your `uv` environment, automatically generating all documentation PDFs and resolving any customized configuration blocks defined for the examples.
-```
