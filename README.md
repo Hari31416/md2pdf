@@ -91,7 +91,13 @@ pip install pymd2pdf
 **Heavy math documents** (physics, engineering)? Install the optional matplotlib backend for faster offline LaTeX rendering:
 
 ```bash
-pip install pymd2pdf[matplotlib]
+pip install "pymd2pdf[matplotlib]"
+```
+
+or
+
+```bash
+uv tool install "pymd2pdf[matplotlib]"
 ```
 
 > **Note:** The PyPI package name is `pymd2pdf`, but the CLI command and Python import are both `md2pdf`.
@@ -220,7 +226,7 @@ You can also pass one explicitly with `--config`. See the annotated [`md2pdf.tom
 | **HTTP Requests**                | requests >= 2.31  | Kroki API communication                                           |
 | **CLI Framework**                | typer >= 0.12     | CLI builder with validation                                       |
 | **Image Processing**             | Pillow >= 10.0    | Auto-cropping and dimension detection                             |
-| **LaTeX Rendering** *(optional)* | matplotlib >= 3.8 | Offline LaTeX math rendering (`pip install pymd2pdf[matplotlib]`) |
+| **LaTeX Rendering** *(optional)* | matplotlib >= 3.8 | Offline LaTeX math rendering (`pip install "pymd2pdf[matplotlib]"`) |
 
 ---
 

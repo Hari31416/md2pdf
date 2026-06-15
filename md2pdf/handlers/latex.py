@@ -120,7 +120,13 @@ def get_latex_image(
 
     # Helper to compute matplotlib metrics if available
     def get_matplotlib_metrics() -> tuple[float, float, float] | None:
-        if np is None or r"\documentclass" in formula or r"\begin{" in formula:
+        if np is None:
+            logger.debug("get_matplotlib_metrics: numpy is not available.")
+            return None
+        if r"\documentclass" in formula or r"\begin{" in formula:
+            logger.debug(
+                "get_matplotlib_metrics: formula contains complex LaTeX constructs, skipping matplotlib."
+            )
             return None
         try:
             import matplotlib
@@ -147,7 +153,8 @@ def get_latex_image(
             w_pt = ((right - left) / dpi) * 72.0
             h_pt = ((bottom - top) / dpi) * 72.0
             return w_pt, h_pt, depth_pt
-        except (ImportError, Exception):
+        except (ImportError, Exception) as exc:
+            logger.debug("get_matplotlib_metrics: matplotlib math parsing failed: %s", exc)
             return None
 
     if path.exists():
