@@ -130,35 +130,76 @@ class PluginLoader:
             config_plugins: Dict sourced from the ``[plugins]`` TOML section.
                 Missing keys are silently ignored.
         """
-        for path in config_plugins.get("handlers", []):
-            self._load_class(path, self._handlers.register)
-        for path in config_plugins.get("preprocessors", []):
-            self._load_class(path, self._pre.register)
-        for path in config_plugins.get("postprocessors", []):
-            self._load_class(path, self._post.register)
+        failed_plugins = []
+
+        handlers = config_plugins.get("handlers", [])
+        if isinstance(handlers, str):
+            handlers = [handlers]
+        for path in handlers:
+            try:
+                self._load_class(path, self._handlers.register)
+            except Exception as e:
+                logger.exception("Failed to load config plugin '%s'", path)
+                failed_plugins.append((path, e))
+
+        preprocessors = config_plugins.get("preprocessors", [])
+        if isinstance(preprocessors, str):
+            preprocessors = [preprocessors]
+        for path in preprocessors:
+            try:
+                self._load_class(path, self._pre.register)
+            except Exception as e:
+                logger.exception("Failed to load config plugin '%s'", path)
+                failed_plugins.append((path, e))
+
+        postprocessors = config_plugins.get("postprocessors", [])
+        if isinstance(postprocessors, str):
+            postprocessors = [postprocessors]
+        for path in postprocessors:
+            try:
+                self._load_class(path, self._post.register)
+            except Exception as e:
+                logger.exception("Failed to load config plugin '%s'", path)
+                failed_plugins.append((path, e))
+
+        if failed_plugins:
+            summary = "\n".join(
+                f"  - {path}: {type(err).__name__}: {err}" for path, err in failed_plugins
+            )
+            logger.warning(
+                "Plugin loading warning: The following config plugins failed to load:\n%s", summary
+            )
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
     def _load_ep_group(self, group: str, register_fn) -> None:  # type: ignore[no-untyped-def]
+        failed_eps = []
         for ep in entry_points(group=group):
             try:
                 cls = ep.load()
                 register_fn(cls())
                 logger.info("Loaded plugin '%s' from group '%s'", ep.name, group)
-            except Exception:
+            except Exception as e:
                 logger.exception("Failed to load plugin '%s' from group '%s'", ep.name, group)
+                failed_eps.append((ep.name, e))
+        if failed_eps:
+            summary = "\n".join(
+                f"  - {name}: {type(err).__name__}: {err}" for name, err in failed_eps
+            )
+            logger.warning(
+                "Plugin loading warning: The following entry-point plugins in group '%s' failed to load:\n%s",
+                group,
+                summary,
+            )
 
     def _load_class(self, dotted_path: str, register_fn) -> None:  # type: ignore[no-untyped-def]
-        try:
-            if ":" in dotted_path:
-                module_path, cls_name = dotted_path.split(":", 1)
-            else:
-                module_path, cls_name = dotted_path.rsplit(".", 1)
-            module = importlib.import_module(module_path)
-            cls = getattr(module, cls_name)
-            register_fn(cls())
-            logger.info("Loaded config plugin '%s'", dotted_path)
-        except Exception:
-            logger.exception("Failed to load config plugin '%s'", dotted_path)
+        if ":" in dotted_path:
+            module_path, cls_name = dotted_path.split(":", 1)
+        else:
+            module_path, cls_name = dotted_path.rsplit(".", 1)
+        module = importlib.import_module(module_path)
+        cls = getattr(module, cls_name)
+        register_fn(cls())
+        logger.info("Loaded config plugin '%s'", dotted_path)

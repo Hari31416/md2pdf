@@ -92,7 +92,7 @@ class HandlerRegistry:
             except Exception:
                 logger.exception("Failed to load entry-point handler plugin '%s'", ep.name)
 
-    def load_from_config(self, dotted_paths: list[str]) -> None:
+    def load_from_config(self, dotted_paths: list[str] | str) -> None:
         """Instantiate and register handlers from config-declared class paths.
 
         Each entry in *dotted_paths* must be a fully-qualified Python class
@@ -100,6 +100,10 @@ class HandlerRegistry:
 
         Errors are logged and skipped — they do not raise.
         """
+        if isinstance(dotted_paths, str):
+            dotted_paths = [dotted_paths]
+
+        failed_plugins = []
         for path in dotted_paths:
             try:
                 if ":" in path:
@@ -109,5 +113,14 @@ class HandlerRegistry:
                 module = importlib.import_module(module_path)
                 handler_cls = getattr(module, cls_name)
                 self.register(handler_cls())
-            except Exception:
+            except Exception as e:
                 logger.exception("Failed to load handler from config path '%s'", path)
+                failed_plugins.append((path, e))
+
+        if failed_plugins:
+            summary = "\n".join(
+                f"  - {path}: {type(err).__name__}: {err}" for path, err in failed_plugins
+            )
+            logger.warning(
+                "Plugin loading warning: The following handlers failed to load:\n%s", summary
+            )

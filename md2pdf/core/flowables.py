@@ -3,12 +3,34 @@
 from __future__ import annotations
 
 import logging
+import threading
 from typing import TYPE_CHECKING
 
 from reportlab.lib import colors
 from reportlab.platypus import Flowable, Image, KeepTogether
 
 logger = logging.getLogger(__name__)
+
+
+def _absolute_to_local(canvas, x_abs: float, y_abs: float) -> tuple[float, float]:
+    """Convert absolute page coordinates to local canvas coordinates by inverting the CTM."""
+    matrix = getattr(canvas, "_currentMatrix", (1.0, 0.0, 0.0, 1.0, 0.0, 0.0))
+    a, b, c, d, e, f = matrix
+    det = a * d - b * c
+    if abs(det) < 1e-7:
+        return x_abs - e, y_abs - f
+
+    inv_a = d / det
+    inv_c = -c / det
+    inv_e = (c * f - d * e) / det
+    inv_b = -b / det
+    inv_d = a / det
+    inv_f = (b * e - a * f) / det
+
+    x_local = inv_a * x_abs + inv_c * y_abs + inv_e
+    y_local = inv_b * x_abs + inv_d * y_abs + inv_f
+    return x_local, y_local
+
 
 if TYPE_CHECKING:
     from reportlab.lib.colors import Color
@@ -110,7 +132,30 @@ class BookmarkFlowable(Flowable):
                 logger.debug("addOutlineEntry failed for key=%r", self.key, exc_info=True)
 
 
-class ResizableImage(Image):
+_image_state = threading.local()
+
+
+class ResizableImageMeta(type):
+    """Metaclass to expose thread-local attributes as class-level properties for ResizableImage."""
+
+    @property
+    def max_avail_height(cls) -> float:
+        return getattr(_image_state, "max_avail_height", 0.0)
+
+    @max_avail_height.setter
+    def max_avail_height(cls, value: float) -> None:
+        _image_state.max_avail_height = value
+
+    @property
+    def min_scale(cls) -> float:
+        return getattr(_image_state, "min_scale", 0.8)
+
+    @min_scale.setter
+    def min_scale(cls, value: float) -> None:
+        _image_state.min_scale = value
+
+
+class ResizableImage(Image, metaclass=ResizableImageMeta):
     """An Image subclass that dynamically fits itself into available page space.
 
     If the image does not fit within the remaining vertical space on the current page,
@@ -122,13 +167,6 @@ class ResizableImage(Image):
     to fit the remaining page height/width (down to a minimum scale if needed to
     prevent layout overflows).
     """
-
-    # Track the maximum available height seen in the current rendering pass.
-    # Updated dynamically on each wrap call to learn the printable page frame height.
-    max_avail_height: float = 0.0
-
-    # Minimum scale factor before deferring rendering to the next page.
-    min_scale: float = 0.8
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -225,6 +263,10 @@ class FootnoteFlowable(Flowable):
         yet when the first footnote is being drawn, meaning their height is otherwise
         recorded as 0.0, leading to overlapping layout.
         """
+        # INVARIANT: get_height() must compute the full required height (including padding
+        # and separators) and cache it in self.height. This cached height is then used
+        # by MD2PDFDocTemplate.handle_pageBegin() to dynamically expand the bottom margin
+        # of the page frame, ensuring we allocate exactly enough room for footnotes.
         if self.height > 0.0:
             return self.height
 
@@ -261,6 +303,10 @@ class FootnoteFlowable(Flowable):
         return self.height
 
     def wrap(self, availWidth: float, availHeight: float) -> tuple[float, float]:
+        # INVARIANT: wrap() returns (0.0, 0.0) so ReportLab does not reserve standard flow
+        # height for the footnote flowable itself, as footnotes are drawn out-of-flow
+        # at the absolute bottom of the page frame. The actual layout height is computed
+        # and cached by calling get_height() here.
         self.get_height(availWidth, availHeight)
         return 0.0, 0.0
 
@@ -325,22 +371,26 @@ class FootnoteFlowable(Flowable):
             line_x_start = left_margin
             line_x_end = left_margin + 72.0  # 1 inch line
 
-            # Translate to local coordinates
-            local_line_y = line_y_abs - y_abs
-            local_line_x_start = line_x_start - x_abs
-            local_line_x_end = line_x_end - x_abs
+            # Translate to local coordinates using the inverse transform matrix
+            local_line_x_start, local_line_y_start = _absolute_to_local(
+                self.canv, line_x_start, line_y_abs
+            )
+            local_line_x_end, local_line_y_end = _absolute_to_local(
+                self.canv, line_x_end, line_y_abs
+            )
 
             self.canv.saveState()
             self.canv.setStrokeColor(self.styles.get("color_hr") or colors.HexColor("#cccccc"))
             self.canv.setLineWidth(0.5)
-            self.canv.line(local_line_x_start, local_line_y, local_line_x_end, local_line_y)
+            self.canv.line(
+                local_line_x_start, local_line_y_start, local_line_x_end, local_line_y_end
+            )
             self.canv.restoreState()
 
         para_y_abs = y_start_abs - self.get_height(width, height) + 4.0
 
         # Draw the paragraph at its absolute position
-        para_x_local = left_margin - x_abs
-        para_y_local = para_y_abs - y_abs
+        para_x_local, para_y_local = _absolute_to_local(self.canv, left_margin, para_y_abs)
 
         self.paragraph.drawOn(self.canv, para_x_local, para_y_local)
 
@@ -457,6 +507,8 @@ class AdmonitionBox(Flowable):
 
     def draw(self) -> None:
         c = self.canv
+        assert self.height > 0.0, "AdmonitionBox must be wrapped before drawn."
+
         c.saveState()
         # 1. Background
         c.setFillColor(self.bg_color)
@@ -467,14 +519,19 @@ class AdmonitionBox(Flowable):
         c.restoreState()
 
         # 3. Draw content
+        inner_avail_width = max(0.0, self.width - (self.left_bar_width + self.padding * 2))
         inner_x = self.left_bar_width + self.padding
         y_cursor = self.height - self.padding
         if self.title_flowable:
+            if not hasattr(self.title_flowable, "height") or self.title_flowable.height <= 0.0:
+                self.title_flowable.wrap(inner_avail_width, self.height)
             h_title = self.title_flowable.height
             y_cursor -= h_title
             self.title_flowable.drawOn(c, inner_x, y_cursor)
             y_cursor -= 6.0
         for f in self.content:
+            if not hasattr(f, "height") or f.height <= 0.0:
+                f.wrap(inner_avail_width, self.height)
             h_f = f.height
             y_cursor -= h_f
             f.drawOn(c, inner_x, y_cursor)

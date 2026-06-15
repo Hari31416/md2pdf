@@ -55,15 +55,18 @@ class MD2PDFDocTemplate(SimpleDocTemplate):
                 frame._orig_y1 = frame.y1
                 frame._orig_height = frame.height
 
-            if fns:
-                total_H = sum(f.get_height(self.width, self.height) for f in fns)
-                frame.y1 = frame._orig_y1 + total_H
-                frame.height = frame._orig_height - total_H
-            else:
-                frame.y1 = frame._orig_y1
-                frame.height = frame._orig_height
+        if fns:
+            total_H = sum(f.get_height(self.width, self.height) for f in fns)
+            max_H = frame._orig_height * 0.5
+            if total_H > max_H:
+                total_H = max_H
+            frame.y1 = frame._orig_y1 + total_H
+            frame.height = frame._orig_height - total_H
+        else:
+            frame.y1 = frame._orig_y1
+            frame.height = frame._orig_height
 
-            frame._reset()
+        frame._reset()
 
 
 class Pipeline:
@@ -276,8 +279,45 @@ class Pipeline:
                 )
             self._render_pass(flowables, is_final=False)
 
-            # Pass 2: Re-build document with populated page numbers and footnotes
-            # Temporarily suppress sub-stage logs for the pass 2 rebuild
+            max_passes = 5
+            converged = False
+            pass_idx = 1
+
+            # Intermediate passes loop
+            for p_idx in range(2, max_passes):
+                pass_idx = p_idx
+                old_footnote_reg = self.footnote_page_registry.copy()
+                old_bookmark_reg = self.bookmark_page_registry.copy()
+
+                # Map tokens to flowables (suppressing progress callbacks)
+                self.progress_callback = None
+                try:
+                    flowables = self._map(tokens)
+                finally:
+                    self.progress_callback = original_callback
+
+                if self.progress_callback:
+                    self.progress_callback(
+                        "render_pass_start",
+                        {
+                            "pass_num": pass_idx,
+                            "total_passes": pass_idx + 1,
+                            "description": "Analyzing layout (outlines & footnotes)",
+                        },
+                    )
+
+                # Run layout analysis pass
+                self._render_pass(flowables, is_final=False)
+
+                # Check convergence
+                if (
+                    old_footnote_reg == self.footnote_page_registry
+                    and old_bookmark_reg == self.bookmark_page_registry
+                ):
+                    converged = True
+                    break
+
+            # Final Pass
             self.progress_callback = None
             try:
                 flowables = self._map(tokens)
@@ -287,7 +327,11 @@ class Pipeline:
             if self.progress_callback:
                 self.progress_callback(
                     "render_pass_start",
-                    {"pass_num": 2, "total_passes": 2, "description": "Generating final PDF"},
+                    {
+                        "pass_num": (pass_idx + 1) if converged else max_passes,
+                        "total_passes": (pass_idx + 1) if converged else max_passes,
+                        "description": "Generating final PDF",
+                    },
                 )
             self._render_pass(flowables, is_final=True)
         else:
@@ -420,37 +464,37 @@ class Pipeline:
         doc._md2pdf_metadata_keys = getattr(self, "parsed_metadata_keys", set())
 
         doc._md2pdf_is_final = is_final
+        # Populate page_footnotes for FootnoteFlowable on every pass to dynamically
+        # adjust margins and layout positions for intermediate analysis passes.
+        from md2pdf.core.flowables import FootnoteFlowable
+
+        self.footnote_page_footnotes.clear()
+
+        def extract_fns(flowables_list):
+            from reportlab.platypus import KeepTogether
+
+            result = []
+            for f in flowables_list:
+                if isinstance(f, FootnoteFlowable):
+                    result.append(f)
+                elif isinstance(f, KeepTogether):
+                    result.extend(extract_fns(f._content))
+            return result
+
+        all_fns = extract_fns(safe_flowables)
+        for f in all_fns:
+            page_num = self.footnote_page_registry.get(f.label)
+            if page_num is not None:
+                self.footnote_page_footnotes.setdefault(page_num, []).append(f)
+
         if is_final:
             doc._md2pdf_toc_page_numbers = self.bookmark_page_registry.copy()
-
-            # Populate page_footnotes for FootnoteFlowable
-            from md2pdf.core.flowables import FootnoteFlowable
-
-            self.footnote_page_footnotes.clear()
-
-            def extract_fns(flowables_list):
-                from reportlab.platypus import KeepTogether
-
-                result = []
-                for f in flowables_list:
-                    if isinstance(f, FootnoteFlowable):
-                        result.append(f)
-                    elif isinstance(f, KeepTogether):
-                        result.extend(extract_fns(f._content))
-                return result
-
-            all_fns = extract_fns(safe_flowables)
-            for f in all_fns:
-                page_num = self.footnote_page_registry.get(f.label)
-                if page_num is not None:
-                    self.footnote_page_footnotes.setdefault(page_num, []).append(f)
         else:
             doc._md2pdf_toc_page_numbers = None
 
         safe_flowables = self._post_registry.run_all(doc, safe_flowables)
 
         # Set doc reference on all FootnoteFlowables
-        from md2pdf.core.flowables import FootnoteFlowable
 
         def set_doc_on_fns(flowables_list, doc_obj):
             from reportlab.platypus import KeepTogether

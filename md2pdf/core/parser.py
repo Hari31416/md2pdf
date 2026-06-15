@@ -57,15 +57,39 @@ class FootnoteDefinition(BlockToken):
         if match_obj is None:
             return "", ""
         content = [match_obj.group(2).strip()]
-        next_line = lines.peek()
-        while (
-            next_line is not None
-            and next_line.strip() != ""
-            and not next_line.lstrip().startswith("[")
-        ):
-            content.append(next(lines).strip())
+
+        temp_blank_lines = []
+        while True:
             next_line = lines.peek()
-        return match_obj.group(1), " ".join(content)
+            if next_line is None:
+                break
+
+            if next_line.lstrip().startswith("["):
+                break
+
+            if next_line.strip() == "":
+                temp_blank_lines.append(next(lines))
+                continue
+
+            is_indented = next_line.startswith("    ") or next_line.startswith("\t")
+            is_simple_continuation = not temp_blank_lines and not next_line.lstrip().startswith("[")
+
+            if is_indented or is_simple_continuation:
+                if temp_blank_lines:
+                    content.extend(temp_blank_lines)
+                    temp_blank_lines = []
+
+                line_val = next(lines)
+                if is_indented:
+                    if line_val.startswith("    "):
+                        line_val = line_val[4:]
+                    else:
+                        line_val = line_val[1:]
+                content.append(line_val.rstrip())
+            else:
+                break
+
+        return match_obj.group(1), "\n".join(content)
 
 
 class Strikethrough(SpanToken):
@@ -158,6 +182,16 @@ _ATTRS_TO_EXTRACT: tuple[str, ...] = (
 _SKIP_NON_INT_START = True
 
 
+def _is_pagebreak_token(token: dict) -> bool:
+    """Check if a token dict represents a PageBreak container."""
+    token_type = token.get("type")
+    if token_type == "RawText":
+        return (token.get("raw") or "").strip() == '<div class="pagebreak"></div>'
+    if token_type in ("HTMLBlock", "RawHTML"):
+        return (token.get("raw") or "").strip() == '<div class="pagebreak"></div>'
+    return False
+
+
 class MarkdownParser:
     """Parse Markdown text into a flat list of normalised token dicts.
 
@@ -229,7 +263,7 @@ class MarkdownParser:
                     stack.pop()
                     open_types.pop()
                 else:
-                    stack[-1].append(token)
+                    logger.warning("Stray admonition closing tag detected and discarded.")
             else:
                 if token.get("children"):
                     token["children"] = self._group_admonitions(token["children"])
@@ -289,10 +323,7 @@ class MarkdownParser:
                 non_empty.append(c)
             if len(non_empty) == 1:
                 child = non_empty[0]
-                if (
-                    child.get("type") == "RawText"
-                    and (child.get("raw") or "").strip() == '<div class="pagebreak"></div>'
-                ):
+                if _is_pagebreak_token(child):
                     return {
                         "type": "PageBreak",
                         "raw": "",
@@ -310,10 +341,7 @@ class MarkdownParser:
                         "attrs": {},
                         "_node": node,
                     }
-        elif (
-            token["type"] in ("HTMLBlock", "RawHTML")
-            and token.get("raw", "").strip() == '<div class="pagebreak"></div>'
-        ):
+        elif token["type"] in ("HTMLBlock", "RawHTML") and _is_pagebreak_token(token):
             return {
                 "type": "PageBreak",
                 "raw": "",

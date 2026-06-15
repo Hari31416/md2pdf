@@ -188,3 +188,49 @@ def test_footnote_document_wide_deduplication(tmp_path):
     fn_flowables = [f for f in flowables if f.__class__.__name__ == "FootnoteFlowable"]
     assert len(fn_flowables) == 1
     assert fn_flowables[0].label == "1"
+
+
+def test_multiple_and_large_footnotes_stress_test(tmp_path):
+    """Stress test with many footnotes and large footnotes to ensure no crash or layout overlap."""
+    paragraphs = []
+    definitions = []
+    for i in range(1, 21):
+        paragraphs.append(f"Paragraph {i} with footnote {i}[^{i}].")
+        if i % 5 == 0:
+            large_text = " ".join(
+                [f"Word {j} for footnote {i} text content which is extra long." for j in range(50)]
+            )
+            definitions.append(f"[^{i}]: {large_text}")
+        else:
+            definitions.append(f"[^{i}]: Short footnote content {i}.")
+
+    md = "\n\n".join(paragraphs) + "\n\n" + "\n".join(definitions)
+
+    pdf_path = tmp_path / "stress_test.pdf"
+    config = Config(output_file=str(pdf_path))
+    pipeline = Pipeline(config)
+    pipeline.run(md)
+
+    assert pdf_path.exists()
+    assert pdf_path.stat().st_size > 1000
+
+
+def test_footnote_multi_line_indented_continuation():
+    """Verify that FootnoteDefinition handles multi-line indented blocks/paragraphs correctly."""
+    md = (
+        "Main text[^1].\n\n"
+        "[^1]: First line of footnote.\n"
+        "    Second line of footnote (indented).\n"
+        "    \n"
+        "    Third paragraph of footnote (indented after blank line).\n"
+    )
+    parser = MarkdownParser()
+    tokens = parser.parse(md)
+
+    fn_def = next(t for t in tokens if t["type"] == "FootnoteDefinition")
+    assert fn_def["attrs"]["label"] == "1"
+
+    raw_content = fn_def["raw"]
+    assert "First line of footnote." in raw_content
+    assert "Second line of footnote (indented)." in raw_content
+    assert "Third paragraph of footnote (indented after blank line)." in raw_content

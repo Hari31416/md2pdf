@@ -110,3 +110,23 @@ def test_can_handle_non_matching_type() -> None:
 def test_can_handle_missing_type_key() -> None:
     handler = _DummyHandler()
     assert handler.can_handle({}) is False
+
+
+def test_load_from_config_single_string(empty_registry: HandlerRegistry) -> None:
+    """A single string config path instead of a list should be handled gracefully."""
+    empty_registry.load_from_config("nonexistent.module:Handler")
+    assert empty_registry.get("Handler") is None
+
+
+def test_load_from_config_logs_warning_summary(empty_registry: HandlerRegistry, caplog) -> None:
+    """Verify that a warning summary is logged when plugins fail to load."""
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        empty_registry.load_from_config(
+            ["nonexistent1.module:Handler", "nonexistent2.module:Handler"]
+        )
+    assert any(
+        "Plugin loading warning: The following handlers failed to load:" in r.message
+        for r in caplog.records
+    )
