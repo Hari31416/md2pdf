@@ -41,6 +41,18 @@ class TestMarkdownParserTokenTypes:
         heading = next(t for t in tokens if t["type"] == HEADING)
         assert heading["attrs"]["level"] == 2
 
+    def test_setext_heading(self):
+        tokens = MarkdownParser().parse("Hello World\n===\n")
+        assert HEADING in _types(tokens)
+        heading = next(t for t in tokens if t["type"] == HEADING)
+        assert heading["attrs"]["level"] == 1
+
+    def test_setext_heading_level2(self):
+        tokens = MarkdownParser().parse("Hello H2\n---\n")
+        assert HEADING in _types(tokens)
+        heading = next(t for t in tokens if t["type"] == HEADING)
+        assert heading["attrs"]["level"] == 2
+
     def test_paragraph(self):
         tokens = MarkdownParser().parse("Just some text.\n")
         assert PARAGRAPH in _types(tokens)
@@ -275,6 +287,28 @@ class TestIncludeResolver:
         resolver = IncludeResolver(str(main_file))
         result = resolver.process(main_file.read_text())
         assert "Included file not found: missing.md" in result
+
+    def test_ignores_include_in_fenced_code_blocks(self, tmp_path):
+        main_file = tmp_path / "main.md"
+        main_file.write_text("Hello\n```\n!include missing.md\n```\n")
+
+        resolver = IncludeResolver(str(main_file))
+        result = resolver.process(main_file.read_text())
+        assert "!include missing.md" in result
+        assert "Included file not found" not in result
+
+    def test_strips_front_matter_from_included_files(self, tmp_path):
+        main_file = tmp_path / "main.md"
+        inc_file = tmp_path / "inc.md"
+
+        main_file.write_text("Hello\n!include inc.md\n")
+        inc_file.write_text("---\ntitle: Subfile\n---\nActual content here")
+
+        resolver = IncludeResolver(str(main_file))
+        result = resolver.process(main_file.read_text())
+        assert "Actual content here" in result
+        assert "Subfile" not in result
+        assert "---" not in result
 
 
 # ---------------------------------------------------------------------------

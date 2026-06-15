@@ -236,27 +236,38 @@ class IncludeResolver(PreProcessor):
         current_dir = os.path.dirname(current_file_path)
         visited = visited | {current_file_path}
 
-        lines = text.splitlines(keepends=True)
-        resolved_lines = []
-        include_pattern = re.compile(r"^[ \t]*!include[ \t]+([^\n]+?)[ \t]*$")
+        def do_resolve(txt: str) -> str:
+            lines = txt.splitlines(keepends=True)
+            resolved_lines = []
+            include_pattern = re.compile(r"^[ \t]*!include[ \t]+([^\n]+?)[ \t]*$")
 
-        for line in lines:
-            m = include_pattern.match(line.rstrip("\r\n"))
-            if m:
-                include_target = m.group(1).strip()
-                if not os.path.isabs(include_target):
-                    target_path = os.path.abspath(os.path.join(current_dir, include_target))
-                else:
-                    target_path = os.path.abspath(include_target)
+            for line in lines:
+                m = include_pattern.match(line.rstrip("\r\n"))
+                if m:
+                    include_target = m.group(1).strip()
+                    if not os.path.isabs(include_target):
+                        target_path = os.path.abspath(os.path.join(current_dir, include_target))
+                    else:
+                        target_path = os.path.abspath(include_target)
 
-                # Restrict includes to paths within the directory containing the main source Markdown file
-                source_dir = os.path.realpath(os.path.dirname(self.main_file))
-                target_real_path = os.path.realpath(target_path)
-                try:
-                    common = os.path.commonpath([source_dir, target_real_path])
-                    if common != source_dir:
+                    # Restrict includes to paths within the directory containing the main source Markdown file
+                    source_dir = os.path.realpath(os.path.dirname(self.main_file))
+                    target_real_path = os.path.realpath(target_path)
+                    try:
+                        common = os.path.commonpath([source_dir, target_real_path])
+                        if common != source_dir:
+                            logger.warning(
+                                "Include path '%s' is outside the source directory '%s'",
+                                target_path,
+                                source_dir,
+                            )
+                            resolved_lines.append(
+                                f"<!-- Include path outside source directory: {include_target} -->\n"
+                            )
+                            continue
+                    except ValueError:
                         logger.warning(
-                            "Include path '%s' is outside the source directory '%s'",
+                            "Include path '%s' has no common path with source directory '%s'",
                             target_path,
                             source_dir,
                         )
@@ -264,52 +275,51 @@ class IncludeResolver(PreProcessor):
                             f"<!-- Include path outside source directory: {include_target} -->\n"
                         )
                         continue
-                except ValueError:
-                    logger.warning(
-                        "Include path '%s' has no common path with source directory '%s'",
-                        target_path,
-                        source_dir,
-                    )
-                    resolved_lines.append(
-                        f"<!-- Include path outside source directory: {include_target} -->\n"
-                    )
-                    continue
 
-                if target_path in visited:
-                    logger.warning("Circular inclusion detected: %s", target_path)
-                    resolved_lines.append(
-                        f"<!-- Circular inclusion of {include_target} skipped -->\n"
-                    )
-                    continue
+                    if target_path in visited:
+                        logger.warning("Circular inclusion detected: %s", target_path)
+                        resolved_lines.append(
+                            f"<!-- Circular inclusion of {include_target} skipped -->\n"
+                        )
+                        continue
 
-                if not os.path.isfile(target_path):
-                    logger.warning("Included file not found: %s", target_path)
-                    resolved_lines.append(f"<!-- Included file not found: {include_target} -->\n")
-                    continue
+                    if not os.path.isfile(target_path):
+                        logger.warning("Included file not found: %s", target_path)
+                        resolved_lines.append(
+                            f"<!-- Included file not found: {include_target} -->\n"
+                        )
+                        continue
 
-                try:
-                    with open(target_path, encoding="utf-8") as f:
-                        included_content = f.read()
-                    resolved_content = self._resolve_includes(
-                        included_content, target_path, visited, depth + 1
-                    )
-                    if self.track_source_files:
-                        prefix = f"\n<!-- SOURCE_FILE: {target_path} -->\n"
-                        suffix = f"\n<!-- SOURCE_FILE: {current_file_path} -->\n"
-                        resolved_lines.append(prefix + resolved_content + suffix)
-                    else:
-                        resolved_lines.append(resolved_content)
-                        if resolved_content and not resolved_content.endswith("\n"):
-                            resolved_lines.append("\n")
-                except Exception as exc:
-                    logger.error("Failed to read included file %s: %s", target_path, exc)
-                    resolved_lines.append(
-                        f"<!-- Failed to read included file: {include_target} -->\n"
-                    )
-            else:
-                resolved_lines.append(line)
+                    try:
+                        with open(target_path, encoding="utf-8") as f:
+                            included_content = f.read()
 
-        return "".join(resolved_lines)
+                        # Strip front matter from included files to prevent metadata blocks
+                        # from being treated as content or parsed as Setext headings.
+                        included_content = FrontMatterStripper().process(included_content)
+
+                        resolved_content = self._resolve_includes(
+                            included_content, target_path, visited, depth + 1
+                        )
+                        if self.track_source_files:
+                            prefix = f"\n<!-- SOURCE_FILE: {target_path} -->\n"
+                            suffix = f"\n<!-- SOURCE_FILE: {current_file_path} -->\n"
+                            resolved_lines.append(prefix + resolved_content + suffix)
+                        else:
+                            resolved_lines.append(resolved_content)
+                            if resolved_content and not resolved_content.endswith("\n"):
+                                resolved_lines.append("\n")
+                    except Exception as exc:
+                        logger.error("Failed to read included file %s: %s", target_path, exc)
+                        resolved_lines.append(
+                            f"<!-- Failed to read included file: {include_target} -->\n"
+                        )
+                else:
+                    resolved_lines.append(line)
+
+            return "".join(resolved_lines)
+
+        return process_outside_fenced_code_blocks(text, do_resolve)
 
 
 class AdmonitionPreProcessor(PreProcessor):
@@ -493,6 +503,7 @@ _EMOJI_SKIP_RANGES: tuple[tuple[int, int], ...] = (
     (0x2500, 0x257F),  # Box Drawing (─ │ ┌ └ …)
     (0x2580, 0x259F),  # Block Elements
     (0x25A0, 0x25FF),  # Geometric Shapes (▶ ■ ▲ …)
+    (0x2610, 0x2610),  # ☐ (ballot box checkbox, no Twemoji exists)
     (0x27C0, 0x27EF),  # Miscellaneous Mathematical Symbols-A
     (0x27F0, 0x27FF),  # Supplemental Arrows-A
     (0x2900, 0x297F),  # Supplemental Arrows-B

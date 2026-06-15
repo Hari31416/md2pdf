@@ -163,6 +163,7 @@ _LATEX_LANGS: frozenset[str] = frozenset({"latex", "math"})
 # mistletoe ≥1.4 renamed BlockQuote → Quote.
 _CLASS_NAME_REMAP: dict[str, str] = {
     "Quote": "BlockQuote",
+    "SetextHeading": "Heading",
 }
 
 
