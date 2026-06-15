@@ -80,8 +80,10 @@ def convert(
         None, "-c", "--config", help="Path to md2pdf.toml"
     ),
     theme: str = typer.Option("default", "-t", "--theme", help="Theme name"),  # noqa: B008
-    offline: bool = typer.Option(  # noqa: B008
-        False, "--offline", help="Skip external API calls; use placeholders instead"
+    offline: bool | None = typer.Option(  # noqa: B008
+        None,
+        "--offline/--no-offline",
+        help="Skip external API calls; use placeholders instead",
     ),
     verbose: bool = typer.Option(  # noqa: B008
         False, "-v", "--verbose", help="Enable debug logging to stderr"
@@ -94,24 +96,28 @@ def convert(
         "--min-image-scale",
         help="Minimum scale factor for resizing images before deferring to a new page (e.g. 0.8)",
     ),
-    toc: bool = typer.Option(  # noqa: B008
-        False, "--toc", help="Generate a Table of Contents page"
+    toc: bool | None = typer.Option(  # noqa: B008
+        None,
+        "--toc/--no-toc",
+        help="Generate a Table of Contents page",
     ),
-    cover: bool = typer.Option(  # noqa: B008
-        False, "--cover", help="Generate a cover/title page before the table of contents"
+    cover: bool | None = typer.Option(  # noqa: B008
+        None,
+        "--cover/--no-cover",
+        help="Generate a cover/title page before the table of contents",
     ),
     header: str = typer.Option(  # noqa: B008
         None,
         "--header",
         help="Header text or template (supports {title} and {section})",
     ),
-    header_on_first_page: bool = typer.Option(  # noqa: B008
-        False,
-        "--header-on-first-page",
+    header_on_first_page: bool | None = typer.Option(  # noqa: B008
+        None,
+        "--header-on-first-page/--no-header-on-first-page",
         help="Draw header on the first page of the document",
     ),
-    emoji: bool = typer.Option(  # noqa: B008
-        True,
+    emoji: bool | None = typer.Option(  # noqa: B008
+        None,
         "--emoji/--no-emoji",
         help="Replace emoji codepoints with Twemoji PNG images (default: enabled)",
     ),
@@ -120,9 +126,9 @@ def convert(
         "--progress/--no-progress",
         help="Show compilation progress stages on stderr (default: enabled)",
     ),
-    deterministic: bool = typer.Option(  # noqa: B008
-        False,
-        "--deterministic",
+    deterministic: bool | None = typer.Option(  # noqa: B008
+        None,
+        "--deterministic/--no-deterministic",
         help="Pin document creation timestamps and ID hashes, enabling byte-identical builds for CI caching.",
     ),
 ) -> None:
@@ -159,27 +165,24 @@ def convert(
                 if home_dot.is_file():
                     active_config_file = str(home_dot)
 
+    toml_data: dict[str, Any] = {}
     if active_config_file is not None:
-        cfg = Config.from_toml(active_config_file)
+        import tomllib
+
+        with open(active_config_file, "rb") as fh:
+            toml_data = tomllib.load(fh)
+
+    if active_config_file is not None:
+        cfg = Config.from_dict(toml_data)
         # CLI arguments take precedence over config file values.
         cfg.input_file = str(input)
         if output is not None:
             cfg.output_file = str(output)
         else:
             # Check if TOML file explicitly configured output_file
-            import tomllib
-
-            toml_has_output = False
-            try:
-                with open(active_config_file, "rb") as fh:
-                    data = tomllib.load(fh)
-                    if "output_file" in data.get("md2pdf", {}):
-                        toml_has_output = True
-            except Exception:
-                pass
-
+            toml_has_output = "output_file" in toml_data.get("md2pdf", {})
             if toml_has_output:
-                if not cfg.output_file:
+                if not toml_data.get("md2pdf", {}).get("output_file"):
                     cfg.output_file = str(input.with_suffix(".pdf"))
             else:
                 cfg.output_file = str(input.with_suffix(".pdf"))
@@ -187,53 +190,55 @@ def convert(
         if theme != "default":
             cfg.theme = theme
             try:
-                import tomllib  # noqa: PLC0415
-
                 from md2pdf.styles.theme import PREBUILT_THEMES, ThemeConfig  # noqa: PLC0415
 
-                theme_data = {}
-                if active_config_file is not None:
-                    with open(active_config_file, "rb") as fh:
-                        toml_data = tomllib.load(fh)
-                    theme_data = toml_data.get("theme", {})
-
+                theme_data = toml_data.get("theme", {})
                 base_theme_data = PREBUILT_THEMES.get(theme, {})
                 merged_theme_data = {**base_theme_data, **theme_data}
                 cfg.theme_config = ThemeConfig.from_dict(merged_theme_data)
             except Exception:
-                pass
-        if offline:
-            cfg.offline = True
+                logger = logging.getLogger("md2pdf")
+                logger.debug("Failed to apply theme config from TOML", exc_info=True)
+
+        if offline is not None:
+            cfg.offline = offline
         if min_image_scale is not None:
             cfg.min_image_scale = min_image_scale
-        if toc:
-            cfg.toc = True
-        if cover:
-            cfg.cover = True
+        if toc is not None:
+            cfg.toc = toc
+        if cover is not None:
+            cfg.cover = cover
         if header is not None:
             cfg.header = header
-        if header_on_first_page:
-            cfg.header_on_first_page = True
-        if not emoji:
-            cfg.emoji = False
-        if deterministic:
-            cfg.deterministic = True
+        if header_on_first_page is not None:
+            cfg.header_on_first_page = header_on_first_page
+        if emoji is not None:
+            cfg.emoji = emoji
+        if deterministic is not None:
+            cfg.deterministic = deterministic
     else:
         resolved_output = output if output is not None else input.with_suffix(".pdf")
         cfg = Config(
             input_file=str(input),
             output_file=str(resolved_output),
             theme=theme,
-            offline=offline,
-            toc=toc,
-            cover=cover,
-            header=header if header is not None else "{title} | {section}",
-            header_on_first_page=header_on_first_page,
-            emoji=emoji,
-            deterministic=deterministic,
         )
+        if offline is not None:
+            cfg.offline = offline
         if min_image_scale is not None:
             cfg.min_image_scale = min_image_scale
+        if toc is not None:
+            cfg.toc = toc
+        if cover is not None:
+            cfg.cover = cover
+        if header is not None:
+            cfg.header = header
+        if header_on_first_page is not None:
+            cfg.header_on_first_page = header_on_first_page
+        if emoji is not None:
+            cfg.emoji = emoji
+        if deterministic is not None:
+            cfg.deterministic = deterministic
 
     registry = HandlerRegistry()
     pipeline = Pipeline(

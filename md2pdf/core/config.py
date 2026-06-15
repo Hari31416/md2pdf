@@ -73,26 +73,19 @@ class Config:
             self.theme_config = ThemeConfig.from_dict(base_theme_data)
 
     @classmethod
-    def from_toml(cls, path: str) -> Config:
-        """Load configuration from a TOML file.
+    def from_dict(cls, data: dict[str, Any]) -> Config:
+        """Create Config from a parsed TOML dictionary.
 
         Reads the ``[md2pdf]`` table for core settings, the ``[theme]``
         table (if present) to build a :class:`~md2pdf.styles.theme.ThemeConfig`,
         and the ``[plugins]`` table for plugin class paths.
 
         Args:
-            path: Filesystem path to the TOML config file.
+            data: A dictionary containing the parsed TOML sections.
 
         Returns:
             A populated Config instance.
-
-        Raises:
-            FileNotFoundError: If *path* does not exist.
-            tomllib.TOMLDecodeError: If the file is not valid TOML.
         """
-        with open(path, "rb") as fh:
-            data = tomllib.load(fh)
-
         md2pdf_section: dict = data.get("md2pdf", {})
         # ``theme_config`` and ``plugins_dict`` are not direct TOML fields.
         known: set[str] = {f.name for f in fields(cls)} - {"theme_config", "plugins_dict"}
@@ -122,3 +115,25 @@ class Config:
         cfg.plugins_dict = data.get("plugins", {})
 
         return cfg
+
+    @classmethod
+    def from_toml(cls, path: str) -> Config:
+        """Load configuration from a TOML file.
+
+        Reads the ``[md2pdf]`` table for core settings, the ``[theme]``
+        table (if present) to build a :class:`~md2pdf.styles.theme.ThemeConfig`,
+        and the ``[plugins]`` table for plugin class paths.
+
+        Args:
+            path: Filesystem path to the TOML config file.
+
+        Returns:
+            A populated Config instance.
+
+        Raises:
+            FileNotFoundError: If *path* does not exist.
+            tomllib.TOMLDecodeError: If the file is not valid TOML.
+        """
+        with open(path, "rb") as fh:
+            data = tomllib.load(fh)
+        return cls.from_dict(data)

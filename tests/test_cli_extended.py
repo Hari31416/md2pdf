@@ -426,3 +426,70 @@ def test_cli_theme_dark(tmp_path: Path, simple_md: str) -> None:
     assert result.exit_code == 0
     assert dest.exists()
     assert dest.stat().st_size > 1000
+
+
+# ---------------------------------------------------------------------------
+# New CLI tests for overrides and theme exceptions
+# ---------------------------------------------------------------------------
+
+
+def test_cli_boolean_overrides_to_false(tmp_path: Path, simple_md: str) -> None:
+    """Verify that CLI flags (e.g. --no-toc) can override TOML settings from true to false."""
+    src = tmp_path / "input.md"
+    src.write_text(simple_md, encoding="utf-8")
+    dest = tmp_path / "out.pdf"
+
+    cfg_toml = tmp_path / "md2pdf.toml"
+    cfg_toml.write_text("[md2pdf]\ntoc = true\noffline = true\n", encoding="utf-8")
+
+    # Override toc to false, but keep offline as true (not specified, defaults to None, preserves TOML)
+    result = runner.invoke(
+        app, [str(src), "-o", str(dest), "--config", str(cfg_toml), "--no-toc", "--no-progress"]
+    )
+    assert result.exit_code == 0, result.output
+    assert dest.exists()
+
+
+def test_cli_boolean_overrides_to_true(tmp_path: Path, simple_md: str) -> None:
+    """Verify that CLI flags (e.g. --toc) can override TOML settings from false to true."""
+    src = tmp_path / "input.md"
+    src.write_text(simple_md, encoding="utf-8")
+    dest = tmp_path / "out.pdf"
+
+    cfg_toml = tmp_path / "md2pdf.toml"
+    cfg_toml.write_text("[md2pdf]\ntoc = false\noffline = true\n", encoding="utf-8")
+
+    # Override toc to true
+    result = runner.invoke(
+        app, [str(src), "-o", str(dest), "--config", str(cfg_toml), "--toc", "--no-progress"]
+    )
+    assert result.exit_code == 0, result.output
+    assert dest.exists()
+
+
+def test_cli_theme_merge_exception_logging(tmp_path: Path, simple_md: str) -> None:
+    """Verify that failures in applying theme config from TOML are logged to debug."""
+    src = tmp_path / "input.md"
+    src.write_text(simple_md, encoding="utf-8")
+    dest = tmp_path / "out.pdf"
+
+    cfg_toml = tmp_path / "md2pdf.toml"
+    # Malformed theme setting (string instead of dict) to trigger a TypeError during merge
+    cfg_toml.write_text('theme = "not a dict"\n[md2pdf]\noffline = true\n', encoding="utf-8")
+
+    with patch("logging.Logger.debug") as mock_debug:
+        result = runner.invoke(
+            app,
+            [
+                str(src),
+                "-o",
+                str(dest),
+                "--config",
+                str(cfg_toml),
+                "--theme",
+                "academic",
+                "--no-progress",
+            ],
+        )
+        assert result.exit_code == 0
+        mock_debug.assert_any_call("Failed to apply theme config from TOML", exc_info=True)
