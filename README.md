@@ -50,21 +50,21 @@ To evaluate compilation speeds, we compared `md2pdf` against **Pandoc** (using v
 
 | Document             | Engine                | Cold Start (s) | Warm Median (s) | Status  |
 | :------------------- | :-------------------- | :------------: | :-------------: | :------ |
-| **`simple.md`**      | **md2pdf (native)**   |   **0.253s**   |   **0.014s**    | Success |
-| *(Short document)*   | Playwright (Chromium) |     0.387s     |     0.040s      | Success |
-|                      | Pandoc (weasyprint)   |     0.362s     |     0.369s      | Success |
-|                      | Pandoc (pdflatex)     |     0.760s     |     0.783s      | Success |
-|                      | Pandoc (xelatex)      |     1.480s     |     1.498s      | Success |
-| **`medium.md`**      | Playwright (Chromium) |     0.410s     |   **0.043s**    | Success |
-| *(With math/code)*   | **md2pdf (native)**   |   **0.472s**   |   **0.046s**    | Success |
-|                      | Pandoc (weasyprint)   |     0.482s     |     0.475s      | Success |
-|                      | Pandoc (pdflatex)     |     0.837s     |     0.842s      | Success |
-|                      | Pandoc (xelatex)      |     1.597s     |     1.537s      | Success |
-| **`large.md`**       | Playwright (Chromium) |     0.404s     |   **0.048s**    | Success |
-| *(Multi-page guide)* | **md2pdf (native)**   |   **0.281s**   |   **0.049s**    | Success |
-|                      | Pandoc (weasyprint)   |     0.528s     |     0.532s      | Success |
-|                      | Pandoc (pdflatex)     |     0.868s     |     0.842s      | Success |
-|                      | Pandoc (xelatex)      |     1.518s     |     1.529s      | Success |
+| **`simple.md`**      | **md2pdf (native)**   |   **0.236s**   |   **0.019s**    | Success |
+| *(Short document)*   | Playwright (Chromium) |     0.476s     |     0.039s      | Success |
+|                      | Pandoc (weasyprint)   |     0.624s     |     0.342s      | Success |
+|                      | Pandoc (pdflatex)     |     1.001s     |     0.737s      | Success |
+|                      | Pandoc (xelatex)      |     1.522s     |     1.428s      | Success |
+| **`medium.md`**      | Playwright (Chromium) |     0.388s     |   **0.043s**    | Success |
+| *(With math/code)*   | **md2pdf (native)**   |   **0.699s**   |   **0.065s**    | Success |
+|                      | Pandoc (weasyprint)   |     0.471s     |     0.462s      | Success |
+|                      | Pandoc (pdflatex)     |     0.846s     |     0.836s      | Success |
+|                      | Pandoc (xelatex)      |     1.502s     |     1.501s      | Success |
+| **`large.md`**       | Playwright (Chromium) |     0.395s     |   **0.047s**    | Success |
+| *(Multi-page guide)* | **md2pdf (native)**   |   **0.297s**   |   **0.070s**    | Success |
+|                      | Pandoc (weasyprint)   |     0.529s     |     0.518s      | Success |
+|                      | Pandoc (pdflatex)     |     0.817s     |     0.831s      | Success |
+|                      | Pandoc (xelatex)      |     1.498s     |     1.513s      | Success |
 
 *Note: For `medium.md`, `md2pdf`'s cold start is higher because it contains mathematical formulas, which initializes the LaTeX math typesetting subsystem. For `large.md` (which has no math), `md2pdf`'s cold start is much faster.*
 
