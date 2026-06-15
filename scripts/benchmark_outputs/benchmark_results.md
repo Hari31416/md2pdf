@@ -1,10 +1,10 @@
 # Rendering Performance Report
-**Date:** 2026-06-14 23:12:46
+**Date:** 2026-06-15 21:19:10
 **Platform:** macOS-26.5.1-arm64-arm-64bit-Mach-O (arm)
 **Python Version:** 3.13.5
 
 ## System Engine Versions
-- **md2pdf (native)**: 0.5.2 (Available)
+- **md2pdf (native)**: 0.5.3 (Available)
 - **Pandoc (pdflatex)**: Pandoc 3.9.0.2 (pdflatex) (Available)
 - **Pandoc (xelatex)**: Pandoc 3.9.0.2 (xelatex) (Available)
 - **Pandoc (weasyprint)**: Pandoc 3.9.0.2 (weasyprint) (Available)
@@ -16,28 +16,28 @@
 
 | Engine | Cold Start (s) | Warm Median (s) | Warm Mean (s) | Std Dev (s) | Status |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| md2pdf (native) | 0.2532 | **0.0143** | 0.0182 | 0.0095 | Success |
-| Playwright (Chromium) | 0.3873 | **0.0405** | 0.0426 | 0.0036 | Success |
-| Pandoc (weasyprint) | 0.3621 | **0.3695** | 0.3735 | 0.0162 | Success |
-| Pandoc (pdflatex) | 0.7609 | **0.7838** | 0.7839 | 0.0177 | Success |
-| Pandoc (xelatex) | 1.4801 | **1.4980** | 1.5025 | 0.0230 | Success |
+| md2pdf (native) | 0.2362 | **0.0191** | 0.0231 | 0.0094 | Success |
+| Playwright (Chromium) | 0.4758 | **0.0391** | 0.0411 | 0.0040 | Success |
+| Pandoc (weasyprint) | 0.6235 | **0.3415** | 0.3408 | 0.0035 | Success |
+| Pandoc (pdflatex) | 1.0007 | **0.7372** | 0.7413 | 0.0158 | Success |
+| Pandoc (xelatex) | 1.5218 | **1.4280** | 1.4354 | 0.0267 | Success |
 
 ### Document: `medium.md`
 
 | Engine | Cold Start (s) | Warm Median (s) | Warm Mean (s) | Std Dev (s) | Status |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| Playwright (Chromium) | 0.4109 | **0.0438** | 0.0455 | 0.0038 | Success |
-| md2pdf (native) | 0.4724 | **0.0461** | 0.0692 | 0.0475 | Success |
-| Pandoc (weasyprint) | 0.4824 | **0.4756** | 0.4840 | 0.0160 | Success |
-| Pandoc (pdflatex) | 0.8377 | **0.8420** | 0.8412 | 0.0094 | Success |
-| Pandoc (xelatex) | 1.5973 | **1.5374** | 1.5395 | 0.0146 | Success |
+| Playwright (Chromium) | 0.3878 | **0.0429** | 0.0441 | 0.0036 | Success |
+| md2pdf (native) | 0.6990 | **0.0650** | 0.0882 | 0.0457 | Success |
+| Pandoc (weasyprint) | 0.4712 | **0.4621** | 0.4634 | 0.0028 | Success |
+| Pandoc (pdflatex) | 0.8464 | **0.8363** | 0.8537 | 0.0472 | Success |
+| Pandoc (xelatex) | 1.5017 | **1.5009** | 1.5054 | 0.0219 | Success |
 
 ### Document: `large.md`
 
 | Engine | Cold Start (s) | Warm Median (s) | Warm Mean (s) | Std Dev (s) | Status |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| Playwright (Chromium) | 0.4048 | **0.0482** | 0.0503 | 0.0055 | Success |
-| md2pdf (native) | 0.2816 | **0.0497** | 0.0503 | 0.0016 | Success |
-| Pandoc (weasyprint) | 0.5280 | **0.5321** | 0.5367 | 0.0169 | Success |
-| Pandoc (pdflatex) | 0.8684 | **0.8424** | 0.8427 | 0.0130 | Success |
-| Pandoc (xelatex) | 1.5188 | **1.5293** | 1.5351 | 0.0162 | Success |
+| Playwright (Chromium) | 0.3954 | **0.0471** | 0.0481 | 0.0041 | Success |
+| md2pdf (native) | 0.2966 | **0.0701** | 0.0709 | 0.0016 | Success |
+| Pandoc (weasyprint) | 0.5287 | **0.5179** | 0.5185 | 0.0087 | Success |
+| Pandoc (pdflatex) | 0.8166 | **0.8305** | 0.8407 | 0.0227 | Success |
+| Pandoc (xelatex) | 1.4976 | **1.5126** | 1.5196 | 0.0243 | Success |
