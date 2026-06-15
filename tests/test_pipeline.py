@@ -123,7 +123,7 @@ def test_pipeline_registry_custom_overrides(tmp_pdf: Path) -> None:
 
 
 def test_convert_config_overrides(tmp_path: Path) -> None:
-    """Verify that convert overrides Config input/output properties to match args."""
+    """Verify that convert does not mutate the caller's Config object and uses args."""
     from md2pdf import convert
 
     src = tmp_path / "input.md"
@@ -133,8 +133,8 @@ def test_convert_config_overrides(tmp_path: Path) -> None:
     cfg = Config(input_file="dummy.md", output_file="dummy.pdf", offline=True)
     convert(str(src), str(dst), config=cfg)
 
-    assert cfg.input_file == str(src)
-    assert cfg.output_file == str(dst)
+    assert cfg.input_file == "dummy.md"
+    assert cfg.output_file == "dummy.pdf"
     assert dst.exists()
 
 

@@ -51,8 +51,9 @@ def convert(
     if config is None:
         config = Config(input_file=src, output_file=dst)
     else:
-        config.input_file = src
-        config.output_file = dst
+        from dataclasses import replace
+
+        config = replace(config, input_file=src, output_file=dst)
 
     pipeline = Pipeline(config, registry, progress_callback=progress_callback)
     raw_md = Path(src).read_text(encoding="utf-8")
