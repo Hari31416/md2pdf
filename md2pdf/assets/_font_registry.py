@@ -224,10 +224,8 @@ def register_theme_fonts(theme: object) -> None:
         try:
             pdfmetrics.registerFont(TTFont(logical_name, str(ttf_path)))
             logger.debug("Registered custom font '%s' from %s", logical_name, ttf_path)
-        except Exception:
-            logger.warning(
-                "Failed to register custom font '%s' from %s",
-                logical_name,
-                ttf_path,
-                exc_info=True,
-            )
+        except Exception as exc:
+            raise ConfigError(
+                f"[theme] Failed to register custom font '{logical_name}' from {ttf_path!s}: {exc!s}\n"
+                "Please verify the file is a valid TrueType (.ttf) font."
+            ) from exc

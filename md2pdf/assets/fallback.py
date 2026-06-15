@@ -51,7 +51,21 @@ class PlaceholderBox(Flowable):
             "..." if len(source) > self._MAX_SOURCE_PREVIEW else ""
         )
         self.width = width
-        self.height = height
+
+        # Wrap the source preview to fit the box width
+        import textwrap
+
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+
+        char_width = stringWidth("A", _SOURCE_FONT, _SOURCE_SIZE)
+        avail_width = max(50.0, self.width - 2 * _PADDING)
+        max_chars = max(1, int(avail_width / char_width))
+        self.source_lines = textwrap.wrap(self.source_preview, width=max_chars)
+
+        # Ensure box height is enough to hold the label and all wrapped lines without overflow
+        needed_height = _PADDING * 2 + _LINE_HEIGHT + len(self.source_lines) * (_SOURCE_SIZE + 3)
+        self.height = max(height, needed_height)
+
         self.spaceBefore = 0
         self.spaceAfter = 8
 
@@ -73,9 +87,12 @@ class PlaceholderBox(Flowable):
         c.setFillColor(_LABEL_COLOR)
         c.setFont(_LABEL_FONT, _LABEL_SIZE)
         label = f"[{self.diagram_type} diagram — offline / render failed]"
-        c.drawString(_PADDING, self.height - _LINE_HEIGHT, label)
+        c.drawString(_PADDING, self.height - _PADDING - _LABEL_SIZE, label)
 
-        # Source preview line
+        # Source preview lines
         c.setFillColor(_SOURCE_COLOR)
         c.setFont(_SOURCE_FONT, _SOURCE_SIZE)
-        c.drawString(_PADDING, self.height - _LINE_HEIGHT * 2, self.source_preview)
+        y = self.height - _PADDING - _LABEL_SIZE - 6
+        for line in self.source_lines:
+            c.drawString(_PADDING, y - _SOURCE_SIZE, line)
+            y -= _SOURCE_SIZE + 3

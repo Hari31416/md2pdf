@@ -55,7 +55,7 @@ class PluginLoader:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def register_builtins(registry: HandlerRegistry) -> None:
+    def register_builtins(registry: HandlerRegistry, cache_dir: str | None = None) -> None:
         """Register all built-in handlers directly into a HandlerRegistry.
 
         This is useful for tests or standalone usage where setup.py / pyproject.toml
@@ -91,7 +91,7 @@ class PluginLoader:
         # Register Mermaid and Latex handlers in offline mode by default
         import os
 
-        default_cache = os.path.expanduser("~/.cache/pymd2pdf")
+        default_cache = cache_dir or os.path.expanduser("~/.cache/pymd2pdf")
         reg(MermaidHandler(KrokiClient(), AssetCache(default_cache), True))
         reg(LatexHandler(KrokiClient(), AssetCache(default_cache), True))
 

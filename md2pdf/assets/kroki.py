@@ -57,7 +57,13 @@ class KrokiClient:
         Raises:
             requests.HTTPError: If the server returns a non-2xx status code.
             requests.RequestException: On any connection/timeout error.
+            ValueError: If diagram_type is invalid.
         """
+        import re
+
+        if not re.match(r"^[a-zA-Z0-9_-]+$", diagram_type):
+            raise ValueError(f"Invalid diagram type: {diagram_type!r}")
+
         url = f"{self.base_url}/{diagram_type}/png"
         resp = self._session.post(
             url,

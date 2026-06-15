@@ -56,8 +56,21 @@ class AssetCache:
             source: Raw diagram source text.
             data: PNG bytes to cache.
         """
+        import os
+        import tempfile
+
         path = self._path(diagram_type, source)
-        path.write_bytes(data)
+        # Write to temporary file in the same cache directory to ensure atomic rename
+        with tempfile.NamedTemporaryFile(dir=self.cache_dir, suffix=".tmp", delete=False) as tmp:
+            tmp.write(data)
+            tmp_path = tmp.name
+
+        try:
+            os.replace(tmp_path, path)
+        except Exception:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            raise
         logger.debug("Cached %d bytes → %s", len(data), path.name)
 
     def path_for(self, diagram_type: str, source: str) -> Path:

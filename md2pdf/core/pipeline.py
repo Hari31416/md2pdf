@@ -140,7 +140,7 @@ class Pipeline:
             post_registry=self._post_registry,
             style_registry=self._style_registry,
         )
-        loader.register_builtins(self.registry)
+        loader.register_builtins(self.registry, cache_dir=self.config.cache_dir)
         loader.load_entry_points()
         loader.load_from_config(config.plugins_dict)
 

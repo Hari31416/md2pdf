@@ -62,6 +62,14 @@ class TestAssetCache:
         png_files = list(Path(str(tmp_path / "cache")).glob("*.png"))
         assert len(png_files) == 1
 
+    def test_put_is_atomic(self, tmp_path: Path) -> None:
+        cache = AssetCache(str(tmp_path / "cache"))
+        with patch("os.replace", side_effect=RuntimeError("disk full")):
+            with pytest.raises(RuntimeError):
+                cache.put("mermaid", "source", _FAKE_PNG)
+        files = list((tmp_path / "cache").iterdir())
+        assert len(files) == 0
+
 
 # ===========================================================================
 # KrokiClient
@@ -106,6 +114,14 @@ class TestKrokiClient:
         with patch.object(client._session, "post", return_value=mock_resp):
             with pytest.raises(requests.HTTPError):
                 client.render("mermaid", "graph TD; A-->B")
+
+    def test_render_validates_diagram_type(self) -> None:
+        client = KrokiClient()
+        with pytest.raises(ValueError, match="Invalid diagram type"):
+            client.render("mermaid/../../traversal", "source")
+
+        with pytest.raises(ValueError, match="Invalid diagram type"):
+            client.render("mermaid; ls", "source")
 
 
 # ===========================================================================
@@ -249,3 +265,23 @@ def test_mermaid_real_kroki_call(tmp_path: Path) -> None:
     png_bytes = cache.get("mermaid", "graph TD; A-->B")
     assert png_bytes is not None
     assert png_bytes[:4] == b"\x89PNG"
+
+
+# ===========================================================================
+# PlaceholderBox
+# ===========================================================================
+
+
+class TestPlaceholderBox:
+    def test_placeholder_box_wrapping(self) -> None:
+        long_source = "A" * 200
+        box = PlaceholderBox("mermaid", long_source, width=200, height=50)
+        # width is 200. Padding is 6 on each side, so avail_width = 188.
+        # StringWidth of "A" in Courier at 7 points is 4.2 points.
+        # 188 / 4.2 = 44 characters per line.
+        # 120 chars wrapped at 44 chars/line should result in 3 lines.
+        assert len(box.source_lines) == 3
+        # Ensure height dynamically expanded
+        # needed_height = padding(12) + label_height(14) + 3 lines * 10 = 56.
+        # Height is max(50, 56) = 56.
+        assert box.height == 56

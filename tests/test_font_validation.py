@@ -90,6 +90,15 @@ class TestRegisterThemeFontsValidation:
         with pytest.raises(ConfigError):
             register_theme_fonts(theme)
 
+    def test_corrupt_font_raises_config_error(self, tmp_path: Path) -> None:
+        from md2pdf.assets._font_registry import register_theme_fonts
+
+        corrupt_ttf = tmp_path / "Corrupt.ttf"
+        corrupt_ttf.write_bytes(b"not a valid ttf font file content")
+        theme = ThemeConfig(font_body="CorruptFont", font_file_body=str(corrupt_ttf))
+        with pytest.raises(ConfigError, match="Failed to register custom font"):
+            register_theme_fonts(theme)
+
     def test_none_theme_no_error(self) -> None:
         from md2pdf.assets._font_registry import register_theme_fonts
 
