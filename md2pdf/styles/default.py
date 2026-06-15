@@ -29,6 +29,27 @@ def build_default_stylesheet(theme: ThemeConfig | None = None) -> dict:
     if theme is None:
         theme = ThemeConfig()
 
+    from reportlab.pdfbase import pdfmetrics
+
+    from md2pdf.assets._font_registry import register_fonts
+    from md2pdf.core.errors import ConfigError
+
+    register_fonts()
+
+    for font_attr, font_name in [
+        ("font_body", theme.font_body),
+        ("font_heading", theme.font_heading),
+        ("font_mono", theme.font_mono),
+    ]:
+        try:
+            pdfmetrics.getFont(font_name)
+        except KeyError as e:
+            raise ConfigError(
+                f"[theme] Font '{font_name}' configured in '{font_attr}' is not registered in ReportLab. "
+                "Ensure it is a standard ReportLab font or that its TTF file is correctly configured "
+                "via 'font_file_*' in the theme config."
+            ) from e
+
     base = getSampleStyleSheet()
 
     return {

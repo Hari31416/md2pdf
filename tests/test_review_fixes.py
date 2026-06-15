@@ -185,3 +185,130 @@ def test_toc_page_number_fallback_when_missing_first_pass() -> None:
     page_num_cell = cell_values[0][1]
     assert 'href="#section-1"' in page_num_cell.text
     assert '<link href="#section-1" color="#00ff00"></link>' in page_num_cell.text
+
+
+def test_theme_color_validation() -> None:
+    """Verify ThemeConfig raises TypeError or ValueError on invalid colors."""
+    import pytest
+
+    from md2pdf.styles.theme import ThemeConfig
+
+    # Non-string color
+    with pytest.raises(TypeError):
+        ThemeConfig(color_body_text=123)
+
+    # Invalid hex string
+    with pytest.raises(ValueError):
+        ThemeConfig(color_body_text="not-a-color")
+
+
+def test_stylesheet_font_validation() -> None:
+    """Verify build_default_stylesheet raises ConfigError on unregistered fonts."""
+    import pytest
+
+    from md2pdf.core.errors import ConfigError
+    from md2pdf.styles.default import build_default_stylesheet
+    from md2pdf.styles.theme import ThemeConfig
+
+    theme = ThemeConfig(font_body="UnregisteredFont")
+    with pytest.raises(ConfigError) as exc:
+        build_default_stylesheet(theme)
+    assert "configured in 'font_body' is not registered" in str(exc.value)
+
+
+def test_escape_xml_no_double_escaping() -> None:
+    """Verify escape_xml does not double-escape already escaped strings."""
+    from md2pdf.handlers.inline import escape_xml
+
+    assert escape_xml("A & B") == "A &amp; B"
+    assert escape_xml("A &amp; B") == "A &amp; B"
+    assert escape_xml("A &lt; B") == "A &lt; B"
+
+
+def test_inline_code_uses_theme_mono_font() -> None:
+    """Verify inline_render uses the font defined in styles['code_inline']."""
+    from reportlab.lib.styles import ParagraphStyle
+
+    from md2pdf.handlers.inline import inline_render
+
+    style = ParagraphStyle("code_inline", fontName="Times-Roman")
+    styles = {"code_inline": style}
+    tokens = [{"type": "InlineCode", "raw": "foo", "children": [], "attrs": {}}]
+    result = inline_render(tokens, styles=styles)
+    assert "<font name='Times-Roman'>" in result
+
+
+def test_latex_formula_delimiter_checking() -> None:
+    """Verify is_latex_formula checks delimiters correctly."""
+    from md2pdf.handlers.code import is_latex_formula
+
+    assert is_latex_formula("$$x^2$$") is True
+    assert is_latex_formula("$x^2$") is True
+    assert is_latex_formula("$ x^2$") is False
+    assert is_latex_formula("$x^2") is False
+    assert is_latex_formula("$$x^2") is False
+    assert is_latex_formula("$$") is False
+
+
+def test_table_column_widths_heuristics_and_overrides() -> None:
+    """Verify column widths heuristic and overrides logic."""
+    from md2pdf.handlers.table import TableHandler
+
+    handler = TableHandler()
+
+    # Heuristic test
+    widths = handler._compute_col_widths(
+        col_count=3,
+        styles=None,
+        width_overrides=None,
+        clean_header_texts=["A", "B", "C"],
+        data_rows_texts=[["very long cell content here", "x", "y"]],
+    )
+    # The first column has longer content so it should get more width
+    assert widths[0] > widths[1]
+    assert widths[1] == widths[2]
+
+    # Percentage override
+    widths_override = handler._compute_col_widths(
+        col_count=2,
+        styles=None,
+        width_overrides=[("pct", 0.3), None],
+        clean_header_texts=["A", "B"],
+        data_rows_texts=[["x", "y"]],
+    )
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+
+    available = A4[0] - 2 * 20 * mm
+    expected_col0 = available * 0.3
+    assert abs(widths_override[0] - expected_col0) < 1e-4
+
+
+def test_nested_image_paths_relative_to_includes(tmp_path) -> None:
+    """Verify recursive include tracking resolves nested images correctly."""
+    import os
+
+    from md2pdf.core.config import Config
+    from md2pdf.core.pipeline import Pipeline
+
+    main_md = tmp_path / "main.md"
+    sub_dir = tmp_path / "sub"
+    sub_dir.mkdir()
+    sub_md = sub_dir / "sub.md"
+
+    # Create a dummy image in sub_dir
+    img_path = sub_dir / "test.png"
+    from PIL import Image
+
+    Image.new("RGB", (10, 10)).save(img_path)
+
+    # main includes sub.md. sub.md references the image relatively as "test.png"
+    main_md.write_text("!include sub/sub.md\n", encoding="utf-8")
+    sub_md.write_text("![alt](test.png)\n", encoding="utf-8")
+
+    cfg = Config(input_file=str(main_md), output_file=str(tmp_path / "out.pdf"), offline=True)
+    pipeline = Pipeline(cfg)
+    pipeline.run(main_md.read_text(encoding="utf-8"))
+
+    # The PDF composer should have successfully found and resolved "sub/test.png" relative to sub.md
+    assert os.path.exists(cfg.output_file)

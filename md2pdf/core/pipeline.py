@@ -365,7 +365,10 @@ class Pipeline:
 
     def _map(self, tokens: list[dict]) -> list:
         """Stage 3 — dispatch each token to its handler and collect flowables."""
+        import re
+
         self._styles["_seen_slugs"] = set()
+        self._styles["_current_source_file"] = self.config.input_file
         # Collect footnote definitions first
         self.footnotes.clear()
         for token in tokens:
@@ -387,6 +390,13 @@ class Pipeline:
         seen_footnotes = set()
         for token in tokens:
             token_type = token.get("type", "")
+            if token_type in ("HTMLBlock", "RawHTML", "RawText"):
+                raw_val = (token.get("raw") or "").strip()
+                match = re.match(r"^<!--\s*SOURCE_FILE:\s*(.+?)\s*-->$", raw_val)
+                if match:
+                    self._styles["_current_source_file"] = match.group(1)
+                    continue
+
             if token_type == "FootnoteDefinition":
                 continue
 

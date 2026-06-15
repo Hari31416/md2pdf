@@ -82,13 +82,17 @@ def _expand_inline_imgs(raw: str) -> str:
 def escape_xml(text: str) -> str:
     """Escape ``<``, ``>``, and ``&`` for use in ReportLab XML markup.
 
+    Avoids double-escaping of existing entities by unescaping first.
+
     Args:
         text: Plain text string.
 
     Returns:
         XML-safe string.
     """
-    return saxutils.escape(text)
+    import html
+
+    return saxutils.escape(html.unescape(text))
 
 
 def inline_render(
@@ -157,7 +161,10 @@ def inline_render(
             inner = inline_render(child.get("children", []), styles, parent_style) or escape_xml(
                 raw
             )
-            parts.append(f"<font name='Courier'>{inner}</font>")
+            font_name = "Courier"
+            if styles and "code_inline" in styles:
+                font_name = getattr(styles["code_inline"], "fontName", "Courier")
+            parts.append(f"<font name='{font_name}'>{inner}</font>")
 
         elif t == "Math":
             config = styles.get("_config") if styles else None
@@ -208,5 +215,5 @@ def inline_render(
 
     rendered = "".join(parts)
 
-    rendered = re.sub(r"&lt;[Bb][Rr]\s*/?&gt;", "<br/>", rendered)
+    rendered = re.sub(r"&lt;[Bb][Rr]\s*/?\s*&gt;", "<br/>", rendered)
     return rendered

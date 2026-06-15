@@ -11,7 +11,10 @@ The entire section is optional — omitting it produces the built-in defaults.
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from reportlab.lib.colors import HexColor
 
 from md2pdf.assets._font_registry import FONT_MONO, FONT_SANS, FONT_SANS_BOLD
 
@@ -86,6 +89,24 @@ class ThemeConfig:
     # --- Page background ---
     color_page_bg: str = "#ffffff"
 
+    def __post_init__(self) -> None:
+        """Validate color values on initialization."""
+        from reportlab.lib import colors  # noqa: PLC0415
+
+        for fld in fields(self):
+            if fld.name.startswith("color_"):
+                val = getattr(self, fld.name)
+                if not isinstance(val, str):
+                    raise TypeError(
+                        f"Theme field '{fld.name}' must be a string, got {type(val).__name__}"
+                    )
+                try:
+                    colors.HexColor(val)
+                except ValueError as e:
+                    raise ValueError(
+                        f"Invalid color value '{val}' for theme field '{fld.name}': {e}"
+                    ) from e
+
     # ------------------------------------------------------------------ #
     # Class methods
     # ------------------------------------------------------------------ #
@@ -110,7 +131,7 @@ class ThemeConfig:
     # Helpers
     # ------------------------------------------------------------------ #
 
-    def hex(self, attr: str):
+    def hex(self, attr: str) -> HexColor:
         """Return a ReportLab ``HexColor`` for the named attribute.
 
         Args:

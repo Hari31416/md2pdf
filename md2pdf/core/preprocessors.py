@@ -207,17 +207,22 @@ class IncludeResolver(PreProcessor):
         main_file: str = "",
         progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
         max_depth: int = 10,
+        track_source_files: bool = False,
     ) -> None:
         self.main_file = main_file
         self.progress_callback = progress_callback
         self.max_depth = max_depth
+        self.track_source_files = track_source_files
 
     def process(self, raw_md: str) -> str:
         if not self.main_file:
             return raw_md
         if self.progress_callback:
             self.progress_callback("preprocess_resolve_includes", {})
-        return self._resolve_includes(raw_md, os.path.abspath(self.main_file), set(), depth=0)
+        resolved = self._resolve_includes(raw_md, os.path.abspath(self.main_file), set(), depth=0)
+        if self.track_source_files:
+            return f"<!-- SOURCE_FILE: {os.path.abspath(self.main_file)} -->\n" + resolved
+        return resolved
 
     def _resolve_includes(
         self, text: str, current_file_path: str, visited: set[str], depth: int = 0
@@ -288,9 +293,14 @@ class IncludeResolver(PreProcessor):
                     resolved_content = self._resolve_includes(
                         included_content, target_path, visited, depth + 1
                     )
-                    resolved_lines.append(resolved_content)
-                    if resolved_content and not resolved_content.endswith("\n"):
-                        resolved_lines.append("\n")
+                    if self.track_source_files:
+                        prefix = f"\n<!-- SOURCE_FILE: {target_path} -->\n"
+                        suffix = f"\n<!-- SOURCE_FILE: {current_file_path} -->\n"
+                        resolved_lines.append(prefix + resolved_content + suffix)
+                    else:
+                        resolved_lines.append(resolved_content)
+                        if resolved_content and not resolved_content.endswith("\n"):
+                            resolved_lines.append("\n")
                 except Exception as exc:
                     logger.error("Failed to read included file %s: %s", target_path, exc)
                     resolved_lines.append(
@@ -749,7 +759,10 @@ class PreProcessorRegistry:
         if register_builtins:
             self.register(FrontMatterStripper(input_file), priority=10)
             self.register(
-                IncludeResolver(input_file, progress_callback=progress_callback), priority=20
+                IncludeResolver(
+                    input_file, progress_callback=progress_callback, track_source_files=True
+                ),
+                priority=20,
             )
             self.register(LatexBlockPreProcessor(), priority=22)
             self.register(PageBreakPreProcessor(), priority=25)

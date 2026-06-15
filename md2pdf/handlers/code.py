@@ -57,7 +57,11 @@ class ReportLabFormatter(Formatter):
 def is_latex_formula(text: str) -> bool:
     """Detect if a block of code contains a LaTeX math formula."""
     text = text.strip()
-    return text.startswith("$$") or (text.startswith("$") and not text.startswith("$ "))
+    if text.startswith("$$"):
+        return text.endswith("$$") and len(text) >= 5
+    if text.startswith("$") and text.endswith("$") and not text.startswith("$ ") and len(text) >= 3:
+        return True
+    return False
 
 
 class CodeFenceHandler(ElementHandler):
@@ -102,21 +106,26 @@ class BlockCodeHandler(ElementHandler):
     def render(self, token: dict, styles: dict) -> list[Flowable]:
         raw: str = token.get("raw", "")
         if is_latex_formula(raw):
-            from md2pdf.handlers.latex import LatexHandler
+            registry = styles.get("_registry")
+            latex_handler = registry.get("LatexBlock") if registry else None
 
-            config = styles.get("_config")
-            client = None
-            cache = None
-            offline = False
-            if config:
-                from md2pdf.assets.cache import AssetCache
-                from md2pdf.assets.kroki import KrokiClient
+            if not latex_handler:
+                config = styles.get("_config")
+                client = None
+                cache = None
+                offline = False
+                if config:
+                    from md2pdf.assets.cache import AssetCache
+                    from md2pdf.assets.kroki import KrokiClient
 
-                offline = getattr(config, "offline", False)
-                cache = AssetCache(config.cache_dir)
-                client = KrokiClient()
+                    offline = getattr(config, "offline", False)
+                    cache = AssetCache(config.cache_dir)
+                    client = KrokiClient()
 
-            latex_handler = LatexHandler(client=client, cache=cache, offline=offline)
+                from md2pdf.handlers.latex import LatexHandler
+
+                latex_handler = LatexHandler(client=client, cache=cache, offline=offline)
+
             latex_token = token.copy()
             latex_token["type"] = "LatexBlock"
             return latex_handler.render(latex_token, styles)

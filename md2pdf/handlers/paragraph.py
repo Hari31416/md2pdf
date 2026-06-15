@@ -1,10 +1,9 @@
 import os
-import re
 
 from reportlab.platypus import Paragraph
 
 from md2pdf.core.registry import ElementHandler
-from md2pdf.handlers.inline import inline_render
+from md2pdf.handlers.inline import _IMG_ATTR_RE, _IMG_TAG_RE, inline_render
 
 
 class ParagraphHandler(ElementHandler):
@@ -13,8 +12,8 @@ class ParagraphHandler(ElementHandler):
     token_type = "Paragraph"
 
     def render(self, token: dict, styles: dict) -> list:
-        img_tag_pattern = re.compile(r"(<img\s+[^>]*?>)", re.IGNORECASE)
-        attr_pattern = re.compile(r'(\w+)\s*=\s*(?:"([^"]*)"|\'([^\']*)\')', re.IGNORECASE)
+        img_tag_pattern = _IMG_TAG_RE
+        attr_pattern = _IMG_ATTR_RE
 
         def parse_attributes(tag_str: str) -> dict[str, str]:
             attrs = {}
@@ -104,9 +103,11 @@ class ParagraphHandler(ElementHandler):
 
                 target = child["attrs"]["target"]
 
-                # Resolve relative path using _config.input_file
+                # Resolve relative path using _current_source_file or _config.input_file
                 config = styles.get("_config")
-                input_file = config.input_file if config else ""
+                input_file = styles.get("_current_source_file") or (
+                    config.input_file if config else ""
+                )
                 if input_file and not os.path.isabs(target):
                     base_dir = os.path.dirname(os.path.abspath(input_file))
                     resolved_path = os.path.join(base_dir, target)
@@ -167,6 +168,15 @@ class ParagraphHandler(ElementHandler):
                 display_width = None
                 display_height = None
                 max_avail_width = 450.0
+                if (
+                    styles
+                    and "_page_width" in styles
+                    and "_left_margin" in styles
+                    and "_right_margin" in styles
+                ):
+                    max_avail_width = (
+                        styles["_page_width"] - styles["_left_margin"] - styles["_right_margin"]
+                    )
 
                 if custom_width_str:
                     if "%" in custom_width_str:
