@@ -146,7 +146,7 @@ class TableOfContentsPostProcessor(PostProcessor):
             title_text = f'<link href="#{b.key}" color="{link_color}">{escaped_title}</link>'
 
             # Clickable link for the page number
-            page_num = str(page_numbers.get(b.key, "99")) if page_numbers is not None else "99"
+            page_num = str(page_numbers.get(b.key, "")) if page_numbers is not None else "99"
             page_text = f'<link href="#{b.key}" color="{link_color}">{page_num}</link>'
 
             title_p = Paragraph(title_text, toc_styles[level])

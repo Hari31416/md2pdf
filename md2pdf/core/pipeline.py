@@ -213,7 +213,7 @@ class Pipeline:
         self._pre_registry.reset()
         md = self._pre_process(raw_md)
         tokens = self._parse(md)
-        validator = DocumentValidator()
+        validator = DocumentValidator(self.registry)
         return validator.validate(tokens)
 
     def run(self, raw_md: str) -> None:
@@ -745,6 +745,13 @@ class PageTemplateCallback:
 
     def __call__(self, canvas, doc) -> None:
         draw_page_number(canvas, doc, state=self.state)
+        cb = getattr(
+            doc,
+            "_md2pdf_on_first_page" if self.state.is_first_page else "_md2pdf_on_later_pages",
+            None,
+        )
+        if cb is not None:
+            cb(canvas, doc)
 
 
 def _get_current_section(page_num: int, bookmarks: list, page_registry: dict[str, int]) -> str:

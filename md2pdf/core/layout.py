@@ -57,6 +57,7 @@ class LayoutComposer:
                 heading = current
                 idx_next = i + 1
 
+            assert idx_next > i
             if heading is not None and idx_next < len(flowables):
                 nxt = flowables[idx_next]
                 # Don't bond heading to another heading or an image block
@@ -103,6 +104,7 @@ class LayoutComposer:
                 heading = current
                 idx_next = i + 1
 
+            assert idx_next > i
             if heading is not None and idx_next < len(flowables):
                 nxt = flowables[idx_next]
                 if self._is_image_block(nxt):

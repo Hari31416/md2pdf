@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from md2pdf.core.errors import ValidationIssue
+
+if TYPE_CHECKING:
+    from md2pdf.core.registry import HandlerRegistry
 
 
 class DocumentValidator:
@@ -25,6 +30,11 @@ class DocumentValidator:
         "PageBreak",
     }
 
+    def __init__(self, registry: HandlerRegistry | None = None) -> None:
+        self.supported_types = set(self.SUPPORTED_TYPES)
+        if registry is not None:
+            self.supported_types.update(registry._handlers.keys())
+
     def validate(self, tokens: list[dict]) -> list[ValidationIssue]:
         """Validate a list of normalised tokens.
 
@@ -43,7 +53,7 @@ class DocumentValidator:
         issues = []
         t = token.get("type", "")
 
-        if t not in self.SUPPORTED_TYPES:
+        if t not in self.supported_types:
             issues.append(
                 ValidationIssue(
                     severity="warning",
