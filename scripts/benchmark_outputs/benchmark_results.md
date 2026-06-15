@@ -4,7 +4,7 @@
 **Python Version:** 3.13.5
 
 ## System Engine Versions
-- **md2pdf (native)**: 0.5.1 (Available)
+- **md2pdf (native)**: 0.5.2 (Available)
 - **Pandoc (pdflatex)**: Pandoc 3.9.0.2 (pdflatex) (Available)
 - **Pandoc (xelatex)**: Pandoc 3.9.0.2 (xelatex) (Available)
 - **Pandoc (weasyprint)**: Pandoc 3.9.0.2 (weasyprint) (Available)

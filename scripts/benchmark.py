@@ -30,7 +30,7 @@ ROOT = Path(__file__).parent.parent.resolve()
 sys.path.insert(0, str(ROOT))
 
 try:
-    from md2pdf import Config, convert
+    from md2pdf import Config, __version__, convert
 except ImportError:
     logger.error("Could not import md2pdf. Ensure you are running under the project virtualenv.")
     sys.exit(1)
@@ -72,7 +72,7 @@ class BenchmarkRunner:
             "name": "md2pdf (native)",
             "available": True,
             "type": "python",
-            "version": "0.5.1",
+            "version": __version__,
         }
 
         # 2. Pandoc

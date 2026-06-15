@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pymd2pdf"
-version = "0.5.1"
+version = "0.5.2"
 description = "Convert Markdown to PDF in pure Python; no Pandoc, Node.js, or headless Chrome required"
 readme = "README.md"
 license = {file = "LICENSE"}

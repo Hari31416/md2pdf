@@ -5,11 +5,28 @@ All notable changes to the `md2pdf` project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.0] - Unreleased
+## [0.5.2] - 2026-06-15
 
 ### Added
 - **Deterministic PDF Output**: Introduced a `--deterministic` CLI flag and `deterministic` configuration option to enable byte-identical PDF builds. This pins document creation timestamps and ID hashes, suppressing dynamic PDF metadata variance to support CI/CD caching and clean git histories.
+- **Performance Benchmarking**: Added a benchmarking suite under `scripts/benchmark.py` and comparison plots in `README.md` to measure rendering speeds against Pandoc and Playwright.
 - **Integration & Regression Testing**: Added an end-to-end integration and regression testing suite using `pypdf` for text and layout structure extraction. Converts Markdown source (incorporating headings, styled text, lists, tables, admonitions, page breaks, and footnotes) to PDF in deterministic mode, asserting correct page counts, section-based headers, footnote page-locations, and body text layout properties.
+
+### Fixed
+- **Config In-place Mutation**: Copied configuration object via `dataclasses.replace` in `convert()` to avoid mutating caller-provided options.
+- **TOML Parsing Optimization**: Refactored CLI to parse config TOML only once, avoiding multiple redundant disk reads.
+- **CLI Flag Overrides**: Added paired flags with `None` defaults in the CLI (e.g. `--toc/--no-toc`) to allow overriding config `true` values to `false`.
+- **Dynamic Theme Reloading**: Config now automatically reloads theme configuration if `config.theme` is modified after initialization.
+- **Footnote Deduplication**: Implemented document-wide footnote deduplication to prevent duplicate rendering of the same footnote.
+- **Thread-Safe Flowables**: Converted class-level attributes in `ResizableImage` to thread-local properties to ensure thread safety during concurrent rendering.
+- **Admonition Box Defensive Wrapping**: Added defensive validation checks to ensure `AdmonitionBox.draw()` asserts that its children have been wrapped correctly.
+- **Coordinate Transform Correction**: Corrected `FootnoteFlowable` absolute positioning coordinate math under non-trivial canvas transforms.
+- **Include Resolver Enhancements**: Limited path resolution to the source folder and restricted recursion depth to prevent path traversal and infinite loops.
+- **Admonition Title Escaping**: HTML-escaped custom admonition titles in attributes to prevent ReportLab parsing errors.
+- **Indented Footnote Definition**: Added full Markdown continuation support for multi-line indented footnote definitions.
+- **Single-string Plugin Registry Support**: Added `isinstance` guard to handle single string plugin registration paths safely.
+- **Plugin Load Error Warning**: Compiled and logged warnings when plugin loading fails instead of silently swallowing the error.
+- **Matplotlib LaTeX Rendering Logs**: Added explicit debug logging for matplotlib LaTeX rendering attempts to ease troubleshooting.
 
 ## [0.5.1] - 2026-06-14
 
