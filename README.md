@@ -3,6 +3,7 @@
 `md2pdf` converts your Markdown documents into beautiful, print-ready PDFs using **pure Python** — no Pandoc, Node.js, or headless Chrome needed. Powered by ReportLab and mistletoe.
 
 [![PyPI version](https://img.shields.io/pypi/v/pymd2pdf)](https://pypi.org/project/pymd2pdf/)
+[![Downloads](https://pepy.tech/badge/pymd2pdf)](https://pepy.tech/projects/pymd2pdf)
 [![Python](https://img.shields.io/pypi/pyversions/pymd2pdf)](https://pypi.org/project/pymd2pdf/)
 [![License](https://img.shields.io/pypi/l/pymd2pdf)](https://github.com/Hari31416/md2pdf/blob/main/LICENSE)
 [![CI](https://github.com/Hari31416/md2pdf/actions/workflows/ci.yml/badge.svg)](https://github.com/Hari31416/md2pdf/actions/workflows/ci.yml)
