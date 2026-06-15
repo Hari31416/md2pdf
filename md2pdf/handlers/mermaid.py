@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
+import os
 from io import BytesIO
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from md2pdf.assets.cache import AssetCache
 from md2pdf.assets.fallback import PlaceholderBox
@@ -19,6 +20,81 @@ logger = logging.getLogger(__name__)
 
 _DIAGRAM_TYPE = "mermaid"
 _DEFAULT_WIDTH = 400
+
+
+def get_mermaid_image(
+    source: str,
+    config: Any | None = None,
+    client: KrokiClient | None = None,
+    cache: AssetCache | None = None,
+    offline: bool | None = None,
+) -> str | None:
+    """Fetch/render a Mermaid diagram, crop it, cache it on disk, and return the cached path."""
+    import os
+
+    from PIL import Image as PILImage
+    from PIL import ImageChops
+
+    if offline is None:
+        offline = config.offline if config else False
+
+    if cache is None:
+        cache_dir = config.cache_dir if config else os.path.expanduser("~/.cache/pymd2pdf")
+        cache = AssetCache(cache_dir)
+
+    path = cache.path_for(_DIAGRAM_TYPE, source)
+
+    if path.exists():
+        return str(path)
+
+    if offline:
+        return None
+
+    if client is None:
+        client = KrokiClient()
+
+    attempts = 2
+    png = None
+    for attempt in range(attempts):
+        try:
+            png = client.render(_DIAGRAM_TYPE, source)
+            break
+        except Exception as e:
+            if attempt == attempts - 1:
+                logger.warning("Kroki render failed (%s): %s", _DIAGRAM_TYPE, e)
+                return None
+            logger.debug("Kroki render attempt %d failed: %s. Retrying...", attempt + 1, e)
+            import time
+
+            time.sleep(1)
+
+    if not png:
+        return None
+
+    try:
+        # Save cropped version to disk cache
+        with PILImage.open(BytesIO(png)) as pil_img:
+            if pil_img.mode in ("RGBA", "LA") or (
+                pil_img.mode == "P" and "transparency" in pil_img.info
+            ):
+                alpha = pil_img.split()[-1]
+                bbox = alpha.getbbox()
+            else:
+                gray = pil_img.convert("L")
+                inverted = ImageChops.invert(gray)
+                bbox = inverted.getbbox()
+
+            if bbox:
+                pil_img = pil_img.crop(bbox)
+            pil_img.save(path, format="PNG")
+    except Exception as exc:
+        logger.warning("Failed to crop/process Mermaid diagram image: %s", exc)
+        try:
+            path.write_bytes(png)
+        except Exception:
+            pass
+
+    return str(path)
 
 
 class MermaidHandler(ElementHandler):
@@ -47,11 +123,6 @@ class MermaidHandler(ElementHandler):
         cache: AssetCache | None = None,
         offline: bool = False,
     ) -> None:
-        import os
-
-        from md2pdf.assets.cache import AssetCache
-        from md2pdf.assets.kroki import KrokiClient
-
         self.client = client or KrokiClient()
         default_cache = os.path.expanduser("~/.cache/pymd2pdf")
         self.cache = cache or AssetCache(default_cache)
@@ -59,55 +130,25 @@ class MermaidHandler(ElementHandler):
 
     def render(self, token: dict, styles: dict) -> list[Flowable]:  # noqa: ARG002
         source: str = token.get("raw", "")
+        config = styles.get("_config")
 
-        png = self.cache.get(_DIAGRAM_TYPE, source)
-        if png is None:
-            if self.offline:
-                logger.debug("MermaidHandler: offline mode (cache miss) — returning placeholder")
-                box = PlaceholderBox(_DIAGRAM_TYPE, source)
-                box.spaceBefore = 0
-                box.spaceAfter = styles.get("spacing_base", 8)
-                return [box]
-            try:
-                png = self.client.render(_DIAGRAM_TYPE, source)
-                self.cache.put(_DIAGRAM_TYPE, source, png)
-            except Exception as exc:
-                logger.warning("Kroki render failed (%s): %s", _DIAGRAM_TYPE, exc)
-                box = PlaceholderBox(_DIAGRAM_TYPE, source)
-                box.spaceBefore = 0
-                box.spaceAfter = styles.get("spacing_base", 8)
-                return [box]
+        path = get_mermaid_image(
+            source, config, client=self.client, cache=self.cache, offline=self.offline
+        )
+        if path is None or not os.path.exists(path):
+            logger.debug("MermaidHandler: falling back to placeholder due to missing image path")
+            box = PlaceholderBox(_DIAGRAM_TYPE, source)
+            box.spaceBefore = 0
+            box.spaceAfter = styles.get("spacing_base", 8)
+            return [box]
 
-        # Open the image using PIL to read its pixel dimensions and crop margins
         from PIL import Image as PILImage
-        from PIL import ImageChops
 
         try:
-            with PILImage.open(BytesIO(png)) as pil_img:
-                # Crop transparent/white margins
-                if pil_img.mode in ("RGBA", "LA") or (
-                    pil_img.mode == "P" and "transparency" in pil_img.info
-                ):
-                    alpha = pil_img.split()[-1]
-                    bbox = alpha.getbbox()
-                else:
-                    gray = pil_img.convert("L")
-                    inverted = ImageChops.invert(gray)
-                    bbox = inverted.getbbox()
-
-                if bbox:
-                    pil_img = pil_img.crop(bbox)
-                    cropped_io = BytesIO()
-                    pil_img.save(cropped_io, format="PNG")
-                    png = cropped_io.getvalue()
+            with PILImage.open(path) as pil_img:
                 width_px, height_px = pil_img.size
-        except Exception as exc:
-            logger.warning("Failed to crop/process Mermaid diagram image: %s", exc)
-            try:
-                with PILImage.open(BytesIO(png)) as pil_img:
-                    width_px, height_px = pil_img.size
-            except Exception:
-                width_px, height_px = _DEFAULT_WIDTH, _DEFAULT_WIDTH
+        except Exception:
+            width_px, height_px = _DEFAULT_WIDTH, _DEFAULT_WIDTH
 
         # Map 1 pixel to 0.75 points (for 96 DPI equivalent layout rendering)
         display_width = min(400.0, width_px * 0.75)
@@ -121,7 +162,7 @@ class MermaidHandler(ElementHandler):
             display_height = max_height
             display_width = display_width * height_scale
 
-        img = ResizableImage(BytesIO(png), width=display_width, height=display_height)
+        img = ResizableImage(path, width=display_width, height=display_height)
         img.hAlign = "CENTER"
         img.spaceBefore = 0
         img.spaceAfter = styles.get("spacing_base", 8)

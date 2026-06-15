@@ -95,3 +95,20 @@ def test_invalid_theme_raises_config_error() -> None:
 
     assert "Unknown theme" in str(exc_info.value)
     assert "academica" in str(exc_info.value)
+
+
+def test_dynamic_theme_modification() -> None:
+    from md2pdf.core.errors import ConfigError
+
+    cfg = Config()
+    assert cfg.theme == "default"
+    assert cfg.theme_config.font_body == "DejaVuSans"
+
+    # Modify theme
+    cfg.theme = "academic"
+    assert cfg.theme == "academic"
+    assert cfg.theme_config.font_body == "Times-Roman"
+
+    # Modify to invalid theme raises error
+    with pytest.raises(ConfigError):
+        cfg.theme = "invalid_theme_name"

@@ -340,6 +340,7 @@ class Pipeline:
 
         flowables = []
         diagram_idx = 0
+        seen_footnotes = set()
         for token in tokens:
             token_type = token.get("type", "")
             if token_type == "FootnoteDefinition":
@@ -368,8 +369,11 @@ class Pipeline:
                         unique_refs.append(r)
 
                 for ref in unique_refs:
+                    if ref in seen_footnotes:
+                        continue
                     fn_key = f"^{ref}"
                     if fn_key in self.footnotes:
+                        seen_footnotes.add(ref)
                         text = self.footnotes[fn_key][0]
                         from md2pdf.core.flowables import FootnoteFlowable
 
@@ -617,10 +621,6 @@ class Pipeline:
             client = KrokiClient()
             offline = getattr(self.config, "offline", False)
 
-        from PIL import Image as PILImage
-
-        from md2pdf.handlers.latex import _wrap_latex, clean_latex_source, make_image_transparent
-
         # Deduplicate to avoid duplicate rendering work
         unique_assets = {}
         for asset in assets:
@@ -628,125 +628,48 @@ class Pipeline:
             if key not in unique_assets:
                 unique_assets[key] = asset
 
-        kroki_tasks = []
-
+        tasks = []
         for asset_type, raw_source in unique_assets.keys():
             if asset_type in ("LatexBlock", "Math"):
+                from md2pdf.handlers.latex import _wrap_latex, clean_latex_source
+
                 formula = clean_latex_source(raw_source)
                 wrapped = _wrap_latex(formula)
-                path = cache._path("tikz", wrapped)
-
-                if path.exists():
-                    continue
-                try:
-                    if np is None or r"\documentclass" in formula or r"\begin{" in formula:
-                        raise ValueError("Matplotlib does not support documentclass or begin")
-
-                    import matplotlib
-
-                    matplotlib.use("agg")
-                    from matplotlib.font_manager import FontProperties
-                    from matplotlib.mathtext import MathTextParser
-                    from PIL import Image as PILImage
-
-                    dpi = 200
-                    prop = FontProperties(size=10)
-                    parser = MathTextParser("agg")
-                    res = parser.parse(f"${formula}$", dpi=dpi, prop=prop)
-
-                    img_rgba = np.zeros((res.image.shape[0], res.image.shape[1], 4), dtype=np.uint8)
-                    img_rgba[..., 3] = res.image
-                    pil_img = PILImage.fromarray(img_rgba, mode="RGBA")
-
-                    nonzero = np.nonzero(res.image)
-                    if len(nonzero[0]) > 0:
-                        ymin, ymax = np.min(nonzero[0]), np.max(nonzero[0])
-                        xmin, xmax = np.min(nonzero[1]), np.max(nonzero[1])
-                        left, top, right, bottom = xmin, ymin, xmax + 1, ymax + 1
-                        pil_img = pil_img.crop((left, top, right, bottom))
-
-                    pil_img.save(path, format="PNG")
-                    logger.debug(
-                        "Pre-fetched and rendered LaTeX locally via matplotlib: %s", formula
-                    )
-                    continue
-                except (ImportError, Exception):
-                    pass
-
-                if not offline:
-                    kroki_tasks.append(("tikz", wrapped, path))
-
+                path = cache.path_for("tikz", wrapped)
             elif asset_type == "Mermaid":
-                path = cache._path("mermaid", raw_source)
-                if path.exists():
-                    continue
-                if not offline:
-                    kroki_tasks.append(("mermaid", raw_source, path))
+                path = cache.path_for("mermaid", raw_source)
+            else:
+                continue
 
-        if not kroki_tasks:
+            if not path.exists():
+                tasks.append((asset_type, raw_source))
+
+        if not tasks:
             return
 
-        logger.info(
-            "Pre-fetching %d math/diagram assets from Kroki concurrently...", len(kroki_tasks)
-        )
+        logger.info("Pre-fetching %d math/diagram assets concurrently...", len(tasks))
 
         import concurrent.futures
 
-        def fetch_and_cache(diagram_type: str, source: str, cache_path) -> None:
-            attempts = 2
-            png = None
-            for attempt in range(attempts):
-                try:
-                    png = client.render(diagram_type, source)
-                    break
-                except Exception as e:
-                    if attempt == attempts - 1:
-                        logger.warning(
-                            "Failed to pre-fetch %s asset from Kroki after %d attempts: %s",
-                            diagram_type,
-                            attempts,
-                            e,
-                        )
-                        return
-                    logger.debug(
-                        "Kroki pre-fetch attempt %d failed: %s. Retrying...", attempt + 1, e
-                    )
-                    import time
-
-                    time.sleep(1)
-
-            if not png:
-                return
-
+        def fetch_and_cache(asset_type: str, source: str) -> None:
             try:
-                from io import BytesIO
+                if asset_type in ("LatexBlock", "Math"):
+                    from md2pdf.handlers.latex import get_latex_image
 
-                from PIL import ImageChops
+                    get_latex_image(
+                        source, config=self.config, client=client, cache=cache, offline=offline
+                    )
+                elif asset_type == "Mermaid":
+                    from md2pdf.handlers.mermaid import get_mermaid_image
 
-                if diagram_type == "tikz":
-                    with PILImage.open(BytesIO(png)) as pil_img:
-                        gray = pil_img.convert("L")
-                        inverted = ImageChops.invert(gray)
-                        bbox = inverted.getbbox()
-                        if bbox:
-                            pil_img = pil_img.crop(bbox)
-                        pil_img = make_image_transparent(pil_img)
-                        pil_img.save(cache_path, format="PNG")
-                else:
-                    cache_path.write_bytes(png)
-                logger.debug("Successfully pre-fetched and cached %s asset", diagram_type)
-            except Exception as exc:
-                logger.warning("Failed to save pre-fetched asset to cache: %s", exc)
-                try:
-                    cache_path.write_bytes(png)
-                except Exception:
-                    pass
+                    get_mermaid_image(
+                        source, config=self.config, client=client, cache=cache, offline=offline
+                    )
+            except Exception as e:
+                logger.warning("Failed to pre-fetch %s asset: %s", asset_type, e)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            futures = [
-                executor.submit(fetch_and_cache, dtype, src, cpath)
-                for dtype, src, cpath in kroki_tasks
-            ]
+            futures = [executor.submit(fetch_and_cache, dtype, src) for dtype, src in tasks]
             concurrent.futures.wait(futures)
 
 

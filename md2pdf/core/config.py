@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import tomllib
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     pass
@@ -72,6 +75,21 @@ class Config:
             base_theme_data = PREBUILT_THEMES.get(self.theme, {})
             self.theme_config = ThemeConfig.from_dict(base_theme_data)
 
+    def __setattr__(self, name: str, value: Any) -> None:
+        super().__setattr__(name, value)
+        if name == "theme":
+            from md2pdf.core.errors import ConfigError
+            from md2pdf.styles.theme import PREBUILT_THEMES, ThemeConfig  # noqa: PLC0415
+
+            if value != "default" and value not in PREBUILT_THEMES:
+                raise ConfigError(
+                    f"Unknown theme: {value!r}. Available themes: default, "
+                    f"{', '.join(PREBUILT_THEMES.keys())}"
+                )
+
+            base_theme_data = PREBUILT_THEMES.get(value, {})
+            super().__setattr__("theme_config", ThemeConfig.from_dict(base_theme_data))
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Config:
         """Create Config from a parsed TOML dictionary.
@@ -109,7 +127,9 @@ class Config:
             merged_dict = {**base_dict, **theme_data}
             cfg.theme_config = ThemeConfig.from_dict(merged_dict)
         except Exception:
-            pass
+            logger.warning(
+                "Failed to load [theme] section from TOML; using defaults", exc_info=True
+            )
 
         # Load [plugins] section into plugins_dict.
         cfg.plugins_dict = data.get("plugins", {})

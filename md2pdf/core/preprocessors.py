@@ -187,6 +187,8 @@ class FrontMatterStripper(PreProcessor):
                 if key in ("title", "author", "subject", "keywords", "date"):
                     self.metadata[key] = val
                     self.parsed_keys.add(key)
+            else:
+                logger.debug("YAML line ignored or cannot be parsed: %r", line)
 
     def process(self, raw_md: str) -> str:
         match = self._PATTERN.match(raw_md)
@@ -204,18 +206,28 @@ class IncludeResolver(PreProcessor):
         self,
         main_file: str = "",
         progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
+        max_depth: int = 10,
     ) -> None:
         self.main_file = main_file
         self.progress_callback = progress_callback
+        self.max_depth = max_depth
 
     def process(self, raw_md: str) -> str:
         if not self.main_file:
             return raw_md
         if self.progress_callback:
             self.progress_callback("preprocess_resolve_includes", {})
-        return self._resolve_includes(raw_md, os.path.abspath(self.main_file), set())
+        return self._resolve_includes(raw_md, os.path.abspath(self.main_file), set(), depth=0)
 
-    def _resolve_includes(self, text: str, current_file_path: str, visited: set[str]) -> str:
+    def _resolve_includes(
+        self, text: str, current_file_path: str, visited: set[str], depth: int = 0
+    ) -> str:
+        if depth >= self.max_depth:
+            logger.warning(
+                "Maximum include depth (%d) exceeded at %s", self.max_depth, current_file_path
+            )
+            return text
+
         current_dir = os.path.dirname(current_file_path)
         visited = visited | {current_file_path}
 
@@ -231,6 +243,32 @@ class IncludeResolver(PreProcessor):
                     target_path = os.path.abspath(os.path.join(current_dir, include_target))
                 else:
                     target_path = os.path.abspath(include_target)
+
+                # Restrict includes to paths within the directory containing the main source Markdown file
+                source_dir = os.path.realpath(os.path.dirname(self.main_file))
+                target_real_path = os.path.realpath(target_path)
+                try:
+                    common = os.path.commonpath([source_dir, target_real_path])
+                    if common != source_dir:
+                        logger.warning(
+                            "Include path '%s' is outside the source directory '%s'",
+                            target_path,
+                            source_dir,
+                        )
+                        resolved_lines.append(
+                            f"<!-- Include path outside source directory: {include_target} -->\n"
+                        )
+                        continue
+                except ValueError:
+                    logger.warning(
+                        "Include path '%s' has no common path with source directory '%s'",
+                        target_path,
+                        source_dir,
+                    )
+                    resolved_lines.append(
+                        f"<!-- Include path outside source directory: {include_target} -->\n"
+                    )
+                    continue
 
                 if target_path in visited:
                     logger.warning("Circular inclusion detected: %s", target_path)
@@ -248,7 +286,7 @@ class IncludeResolver(PreProcessor):
                     with open(target_path, encoding="utf-8") as f:
                         included_content = f.read()
                     resolved_content = self._resolve_includes(
-                        included_content, target_path, visited
+                        included_content, target_path, visited, depth + 1
                     )
                     resolved_lines.append(resolved_content)
                     if resolved_content and not resolved_content.endswith("\n"):
@@ -358,8 +396,11 @@ class AdmonitionPreProcessor(PreProcessor):
                     title = title[1:-1]
 
                 if title:
+                    import html
+
+                    escaped_title = html.escape(title, quote=True)
                     processed_lines.append(
-                        f'\n<div class="admonition {container_type}" title="{title}">\n'
+                        f'\n<div class="admonition {container_type}" title="{escaped_title}">\n'
                     )
                 else:
                     processed_lines.append(f'\n<div class="admonition {container_type}">\n')

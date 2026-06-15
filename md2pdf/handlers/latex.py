@@ -116,7 +116,7 @@ def get_latex_image(
         client = KrokiClient()
 
     # The cache path
-    path = cache._path(_DIAGRAM_TYPE, wrapped)
+    path = cache.path_for(_DIAGRAM_TYPE, wrapped)
 
     # Helper to compute matplotlib metrics if available
     def get_matplotlib_metrics() -> tuple[float, float, float] | None:

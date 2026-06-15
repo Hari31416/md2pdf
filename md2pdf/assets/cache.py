@@ -60,6 +60,18 @@ class AssetCache:
         path.write_bytes(data)
         logger.debug("Cached %d bytes → %s", len(data), path.name)
 
+    def path_for(self, diagram_type: str, source: str) -> Path:
+        """Return the filesystem Path where the cached image is (or would be) stored.
+
+        Args:
+            diagram_type: Kroki diagram type string.
+            source: Raw diagram source text.
+
+        Returns:
+            The Path object representing the location of the cached file.
+        """
+        return self._path(diagram_type, source)
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------

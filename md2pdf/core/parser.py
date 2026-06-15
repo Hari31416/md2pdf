@@ -188,6 +188,7 @@ class MarkdownParser:
         """Group top-level tokens between admonition open/close HTML tags into Admonition tokens."""
         output = []
         stack = [output]
+        open_types = []
 
         start_pattern = re.compile(r'^<div class="admonition\s+([^"]+)"(?:\s+title="([^"]*)")?\s*>')
         end_pattern = re.compile(r"^</div>$")
@@ -222,15 +223,22 @@ class MarkdownParser:
                 }
                 stack[-1].append(new_token)
                 stack.append(new_token["children"])
+                open_types.append(admonition_type)
             elif is_end:
                 if len(stack) > 1:
                     stack.pop()
+                    open_types.pop()
                 else:
                     stack[-1].append(token)
             else:
                 if token.get("children"):
                     token["children"] = self._group_admonitions(token["children"])
                 stack[-1].append(token)
+
+        if len(stack) > 1:
+            logger.warning(
+                "Unclosed admonition container block(s) detected: %s", ", ".join(open_types)
+            )
 
         return output
 

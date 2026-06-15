@@ -164,3 +164,27 @@ def test_footnote_definition_thread_safety() -> None:
         assert label == f"fn-{thread_id}"
         assert f"Content for {thread_id}" in content
         assert f"extra line {thread_id}" in content
+
+
+def test_footnote_document_wide_deduplication(tmp_path):
+    """Verify that multiple references to the same footnote within a document
+    are deduplicated and only one FootnoteFlowable is rendered.
+    """
+    md = (
+        "First paragraph with a footnote[^1].\n\n"
+        "Second paragraph with the same footnote[^1].\n\n"
+        "[^1]: Shared footnote definition."
+    )
+    pdf_path = tmp_path / "dedup.pdf"
+    config = Config(output_file=str(pdf_path))
+    pipeline = Pipeline(config)
+    pipeline.run(md)
+
+    # Check that FootnoteFlowable is only added once in flowables during mapping
+    tokens = pipeline._parse(pipeline._pre_process(md))
+    flowables = pipeline._map(tokens)
+
+    # Filter for FootnoteFlowable instances
+    fn_flowables = [f for f in flowables if f.__class__.__name__ == "FootnoteFlowable"]
+    assert len(fn_flowables) == 1
+    assert fn_flowables[0].label == "1"
