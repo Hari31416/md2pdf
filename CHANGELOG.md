@@ -5,6 +5,24 @@ All notable changes to the `md2pdf` project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-06-15
+
+### Added
+- **Setext Heading Support**: Remapped `SetextHeading` to `Heading` in the parser to natively support Markdown headings underlined with `===` and `---`.
+
+### Fixed
+- **Fenced Code Block Protection**: Ensured `IncludeResolver` ignores `!include` directives nested inside fenced code blocks.
+- **Included Files Front-Matter Stripping**: Stripped YAML front-matter blocks from recursively included files, preventing them from leaking into the body or being parsed as Setext headings.
+- **Checkbox Emoji Fallback**: Added ballot box character `U+2610` to `_EMOJI_SKIP_RANGES` to prevent failed Twemoji CDN requests, falling back to standard Unicode rendering.
+- **Wired Page Numbers**: Re-wired/refactored `PageNumberPostProcessor` and resolved TOC page number fallback placeholder leaks.
+- **Validator Registry Support**: Added `BlockCode` to supported types and enabled validation of custom tokens added by plugins.
+- **Atomic Cache & Asset Operations**: Implemented atomic file writes (via temporary file staging and renaming) in the local asset cache and LaTeX diagram rendering cache.
+- **Table Column Width Heuristics**: Improved column auto-sizing to support dynamic width heuristics based on cell content, alongside custom manual overrides.
+- **Nested List & Blockquote Rendering**: Restored block-level rendering (e.g., nested lists, tables, and code blocks) inside blockquotes and list items instead of discarding/flattening them.
+- **Thread Safety**: Avoided class-level state mutations in image flowables to support thread-safe concurrent rendering.
+- **Documentation & Build Script**: Configured `build_docs.py` to exit with a non-zero status code on compilation failure.
+- **Shared Kroki/Cache Clients**: Reused Kroki client and Cache instances inside rendering handlers instead of constructing them per-render.
+
 ## [0.5.2] - 2026-06-15
 
 ### Added
