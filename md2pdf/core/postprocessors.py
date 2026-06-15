@@ -23,7 +23,7 @@ from reportlab.lib.enums import TA_RIGHT
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import PageBreak, Paragraph, Spacer, Table, TableStyle
 
-from md2pdf.core.flowables import BookmarkFlowable
+from md2pdf.core.flowables import BookmarkFlowable, find_bookmarks
 from md2pdf.handlers.inline import escape_xml
 
 if TYPE_CHECKING:
@@ -66,18 +66,6 @@ class TableOfContentsPostProcessor(PostProcessor):
         config = getattr(doc, "_md2pdf_config", None)
         if not config or not getattr(config, "toc", False):
             return flowables
-
-        def find_bookmarks(items: list) -> list[BookmarkFlowable]:
-            res = []
-            for item in items:
-                if isinstance(item, BookmarkFlowable):
-                    if item.title:
-                        res.append(item)
-                elif hasattr(item, "_content") and isinstance(item._content, list):
-                    res.extend(find_bookmarks(item._content))
-                elif hasattr(item, "inner") and item.inner:
-                    res.extend(find_bookmarks([item.inner]))
-            return res
 
         bookmarks = find_bookmarks(flowables)
 

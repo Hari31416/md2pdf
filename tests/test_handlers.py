@@ -304,27 +304,22 @@ class TestListHandler:
         p3 = get_para(items[3])
         assert "not a task" in p3.text
 
-    @patch("md2pdf.core.preprocessors._fetch_emoji_png")
-    def test_task_list_checkboxes_emoji_enabled(self, mock_fetch, styles, tmp_path):
-        from pathlib import Path
+    def test_task_list_checkboxes_emoji_enabled(self, styles, tmp_path):
         from unittest.mock import MagicMock
 
         styles["_config"] = MagicMock(emoji=True, cache_dir=str(tmp_path))
 
-        def mock_fetch_emoji(slug, cache_dir):
-            p = Path(cache_dir) / f"{slug}.png"
-            p.parent.mkdir(parents=True, exist_ok=True)
-            if not p.exists():
-                from io import BytesIO
+        # Write dummy checkbox images to simulate pre-fetched assets
+        emoji_dir = tmp_path / "emoji"
+        emoji_dir.mkdir(parents=True, exist_ok=True)
+        from io import BytesIO
 
-                from PIL import Image as PILImage
+        from PIL import Image as PILImage
 
-                buf = BytesIO()
-                PILImage.new("RGBA", (14, 14), (255, 200, 0, 255)).save(buf, format="PNG")
-                p.write_bytes(buf.getvalue())
-            return p
-
-        mock_fetch.side_effect = mock_fetch_emoji
+        for slug in ("25fb", "2611"):
+            buf = BytesIO()
+            PILImage.new("RGBA", (14, 14), (255, 200, 0, 255)).save(buf, format="PNG")
+            (emoji_dir / f"{slug}.png").write_bytes(buf.getvalue())
 
         token = _make_list_token(["[ ] todo", "[x] done"])
         flowables = ListHandler().render(token, styles)

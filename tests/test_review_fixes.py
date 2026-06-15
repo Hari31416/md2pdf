@@ -312,3 +312,158 @@ def test_nested_image_paths_relative_to_includes(tmp_path) -> None:
 
     # The PDF composer should have successfully found and resolved "sub/test.png" relative to sub.md
     assert os.path.exists(cfg.output_file)
+
+
+def test_find_bookmarks_utility() -> None:
+    """Verify that find_bookmarks recursively extracts BookmarkFlowable instances from nested flowables."""
+    from reportlab.lib.colors import HexColor
+    from reportlab.platypus import KeepTogether
+
+    from md2pdf.core.flowables import BlockQuoteBar, BookmarkFlowable, find_bookmarks
+
+    b1 = BookmarkFlowable("k1", "Title 1", level=0)
+    b2 = BookmarkFlowable("k2", "Title 2", level=1)
+    b_no_title = BookmarkFlowable("k3", "", level=2)
+
+    # Nest them in KeepTogether and BlockQuoteBar
+    items = [
+        b1,
+        KeepTogether([b2]),
+        BlockQuoteBar(b_no_title, bar_color=HexColor("#cccccc")),
+    ]
+
+    res = find_bookmarks(items)
+    assert len(res) == 2
+    assert res[0] is b1
+    assert res[1] is b2
+
+
+def test_list_item_block_children() -> None:
+    """Verify that nested block elements inside list items are rendered using the registry."""
+    from md2pdf.core.registry import ElementHandler, HandlerRegistry
+    from md2pdf.handlers.list_ import ListHandler
+
+    class DummyBlockHandler(ElementHandler):
+        token_type = "DummyBlock"
+
+        def render(self, token, styles):
+            from reportlab.platypus import Paragraph
+
+            return [Paragraph("dummy block content", styles["list_item"])]
+
+    reg = HandlerRegistry()
+    reg.register(DummyBlockHandler())
+
+    styles = {
+        "list_item": None,
+        "_registry": reg,
+    }
+    from md2pdf.styles.default import build_default_stylesheet
+
+    styles.update(build_default_stylesheet())
+    styles["_registry"] = reg
+
+    token = {
+        "type": "List",
+        "children": [
+            {
+                "type": "ListItem",
+                "children": [
+                    {"type": "RawText", "raw": "item text"},
+                    {"type": "DummyBlock", "children": []},
+                ],
+            }
+        ],
+    }
+
+    handler = ListHandler()
+    flowables = handler.render(token, styles)
+    assert len(flowables) == 1
+    lf = flowables[0]
+
+    # LIIndenter wraps each flowable in ListFlowable._content
+    texts = [x._flowable.text for x in lf._content]
+    assert "item text" in texts
+    assert "dummy block content" in texts
+
+
+def test_blockquote_nested_block_structure() -> None:
+    """Verify that blockquotes render nested block elements using their handlers."""
+    from reportlab.platypus import Paragraph
+
+    from md2pdf.core.flowables import BlockQuoteBar
+    from md2pdf.core.registry import ElementHandler, HandlerRegistry
+    from md2pdf.handlers.blockquote import BlockQuoteHandler
+
+    class DummyBlockHandler(ElementHandler):
+        token_type = "DummyBlock"
+
+        def render(self, token, styles):
+            return [Paragraph("dummy text", styles.get("body"))]
+
+    reg = HandlerRegistry()
+    reg.register(DummyBlockHandler())
+
+    styles = {
+        "color_blockquote_bar": None,
+        "_registry": reg,
+    }
+    from md2pdf.styles.default import build_default_stylesheet
+
+    styles.update(build_default_stylesheet())
+    styles["_registry"] = reg
+
+    token = {
+        "type": "BlockQuote",
+        "children": [
+            {"type": "DummyBlock", "children": []},
+        ],
+    }
+
+    handler = BlockQuoteHandler()
+    flowables = handler.render(token, styles)
+    assert len(flowables) == 1
+    assert isinstance(flowables[0], BlockQuoteBar)
+    assert isinstance(flowables[0].inner, Paragraph)
+    assert flowables[0].inner.text == "dummy text"
+
+
+def test_latex_atomic_save_and_write(tmp_path) -> None:
+    """Verify that cached LaTeX images are saved and written atomically."""
+    from PIL import Image as PILImage
+
+    from md2pdf.handlers.latex import _save_pil_image_atomically, _write_bytes_atomically
+
+    img = PILImage.new("RGBA", (5, 5), (0, 100, 200, 255))
+    path = tmp_path / "cached_image.png"
+
+    # Save PIL Image atomically
+    _save_pil_image_atomically(img, path)
+    assert path.exists()
+    with PILImage.open(path) as loaded:
+        assert loaded.size == (5, 5)
+
+    # Write bytes atomically
+    path2 = tmp_path / "cached_bytes.png"
+    _write_bytes_atomically(b"fake data", path2)
+    assert path2.exists()
+    assert path2.read_bytes() == b"fake data"
+
+
+def test_emoji_preprocessor_checkbox_prefetch(tmp_path) -> None:
+    """Verify that EmojiPreProcessor pre-fetches checkbox emojis when GFM checkboxes are detected."""
+    from unittest.mock import patch
+
+    from md2pdf.core.preprocessors import EmojiPreProcessor
+
+    cache_dir = tmp_path / "cache"
+    pp = EmojiPreProcessor(cache_dir=str(cache_dir))
+
+    md = "- [ ] Unchecked item\n- [x] Checked item\n"
+
+    # Mock _fetch_emoji_png to avoid real network requests
+    with patch("md2pdf.core.preprocessors._fetch_emoji_png") as mock_fetch:
+        pp.process(md)
+        calls = [c[0][0] for c in mock_fetch.call_args_list]
+        assert "25fb" in calls
+        assert "2611" in calls

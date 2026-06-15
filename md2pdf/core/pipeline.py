@@ -453,7 +453,7 @@ class Pipeline:
 
     def _render_pass(self, flowables: list, is_final: bool) -> None:
         """Stage 4 — run post-processors then build the PDF with layout safeguards."""
-        from md2pdf.core.flowables import BookmarkFlowable, ResizableImage
+        from md2pdf.core.flowables import ResizableImage, find_bookmarks
         from md2pdf.core.layout import LayoutComposer
 
         # Reset max available height for the current rendering pass
@@ -519,20 +519,6 @@ class Pipeline:
 
         # Collect bookmarks in order to determine running section headers
         bookmarks = []
-
-        def find_bookmarks(items: list) -> list:
-            res = []
-            for item in items:
-
-                if isinstance(item, BookmarkFlowable):
-                    if item.title:
-                        res.append(item)
-                elif hasattr(item, "_content") and isinstance(item._content, list):
-                    res.extend(find_bookmarks(item._content))
-                elif hasattr(item, "inner") and item.inner:
-                    res.extend(find_bookmarks([item.inner]))
-            return res
-
         if is_final:
             bookmarks = find_bookmarks(safe_flowables)
 

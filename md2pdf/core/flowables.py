@@ -132,6 +132,20 @@ class BookmarkFlowable(Flowable):
                 logger.debug("addOutlineEntry failed for key=%r", self.key, exc_info=True)
 
 
+def find_bookmarks(items: list) -> list[BookmarkFlowable]:
+    """Recursively search for BookmarkFlowables with a title in a list of flowables."""
+    res = []
+    for item in items:
+        if isinstance(item, BookmarkFlowable):
+            if item.title:
+                res.append(item)
+        elif hasattr(item, "_content") and isinstance(item._content, list):
+            res.extend(find_bookmarks(item._content))
+        elif hasattr(item, "inner") and getattr(item, "inner", None):
+            res.extend(find_bookmarks([item.inner]))
+    return res
+
+
 _image_state = threading.local()
 
 

@@ -8,6 +8,9 @@ Supports:
 
 from __future__ import annotations
 
+import copy
+import re
+
 from reportlab.platypus import ListFlowable, ListItem, Paragraph
 
 from md2pdf.core.registry import ElementHandler
@@ -15,6 +18,18 @@ from md2pdf.handlers.inline import inline_render
 
 # Indentation added per nesting level (points)
 _INDENT_PER_LEVEL: int = 18
+
+
+def _copy_token(token: dict) -> dict:
+    """Deep copy a token dict, excluding raw AST '_node' objects to avoid deepcopy issues."""
+    copied = {
+        "type": token.get("type", ""),
+        "raw": token.get("raw", ""),
+        "attrs": copy.deepcopy(token.get("attrs", {})),
+    }
+    if "children" in token:
+        copied["children"] = [_copy_token(c) for c in token["children"]]
+    return copied
 
 
 class ListHandler(ElementHandler):
@@ -91,7 +106,6 @@ class ListHandler(ElementHandler):
             return
 
         raw_text = first_inline.get("raw", "")
-        import re
 
         # Match [ ] or [x] or [X] at the beginning
         match = re.match(r"^\[([ xX])\](?:[ \t](.*)|$)", raw_text)
@@ -110,15 +124,13 @@ class ListHandler(ElementHandler):
         if emoji_enabled:
             from pathlib import Path
 
-            from md2pdf.core.preprocessors import _fetch_emoji_png
-
             slug = "2611" if is_checked else "25fb"
             emoji_cache_dir = (
                 Path(cache_dir) / "emoji" if cache_dir else Path.home() / ".cache/pymd2pdf/emoji"
             )
 
-            png_path = _fetch_emoji_png(slug, emoji_cache_dir)
-            if png_path and png_path.exists():
+            png_path = emoji_cache_dir / f"{slug}.png"
+            if png_path.exists():
                 replacement = f'<img src="{png_path}" width="14" height="14"/>'
 
         if not replacement:
@@ -141,6 +153,7 @@ class ListHandler(ElementHandler):
         - Nested ``List`` tokens → rendered recursively and appended after
           the paragraph
         """
+        item_token = _copy_token(item_token)
         self._process_checkbox(item_token, styles)
 
         contents: list = []
@@ -163,6 +176,18 @@ class ListHandler(ElementHandler):
                 text = inline_render(child.get("children", []), styles, parent_style="list_item")
                 contents.append(Paragraph(text, styles["list_item"]))
 
+            elif registry := styles.get("_registry"):
+                handler = registry.get(child_type)
+                if handler is not None:
+                    # Flush buffered inline children first
+                    if inline_children:
+                        text = inline_render(inline_children, styles, parent_style="list_item")
+                        contents.append(Paragraph(text, styles["list_item"]))
+                        inline_children = []
+                    # Render using handler
+                    contents.extend(handler.render(child, styles))
+                else:
+                    inline_children.append(child)
             else:
                 # Tight list items expose inline tokens directly
                 inline_children.append(child)

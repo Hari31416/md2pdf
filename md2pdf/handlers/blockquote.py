@@ -23,25 +23,32 @@ class BlockQuoteHandler(ElementHandler):
         bq_style = styles.get("blockquote", styles.get("body"))
         flowables: list = []
 
+        registry = styles.get("_registry")
         for child in token.get("children", []):
             child_type = child.get("type", "")
+            child_flowables = []
 
             if child_type == "Paragraph":
                 text = inline_render(child.get("children", []), styles, parent_style=bq_style)
-            else:
-                # Non-paragraph children: render raw text as a fallback
+                if text:
+                    child_flowables = [Paragraph(text, bq_style)]
+            elif registry:
+                handler = registry.get(child_type)
+                if handler is not None:
+                    child_flowables = handler.render(child, styles)
+
+            # Fallback to rendering raw text of the child
+            if not child_flowables:
                 text = inline_render(
                     child.get("children", []), styles, parent_style=bq_style
                 ) or child.get("raw", "")
+                if text:
+                    child_flowables = [Paragraph(text, bq_style)]
 
-            if not text:
-                continue
-
-            para = Paragraph(text, bq_style)
-
-            if bar_color is not None:
-                flowables.append(BlockQuoteBar(para, bar_color=bar_color))
-            else:
-                flowables.append(para)
+            for f in child_flowables:
+                if bar_color is not None:
+                    flowables.append(BlockQuoteBar(f, bar_color=bar_color))
+                else:
+                    flowables.append(f)
 
         return flowables

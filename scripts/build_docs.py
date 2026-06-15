@@ -24,13 +24,14 @@ except ImportError:
     sys.exit(1)
 
 
-def build_docs() -> None:
+def build_docs() -> bool:
     """Compile documentation files in docs/ to PDFs."""
     docs_to_compile = [
         ("docs/user_manual.md", "docs/user_manual.pdf", Config(toc=True, deterministic=True)),
     ]
 
     logger.info("--- Compiling Documentation Suite ---")
+    has_errors = False
     for src_rel, dst_rel, config in docs_to_compile:
         src = ROOT / src_rel
         dst = ROOT / dst_rel
@@ -43,16 +44,19 @@ def build_docs() -> None:
             logger.info("Successfully wrote %s", dst_rel)
         except Exception as exc:
             logger.error("Failed to compile %s: %s", src_rel, exc, exc_info=True)
+            has_errors = True
+    return not has_errors
 
 
-def build_examples() -> None:
+def build_examples() -> bool:
     """Compile examples in examples/ to PDFs using local configuration overrides."""
     examples_dir = ROOT / "examples"
     if not examples_dir.exists():
         logger.warning("Examples directory does not exist.")
-        return
+        return True
 
     logger.info("--- Compiling Examples Suite ---")
+    has_errors = False
     for item in examples_dir.iterdir():
         if not item.is_dir():
             continue
@@ -80,15 +84,21 @@ def build_examples() -> None:
                 config.deterministic = True
             except Exception as exc:
                 logger.error("  Failed to load config %s: %s", toml_rel, exc)
+                has_errors = True
 
         try:
             convert(str(src), str(dst), config=config)
             logger.info("Successfully wrote %s", dst_rel)
         except Exception as exc:
             logger.error("Failed to compile example %s: %s", item.name, exc, exc_info=True)
+            has_errors = True
+    return not has_errors
 
 
 if __name__ == "__main__":
-    build_docs()
-    build_examples()
+    success_docs = build_docs()
+    success_examples = build_examples()
+    if not success_docs or not success_examples:
+        logger.error("Build failed with errors.")
+        sys.exit(1)
     logger.info("--- Build Complete ---")

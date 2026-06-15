@@ -47,6 +47,47 @@ def clean_latex_source(source: str) -> str:
     return formula
 
 
+def _save_pil_image_atomically(pil_img: Any, path: Any) -> None:
+    """Save PIL image to disk cache atomically to avoid corrupt cache entries."""
+    import os
+    import tempfile
+
+    # Create temporary file in the same directory as path
+    with tempfile.NamedTemporaryFile(dir=path.parent, suffix=".tmp", delete=False) as tmp:
+        tmp_name = tmp.name
+
+    try:
+        pil_img.save(tmp_name, format="PNG")
+        os.replace(tmp_name, path)
+    except Exception:
+        if os.path.exists(tmp_name):
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                pass
+        raise
+
+
+def _write_bytes_atomically(data: bytes, path: Any) -> None:
+    """Write bytes to disk cache atomically to avoid corrupt cache entries."""
+    import os
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(dir=path.parent, suffix=".tmp", delete=False) as tmp:
+        tmp.write(data)
+        tmp_name = tmp.name
+
+    try:
+        os.replace(tmp_name, path)
+    except Exception:
+        if os.path.exists(tmp_name):
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                pass
+        raise
+
+
 def make_image_transparent(pil_img: Any) -> Any:
     """Make the white background of the image transparent, preserving other colors."""
     from PIL import Image as PILImage
@@ -64,7 +105,7 @@ def make_image_transparent(pil_img: Any) -> Any:
         rgba_arr = np.zeros((pil_img.height, pil_img.width, 4), dtype=np.uint8)
         rgba_arr[..., :3] = (f_arr * 255.0).astype(np.uint8)
         rgba_arr[..., 3] = (a * 255.0).astype(np.uint8)
-        return PILImage.fromarray(rgba_arr, mode="RGBA")
+        return PILImage.fromarray(rgba_arr)
     else:
         gray = pil_img.convert("L")
         inverted = ImageChops.invert(gray)
@@ -119,7 +160,7 @@ def get_latex_image(
     path = cache.path_for(_DIAGRAM_TYPE, wrapped)
 
     # Helper to compute matplotlib metrics if available
-    def get_matplotlib_metrics() -> tuple[float, float, float] | None:
+    def get_matplotlib_metrics() -> tuple[float, float, float, Any] | None:
         if np is None:
             logger.debug("get_matplotlib_metrics: numpy is not available.")
             return None
@@ -152,7 +193,7 @@ def get_latex_image(
             depth_pt = (new_depth_px / dpi) * 72.0
             w_pt = ((right - left) / dpi) * 72.0
             h_pt = ((bottom - top) / dpi) * 72.0
-            return w_pt, h_pt, depth_pt
+            return w_pt, h_pt, depth_pt, (res, left, top, right, bottom)
         except (ImportError, Exception) as exc:
             logger.debug("get_matplotlib_metrics: matplotlib math parsing failed: %s", exc)
             return None
@@ -171,13 +212,13 @@ def get_latex_image(
                 if is_opaque:
                     logger.debug("Converting opaque cached image to transparent: %s", path)
                     transparent_img = make_image_transparent(img)
-                    transparent_img.save(path, format="PNG")
+                    _save_pil_image_atomically(transparent_img, path)
         except Exception as exc:
             logger.debug("Failed to check/convert cached image transparency: %s", exc)
 
         metrics = get_matplotlib_metrics()
         if metrics is not None:
-            w_pt, h_pt, depth_pt = metrics
+            w_pt, h_pt, depth_pt, _ = metrics
             return str(path), w_pt, h_pt, depth_pt
         try:
             with PILImage.open(path) as pil_img:
@@ -193,32 +234,19 @@ def get_latex_image(
     metrics = get_matplotlib_metrics()
     if metrics is not None:
         try:
-            import matplotlib
-
-            matplotlib.use("agg")
-            from matplotlib.font_manager import FontProperties
-            from matplotlib.mathtext import MathTextParser
-
-            dpi = 200
-            prop = FontProperties(size=fontsize)
-            parser = MathTextParser("agg")
-            res = parser.parse(f"${formula}$", dpi=dpi, prop=prop)
+            w_pt, h_pt, depth_pt, extra = metrics
+            res, left, top, right, bottom = extra
 
             img_rgba = np.zeros((res.image.shape[0], res.image.shape[1], 4), dtype=np.uint8)
             img_rgba[..., 3] = res.image
-            pil_img = PILImage.fromarray(img_rgba, mode="RGBA")
+            pil_img = PILImage.fromarray(img_rgba)
 
-            nonzero = np.nonzero(res.image)
-            if len(nonzero[0]) > 0:
-                ymin, ymax = np.min(nonzero[0]), np.max(nonzero[0])
-                xmin, xmax = np.min(nonzero[1]), np.max(nonzero[1])
-                left, top, right, bottom = xmin, ymin, xmax + 1, ymax + 1
+            if (bottom - top) > 0 and (right - left) > 0:
                 pil_img = pil_img.crop((left, top, right, bottom))
 
-            # Save the cropped/reshaped image to cache
-            pil_img.save(path, format="PNG")
+            # Save the cropped/reshaped image to cache atomically
+            _save_pil_image_atomically(pil_img, path)
 
-            w_pt, h_pt, depth_pt = metrics
             logger.debug("Rendered LaTeX locally using matplotlib: %s", formula)
             return str(path), w_pt, h_pt, depth_pt
         except Exception as exc:
@@ -253,12 +281,12 @@ def get_latex_image(
             if bbox:
                 pil_img = pil_img.crop(bbox)
             pil_img = make_image_transparent(pil_img)
-            pil_img.save(path, format="PNG")
+            _save_pil_image_atomically(pil_img, path)
             width_px, height_px = pil_img.size
     except Exception as exc:
         logger.warning("Failed to crop/process LaTeX image: %s", exc)
         try:
-            path.write_bytes(png)
+            _write_bytes_atomically(png, path)
             with PILImage.open(path) as pil_img:
                 width_px, height_px = pil_img.size
         except Exception:

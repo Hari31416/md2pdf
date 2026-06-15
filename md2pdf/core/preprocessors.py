@@ -635,51 +635,69 @@ class EmojiPreProcessor(PreProcessor):
             i = 0
             n = len(text)
 
+            # Detect checkboxes and prefetch if needed
+            has_unchecked = bool(re.search(r"^[ \t]*[-*+][ \t]+\[ \]", text, re.MULTILINE))
+            has_checked = bool(re.search(r"^[ \t]*[-*+][ \t]+\[[xX]\]", text, re.MULTILINE))
+
+            checkbox_slugs = []
+            if has_unchecked:
+                checkbox_slugs.append("25fb")
+            if has_checked:
+                checkbox_slugs.append("2611")
+
             # Pre-scan to identify unique emojis that need downloading
-            if self.progress_callback:
-                slugs_to_download = []
-                seen_slugs = set()
-                while i < n:
-                    ch = text[i]
-                    if ch == "`":
-                        end = text.find("`", i + 1)
-                        if end == -1:
-                            break
-                        i = end + 1
-                        continue
-                    if not _is_emoji_char(ch):
-                        i += 1
-                        continue
-                    seq_chars = [ch]
-                    j = i + 1
-                    while j < n:
-                        next_cp = ord(text[j])
-                        if next_cp in (_ZWJ, _VARIATION_SELECTOR_16) or _is_emoji_char(text[j]):
-                            seq_chars.append(text[j])
-                            j += 1
-                        else:
-                            break
-                    slug = _codepoints_to_slug("".join(seq_chars))
-                    if slug not in seen_slugs:
-                        seen_slugs.add(slug)
-                        dest = self.emoji_cache_dir / f"{slug}.png"
-                        if not dest.exists():
-                            slugs_to_download.append(slug)
-                    i = j
+            slugs_to_download = []
+            seen_slugs = set()
 
-                # Reset scanning pointer
-                i = 0
+            for slug in checkbox_slugs:
+                if slug not in seen_slugs:
+                    seen_slugs.add(slug)
+                    dest = self.emoji_cache_dir / f"{slug}.png"
+                    if not dest.exists():
+                        slugs_to_download.append(slug)
 
-                if slugs_to_download:
+            # Pre-scan inline emojis to pre-download
+            i_scan = 0
+            while i_scan < n:
+                ch = text[i_scan]
+                if ch == "`":
+                    end = text.find("`", i_scan + 1)
+                    if end == -1:
+                        break
+                    i_scan = end + 1
+                    continue
+                if not _is_emoji_char(ch):
+                    i_scan += 1
+                    continue
+                seq_chars = [ch]
+                j_scan = i_scan + 1
+                while j_scan < n:
+                    next_cp = ord(text[j_scan])
+                    if next_cp in (_ZWJ, _VARIATION_SELECTOR_16) or _is_emoji_char(text[j_scan]):
+                        seq_chars.append(text[j_scan])
+                        j_scan += 1
+                    else:
+                        break
+                slug = _codepoints_to_slug("".join(seq_chars))
+                if slug not in seen_slugs:
+                    seen_slugs.add(slug)
+                    dest = self.emoji_cache_dir / f"{slug}.png"
+                    if not dest.exists():
+                        slugs_to_download.append(slug)
+                i_scan = j_scan
+
+            if slugs_to_download:
+                if self.progress_callback:
                     self.progress_callback(
                         "emoji_download_start", {"total": len(slugs_to_download)}
                     )
-                    for idx, slug in enumerate(slugs_to_download, 1):
+                for idx, slug in enumerate(slugs_to_download, 1):
+                    if self.progress_callback:
                         self.progress_callback(
                             "emoji_download_item",
                             {"slug": slug, "index": idx, "total": len(slugs_to_download)},
                         )
-                        _fetch_emoji_png(slug, self.emoji_cache_dir, self.timeout)
+                    _fetch_emoji_png(slug, self.emoji_cache_dir, self.timeout)
 
             while i < n:
                 ch = text[i]
