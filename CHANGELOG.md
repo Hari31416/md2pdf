@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Page-Size & Orientation Configuration**: Added support for configuring PDF page size (e.g. A4, Letter, A3) and page orientation (portrait/landscape) via config file (`md2pdf.toml`) and CLI flags (`--page-size`, `--orientation`).
 - **Encoding Detection**: Added an `--encoding` CLI flag to support reading non-UTF-8 source files, along with optional auto-detection (using `charset-normalizer`).
+- **Watch Mode**: Introduced a `--watch` CLI flag to support live editing. It monitors the input Markdown file, recursively included files, and active configuration TOML files, automatically re-rendering the output PDF when changes are detected.
 - **Structured JSON Validation Output**: Introduced a `--format json` CLI option for the `--validate-only` command to output structured validation results in JSON format.
 
 ### Fixed

@@ -23,6 +23,11 @@ Convert this document to a PDF:
 md2pdf docs/showcase.md -o docs/showcase.pdf
 ```
 
+Watch for changes and automatically re-render the PDF:
+```bash
+md2pdf docs/showcase.md -o docs/showcase.pdf --watch
+```
+
 Enable validation checks without writing a PDF:
 ```bash
 md2pdf docs/showcase.md --validate-only

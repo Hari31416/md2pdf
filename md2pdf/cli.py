@@ -151,6 +151,11 @@ def convert(
         "--format",
         help="Format of the validation output (text or json).",
     ),
+    watch: bool = typer.Option(  # noqa: B008
+        False,
+        "--watch",
+        help="Watch the input file and re-render on changes.",
+    ),
 ) -> None:
     """Convert a Markdown file to a print-ready PDF."""
     _setup_logging(verbose)
@@ -174,142 +179,210 @@ def convert(
 
     import os
 
-    active_config_file = None
-    if config_file is not None:
-        if not config_file.exists():
-            typer.echo(f"✗ Config file not found: {config_file}", err=True)
-            raise typer.Exit(code=1)
-        active_config_file = str(config_file)
-    else:
-        cwd_config = Path("md2pdf.toml")
-        if cwd_config.is_file():
-            active_config_file = str(cwd_config)
+    def do_build() -> tuple[set[Path], Path | None, bool]:
+        active_config_file = None
+        if config_file is not None:
+            if not config_file.exists():
+                typer.echo(f"✗ Config file not found: {config_file}", err=True)
+                raise typer.Exit(code=1)
+            active_config_file = config_file.resolve()
         else:
-            home_config = Path(os.path.expanduser("~/.config/md2pdf/md2pdf.toml"))
-            if home_config.is_file():
-                active_config_file = str(home_config)
+            cwd_config = Path("md2pdf.toml")
+            if cwd_config.is_file():
+                active_config_file = cwd_config.resolve()
             else:
-                home_dot = Path(os.path.expanduser("~/.md2pdf.toml"))
-                if home_dot.is_file():
-                    active_config_file = str(home_dot)
+                home_config = Path(os.path.expanduser("~/.config/md2pdf/md2pdf.toml"))
+                if home_config.is_file():
+                    active_config_file = home_config.resolve()
+                else:
+                    home_dot = Path(os.path.expanduser("~/.md2pdf.toml"))
+                    if home_dot.is_file():
+                        active_config_file = home_dot.resolve()
 
-    toml_data: dict[str, Any] = {}
-    if active_config_file is not None:
-        import tomllib
+        toml_data: dict[str, Any] = {}
+        if active_config_file is not None:
+            import tomllib
 
-        with open(active_config_file, "rb") as fh:
-            toml_data = tomllib.load(fh)
+            with open(active_config_file, "rb") as fh:
+                toml_data = tomllib.load(fh)
 
-    if active_config_file is not None:
-        cfg = Config.from_dict(toml_data)
-        # CLI arguments take precedence over config file values.
-        cfg.input_file = str(input)
-        if output is not None:
-            cfg.output_file = str(output)
-        else:
-            # Check if TOML file explicitly configured output_file
-            toml_has_output = "output_file" in toml_data.get("md2pdf", {})
-            if toml_has_output:
-                if not toml_data.get("md2pdf", {}).get("output_file"):
+        if active_config_file is not None:
+            cfg = Config.from_dict(toml_data)
+            # CLI arguments take precedence over config file values.
+            cfg.input_file = str(input)
+            if output is not None:
+                cfg.output_file = str(output)
+            else:
+                # Check if TOML file explicitly configured output_file
+                toml_has_output = "output_file" in toml_data.get("md2pdf", {})
+                if toml_has_output:
+                    if not toml_data.get("md2pdf", {}).get("output_file"):
+                        cfg.output_file = str(input.with_suffix(".pdf"))
+                else:
                     cfg.output_file = str(input.with_suffix(".pdf"))
-            else:
-                cfg.output_file = str(input.with_suffix(".pdf"))
 
-        if theme != "default":
-            cfg.theme = theme
-            try:
-                from md2pdf.styles.theme import PREBUILT_THEMES, ThemeConfig  # noqa: PLC0415
+            if theme != "default":
+                cfg.theme = theme
+                try:
+                    from md2pdf.styles.theme import PREBUILT_THEMES, ThemeConfig  # noqa: PLC0415
 
-                theme_data = toml_data.get("theme", {})
-                base_theme_data = PREBUILT_THEMES.get(theme, {})
-                merged_theme_data = {**base_theme_data, **theme_data}
-                cfg.theme_config = ThemeConfig.from_dict(merged_theme_data)
-            except Exception:
-                logger = logging.getLogger("md2pdf")
-                logger.debug("Failed to apply theme config from TOML", exc_info=True)
+                    theme_data = toml_data.get("theme", {})
+                    base_theme_data = PREBUILT_THEMES.get(theme, {})
+                    merged_theme_data = {**base_theme_data, **theme_data}
+                    cfg.theme_config = ThemeConfig.from_dict(merged_theme_data)
+                except Exception:
+                    logger = logging.getLogger("md2pdf")
+                    logger.debug("Failed to apply theme config from TOML", exc_info=True)
 
-        if offline is not None:
-            cfg.offline = offline
-        if min_image_scale is not None:
-            cfg.min_image_scale = min_image_scale
-        if toc is not None:
-            cfg.toc = toc
-        if cover is not None:
-            cfg.cover = cover
-        if header is not None:
-            cfg.header = header
-        if header_on_first_page is not None:
-            cfg.header_on_first_page = header_on_first_page
-        if emoji is not None:
-            cfg.emoji = emoji
-        if deterministic is not None:
-            cfg.deterministic = deterministic
-        if page_size is not None:
-            cfg.page_size = page_size
-        if orientation is not None:
-            cfg.orientation = orientation
-        if encoding is not None:
-            cfg.encoding = encoding
-    else:
-        resolved_output = output if output is not None else input.with_suffix(".pdf")
-        cfg = Config(
-            input_file=str(input),
-            output_file=str(resolved_output),
-            theme=theme,
-        )
-        if offline is not None:
-            cfg.offline = offline
-        if min_image_scale is not None:
-            cfg.min_image_scale = min_image_scale
-        if toc is not None:
-            cfg.toc = toc
-        if cover is not None:
-            cfg.cover = cover
-        if header is not None:
-            cfg.header = header
-        if header_on_first_page is not None:
-            cfg.header_on_first_page = header_on_first_page
-        if emoji is not None:
-            cfg.emoji = emoji
-        if deterministic is not None:
-            cfg.deterministic = deterministic
-        if page_size is not None:
-            cfg.page_size = page_size
-        if orientation is not None:
-            cfg.orientation = orientation
-        if encoding is not None:
-            cfg.encoding = encoding
-
-    registry = HandlerRegistry()
-    pipeline = Pipeline(
-        cfg, registry, progress_callback=cli_progress_callback if progress else None
-    )
-
-    from md2pdf.core.config import read_file_with_encoding
-
-    try:
-        raw_md = read_file_with_encoding(input, cfg.encoding)
-    except Exception as exc:
-        typer.echo(f"✗ Failed to read input file: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
-
-    if validate_only:
-        issues = pipeline.validate(raw_md)
-        if format == "json":
-            import dataclasses
-            import json
-
-            issues_dict = [dataclasses.asdict(i) for i in issues]
-            typer.echo(json.dumps(issues_dict, indent=2))
+            if offline is not None:
+                cfg.offline = offline
+            if min_image_scale is not None:
+                cfg.min_image_scale = min_image_scale
+            if toc is not None:
+                cfg.toc = toc
+            if cover is not None:
+                cfg.cover = cover
+            if header is not None:
+                cfg.header = header
+            if header_on_first_page is not None:
+                cfg.header_on_first_page = header_on_first_page
+            if emoji is not None:
+                cfg.emoji = emoji
+            if deterministic is not None:
+                cfg.deterministic = deterministic
+            if page_size is not None:
+                cfg.page_size = page_size
+            if orientation is not None:
+                cfg.orientation = orientation
+            if encoding is not None:
+                cfg.encoding = encoding
         else:
-            _report_issues(issues)
-        has_errors = any(i.severity == "error" for i in issues)
-        raise typer.Exit(code=1 if has_errors else 0)
+            resolved_output = output if output is not None else input.with_suffix(".pdf")
+            cfg = Config(
+                input_file=str(input),
+                output_file=str(resolved_output),
+                theme=theme,
+            )
+            if offline is not None:
+                cfg.offline = offline
+            if min_image_scale is not None:
+                cfg.min_image_scale = min_image_scale
+            if toc is not None:
+                cfg.toc = toc
+            if cover is not None:
+                cfg.cover = cover
+            if header is not None:
+                cfg.header = header
+            if header_on_first_page is not None:
+                cfg.header_on_first_page = header_on_first_page
+            if emoji is not None:
+                cfg.emoji = emoji
+            if deterministic is not None:
+                cfg.deterministic = deterministic
+            if page_size is not None:
+                cfg.page_size = page_size
+            if orientation is not None:
+                cfg.orientation = orientation
+            if encoding is not None:
+                cfg.encoding = encoding
 
-    try:
-        pipeline.run(raw_md)
-        typer.echo(f"✓ PDF written to: {cfg.output_file}")
-    except Exception as exc:
-        logging.exception("Conversion failed")
-        typer.echo(f"✗ Conversion failed: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
+        registry = HandlerRegistry()
+        pipeline = Pipeline(
+            cfg, registry, progress_callback=cli_progress_callback if progress else None
+        )
+
+        from md2pdf.core.config import read_file_with_encoding
+
+        try:
+            raw_md = read_file_with_encoding(input, cfg.encoding)
+        except Exception as exc:
+            typer.echo(f"✗ Failed to read input file: {exc}", err=True)
+            raise RuntimeError(f"Failed to read input file: {exc}") from exc
+
+        if validate_only:
+            issues = pipeline.validate(raw_md)
+            if format == "json":
+                import dataclasses
+                import json
+
+                issues_dict = [dataclasses.asdict(i) for i in issues]
+                typer.echo(json.dumps(issues_dict, indent=2))
+            else:
+                _report_issues(issues)
+            has_errors = any(i.severity == "error" for i in issues)
+            success = not has_errors
+        else:
+            try:
+                pipeline.run(raw_md)
+                typer.echo(f"✓ PDF written to: {cfg.output_file}")
+                success = True
+            except Exception as exc:
+                logging.exception("Conversion failed")
+                typer.echo(f"✗ Conversion failed: {exc}", err=True)
+                raise RuntimeError(f"Conversion failed: {exc}") from exc
+
+        watched = {Path(p).resolve() for p in pipeline.watched_files}
+        return watched, active_config_file, success
+
+    if not watch:
+        try:
+            _, _, success = do_build()
+            if not success:
+                raise typer.Exit(code=1)
+        except typer.Exit:
+            raise
+        except Exception as exc:
+            raise typer.Exit(code=1) from exc
+    else:
+        typer.echo("👁 Watch mode enabled. Press Ctrl+C to stop.", err=True)
+
+        def get_mtimes(paths: set[Path]) -> dict[Path, float]:
+            mtimes = {}
+            for p in paths:
+                try:
+                    mtimes[p] = p.stat().st_mtime
+                except Exception:
+                    mtimes[p] = 0.0
+            return mtimes
+
+        watched_paths = {input.resolve()}
+        if config_file is not None:
+            watched_paths.add(config_file.resolve())
+
+        try:
+            new_paths, active_config, success = do_build()
+            watched_paths.update(new_paths)
+            if active_config:
+                watched_paths.add(active_config)
+        except Exception as exc:
+            typer.echo(f"✗ Initial build failed: {exc}", err=True)
+
+        mtimes = get_mtimes(watched_paths)
+
+        import time
+
+        try:
+            while True:
+                time.sleep(0.5)
+                current_mtimes = get_mtimes(watched_paths)
+                changed = False
+                for p, mtime in current_mtimes.items():
+                    if mtimes.get(p) != mtime:
+                        changed = True
+                        break
+
+                if changed:
+                    typer.echo("\n⚡ Change detected, rebuilding...", err=True)
+                    try:
+                        new_paths, active_config, success = do_build()
+                        watched_paths = {input.resolve()}
+                        watched_paths.update(new_paths)
+                        if active_config:
+                            watched_paths.add(active_config)
+                        mtimes = get_mtimes(watched_paths)
+                    except Exception as exc:
+                        typer.echo(f"✗ Rebuild failed: {exc}", err=True)
+                        mtimes = current_mtimes
+        except KeyboardInterrupt:
+            typer.echo("\nStopping watch mode.", err=True)
+            raise typer.Exit(code=0) from None

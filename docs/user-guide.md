@@ -46,6 +46,7 @@ The CLI is built with `typer` and supports the following options:
 | `--page-size`            |              | Page size name (e.g. A4, Letter, A3). Defaults to `"A4"`.                  |
 | `--orientation`          |              | Page orientation: `"portrait"` or `"landscape"`. Defaults to `"portrait"`. |
 | `--encoding`             |              | Source file encoding (e.g., `"shift_jis"`, `"latin-1"`) or `"auto"`. Defaults to `"utf-8"`. |
+| `--watch`                |              | Watch the input file (and config/includes) and re-render on changes.       |
 
 ---
 
@@ -452,6 +453,24 @@ When generating PDFs for automated build systems, documentation servers, or with
 
 - **Recursive Includes**: When file inclusion (`!include`) is used, all recursively included Markdown files are read using the same configured/detected encoding.
 - **BOM Auto-detection**: In `"auto"` mode, the engine automatically detects UTF-8 BOM, UTF-16 BOMs, and then falls back to using the `charset-normalizer` package to determine the best single-byte or multi-byte encoding (e.g. Shift-JIS, CP1252, etc.).
+
+## Watch Mode
+
+`md2pdf` provides a live-editing watch mode that automatically monitors files and re-compiles the document upon detecting edits.
+
+### Usage
+
+To enable watch mode, run the CLI with the `--watch` option:
+
+```bash
+md2pdf input.md -o output.pdf --watch
+```
+
+### Key Behaviors
+
+- **Watched Resources**: The watcher monitors changes to the main source Markdown file, any recursively included Markdown files resolved via `!include` directives, and the active configuration file (e.g. `md2pdf.toml`).
+- **Error Recovery**: If an error occurs during compiling (such as a validation warning or rendering exception), watch mode prints the traceback and error status, but does not terminate. Rebuilding is automatically retried when you fix the issue and save any of the watched files again.
+- **Graceful Shutdown**: You can press `Ctrl+C` to stop watching and terminate the process.
 
 ---
 

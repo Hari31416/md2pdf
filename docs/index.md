@@ -20,6 +20,7 @@ Learn about all supported Markdown structures, features, and configuration param
 - **Deterministic PDF Output**: Pinning timestamps and ID hashes for byte-identical builds.
 - **Page-Size & Orientation Configuration**: Configure custom page sizes and landscape/portrait modes.
 - **Encoding Detection**: Support for reading non-UTF-8 source files with manual overrides or auto-detection.
+- **Watch Mode**: Automatic re-rendering on changes to source, included, or configuration files.
 - **Validation Options**: Pre-render checks with optional structured JSON output for CI/CD integration.
 - **Inline Formatting**: Support for `~~strikethrough~~`, `==highlight==`, superscript `x^2^`, and subscript `H~2~O` spans.
 - **Tables**: Automatic column alignment parsing (`:---`, `:---:`, `---:`) and layout styling.

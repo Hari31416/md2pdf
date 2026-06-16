@@ -199,6 +199,23 @@ class Pipeline:
         if hasattr(self, "_pre_registry") and self._pre_registry:
             self._pre_registry.progress_callback = val
 
+    @property
+    def watched_files(self) -> set[str]:
+        """Return absolute paths of all source and recursively included files parsed."""
+        import os
+
+        from md2pdf.core.preprocessors import IncludeResolver
+
+        files = set()
+        if self.config.input_file:
+            files.add(os.path.abspath(self.config.input_file))
+
+        if hasattr(self, "_pre_registry") and self._pre_registry:
+            for _, pp in self._pre_registry._processors:
+                if isinstance(pp, IncludeResolver):
+                    files.update(pp.resolved_files)
+        return files
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------

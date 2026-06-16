@@ -215,6 +215,14 @@ class IncludeResolver(PreProcessor):
         self.max_depth = max_depth
         self.track_source_files = track_source_files
         self.encoding = encoding
+        self.resolved_files: set[str] = set()
+        if main_file:
+            self.resolved_files.add(os.path.abspath(main_file))
+
+    def reset(self) -> None:
+        self.resolved_files = set()
+        if self.main_file:
+            self.resolved_files.add(os.path.abspath(self.main_file))
 
     def process(self, raw_md: str) -> str:
         if not self.main_file:
@@ -291,6 +299,8 @@ class IncludeResolver(PreProcessor):
                             f"<!-- Included file not found: {include_target} -->\n"
                         )
                         continue
+
+                    self.resolved_files.add(target_path)
 
                     try:
                         from md2pdf.core.config import read_file_with_encoding
