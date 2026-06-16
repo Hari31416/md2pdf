@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from reportlab.lib import colors
-from reportlab.platypus import Flowable, Image, KeepTogether
+from reportlab.platypus import Flowable, Image, KeepTogether, XPreformatted
 
 logger = logging.getLogger(__name__)
 
@@ -592,3 +592,135 @@ class AdmonitionBox(Flowable):
             left_bar_width=self.left_bar_width,
         )
         return [part1, part2]
+
+
+class WrappedXPreformatted(XPreformatted):
+    """A subclass of XPreformatted that wraps text lines to fit the available width."""
+
+    def breakLines(self, width: float | list[float] | tuple[float, ...]) -> Any:
+        if not self.frags or not all(hasattr(f, "text") for f in self.frags):
+            return super().breakLines(width)
+
+        # Backup self.frags
+        old_frags = self.frags
+
+        # Calculate new wrapped fragments
+        if isinstance(width, (list, tuple)):
+            max_w = float(width[0])
+        else:
+            max_w = float(width)
+
+        from reportlab.pdfbase.pdfmetrics import stringWidth
+        from reportlab.platypus.xpreformatted import _getFragLines
+
+        logical_lines = _getFragLines(self.frags)
+        new_frags = []
+
+        for idx, line_frags in enumerate(logical_lines):
+            # Prepend newline if not the first logical line
+            if idx > 0:
+                nl_f = line_frags[0].clone()
+                nl_f.text = "\n"
+                new_frags.append(nl_f)
+
+            # Measure total width of this line
+            line_w = sum(stringWidth(f.text, f.fontName, f.fontSize) for f in line_frags)
+            if line_w <= max_w:
+                new_frags.extend(line_frags)
+            else:
+                # Need to wrap this line
+                atoms = []
+                for f in line_frags:
+                    text = f.text
+                    if not text:
+                        continue
+                    i = 0
+                    n = len(text)
+                    while i < n:
+                        if text[i] == " ":
+                            f_space = f.clone()
+                            f_space.text = " "
+                            w = stringWidth(" ", f.fontName, f.fontSize)
+                            atoms.append((f_space, w, True))
+                            i += 1
+                        else:
+                            start = i
+                            while i < n and text[i] != " ":
+                                i += 1
+                            word = text[start:i]
+                            f_word = f.clone()
+                            f_word.text = word
+                            w = stringWidth(word, f.fontName, f.fontSize)
+                            atoms.append((f_word, w, False))
+
+                wrapped_lines = []
+                current_line = []
+                current_width = 0.0
+
+                for atom_f, atom_w, is_space in atoms:
+                    if current_width + atom_w <= max_w:
+                        current_line.append(atom_f)
+                        current_width += atom_w
+                    else:
+                        if is_space:
+                            if current_line:
+                                wrapped_lines.append(current_line)
+                                current_line = [atom_f]
+                                current_width = atom_w
+                            else:
+                                current_line.append(atom_f)
+                                current_width += atom_w
+                        else:
+                            if current_line:
+                                wrapped_lines.append(current_line)
+                                if atom_w <= max_w:
+                                    current_line = [atom_f]
+                                    current_width = atom_w
+                                else:
+                                    # Split word character by character
+                                    word_text = atom_f.text
+                                    current_line = []
+                                    current_width = 0.0
+                                    for char in word_text:
+                                        f_char = atom_f.clone()
+                                        f_char.text = char
+                                        char_w = stringWidth(char, atom_f.fontName, atom_f.fontSize)
+                                        if current_width + char_w <= max_w:
+                                            current_line.append(f_char)
+                                            current_width += char_w
+                                        else:
+                                            if current_line:
+                                                wrapped_lines.append(current_line)
+                                            current_line = [f_char]
+                                            current_width = char_w
+                            else:
+                                # Word is wider than max_w on an empty line
+                                word_text = atom_f.text
+                                for char in word_text:
+                                    f_char = atom_f.clone()
+                                    f_char.text = char
+                                    char_w = stringWidth(char, atom_f.fontName, atom_f.fontSize)
+                                    if current_width + char_w <= max_w:
+                                        current_line.append(f_char)
+                                        current_width += char_w
+                                    else:
+                                        if current_line:
+                                            wrapped_lines.append(current_line)
+                                        current_line = [f_char]
+                                        current_width = char_w
+
+                if current_line:
+                    wrapped_lines.append(current_line)
+
+                for w_idx, w_line in enumerate(wrapped_lines):
+                    if w_idx > 0:
+                        nl_f = w_line[0].clone()
+                        nl_f.text = "\n"
+                        new_frags.append(nl_f)
+                    new_frags.extend(w_line)
+
+        self.frags = new_frags
+        try:
+            return super().breakLines(width)
+        finally:
+            self.frags = old_frags

@@ -10,8 +10,8 @@ from pygments.formatter import Formatter
 from pygments.lexers import get_lexer_by_name
 from pygments.styles import get_style_by_name
 from pygments.util import ClassNotFound
-from reportlab.platypus import XPreformatted
 
+from md2pdf.core.flowables import WrappedXPreformatted
 from md2pdf.core.registry import ElementHandler
 from md2pdf.handlers.inline import escape_xml
 
@@ -90,7 +90,7 @@ class CodeFenceHandler(ElementHandler):
 
         # Retrieve the code block style (falling back to inline code if not present)
         style = styles.get("code_block") or styles.get("code_inline")
-        flowable = XPreformatted(highlighted, style)
+        flowable = WrappedXPreformatted(highlighted, style)
         return [flowable]
 
 

@@ -453,6 +453,26 @@ class TestCodeFenceHandler:
         assert isinstance(flowables[0], XPreformatted)
         assert flowables[0].text == "some raw text"
 
+    def test_code_wrapping(self, styles):
+        from md2pdf.core.flowables import WrappedXPreformatted
+        from md2pdf.handlers.code import CodeFenceHandler
+
+        # A very long line of plain text that exceeds a width of 100
+        token = {
+            "type": "CodeFence",
+            "raw": "this_is_a_very_long_line_of_code_without_spaces_that_should_wrap_character_by_character_when_width_is_small",
+            "attrs": {},
+            "children": [],
+            "_node": None,
+        }
+        flowables = CodeFenceHandler().render(token, styles)
+        flowable = flowables[0]
+        assert isinstance(flowable, WrappedXPreformatted)
+
+        # Let's wrap it to a very narrow width, say 50 points
+        w, h = flowable.wrap(50, 500)
+        assert h > 20
+
 
 # ---------------------------------------------------------------------------
 # Spacing Properties
