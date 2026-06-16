@@ -28,7 +28,6 @@ __all__ = [
 
 
 from collections.abc import Callable
-from pathlib import Path
 from typing import Any
 
 
@@ -56,5 +55,7 @@ def convert(
         config = replace(config, input_file=src, output_file=dst)
 
     pipeline = Pipeline(config, registry, progress_callback=progress_callback)
-    raw_md = Path(src).read_text(encoding="utf-8")
+    from md2pdf.core.config import read_file_with_encoding
+
+    raw_md = read_file_with_encoding(src, config.encoding)
     pipeline.run(raw_md)

@@ -44,6 +44,7 @@ The CLI is built with `typer` and supports the following options:
 | `--deterministic`        |              | Pin document creation timestamps and ID hashes, enabling byte-identical builds for CI caching. |
 | `--page-size`            |              | Page size name (e.g. A4, Letter, A3). Defaults to `"A4"`.                  |
 | `--orientation`          |              | Page orientation: `"portrait"` or `"landscape"`. Defaults to `"portrait"`. |
+| `--encoding`             |              | Source file encoding (e.g., `"shift_jis"`, `"latin-1"`) or `"auto"`. Defaults to `"utf-8"`. |
 
 ---
 
@@ -74,6 +75,7 @@ emoji                = true                  # true = translate emoji codepoints
 deterministic        = false                 # true = pin creation timestamps and ID hashes for byte-identical builds
 page_size            = "A4"                  # Page size name (e.g., A4, Letter, A3)
 orientation          = "portrait"            # Page orientation (portrait, landscape)
+encoding             = "utf-8"               # Source file encoding (e.g., utf-8, shift_jis, or auto)
 
 [theme]
 # Typography
@@ -384,6 +386,38 @@ When generating PDFs for automated build systems, documentation servers, or with
   page_size = "Letter"
   orientation = "landscape"
   ```
+
+---
+
+## Source File Encoding & Auto-Detection
+
+`md2pdf` reads Markdown source files as UTF-8 by default. However, you can configure it to read non-UTF-8 source files by specifying a manual encoding or enabling auto-detection.
+
+### Usage
+
+- **CLI Flag**: Pass the `--encoding` option:
+
+  ```bash
+  md2pdf input.md -o output.pdf --encoding shift_jis
+  ```
+
+  To automatically detect the file encoding, pass `auto`:
+
+  ```bash
+  md2pdf input.md -o output.pdf --encoding auto
+  ```
+
+- **Configuration File**: Specify the `encoding` property under the `[md2pdf]` table in `md2pdf.toml`:
+
+  ```toml
+  [md2pdf]
+  encoding = "auto"
+  ```
+
+### Key Behaviors
+
+- **Recursive Includes**: When file inclusion (`!include`) is used, all recursively included Markdown files are read using the same configured/detected encoding.
+- **BOM Auto-detection**: In `"auto"` mode, the engine automatically detects UTF-8 BOM, UTF-16 BOMs, and then falls back to using the `charset-normalizer` package to determine the best single-byte or multi-byte encoding (e.g. Shift-JIS, CP1252, etc.).
 
 ---
 

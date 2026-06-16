@@ -47,6 +47,7 @@ class Config:
     deterministic: bool = False
     page_size: str = "A4"
     orientation: str = "portrait"
+    encoding: str = "utf-8"
 
     # Structured plugin config from [plugins] TOML section.
     # Keys: "handlers", "preprocessors", "postprocessors" → list[str]
@@ -212,3 +213,41 @@ def resolve_page_geometry(page_size: str, orientation: str) -> tuple[float, floa
     if orientation_clean == "landscape":
         return (matched_size[1], matched_size[0])
     return matched_size
+
+
+def detect_encoding(file_path: Path | str) -> str:
+    """Detect encoding of a file, checking BOM first then using charset-normalizer."""
+    path = Path(file_path)
+    try:
+        content_bytes = path.read_bytes()
+    except Exception:
+        return "utf-8"
+
+    if not content_bytes:
+        return "utf-8"
+
+    # Check for BOMs first
+    if content_bytes.startswith(b"\xef\xbb\xbf"):
+        return "utf-8-sig"
+    elif content_bytes.startswith(b"\xff\xfe") or content_bytes.startswith(b"\xfe\xff"):
+        return "utf-16"
+
+    try:
+        import charset_normalizer
+
+        result = charset_normalizer.from_bytes(content_bytes).best()
+        if result is not None and result.encoding:
+            return result.encoding
+    except Exception:
+        pass
+    return "utf-8"
+
+
+def read_file_with_encoding(file_path: Path | str, encoding: str) -> str:
+    """Read file with manually specified or automatically detected encoding."""
+    path = Path(file_path)
+    if encoding.lower() == "auto":
+        resolved_encoding = detect_encoding(path)
+    else:
+        resolved_encoding = encoding
+    return path.read_text(encoding=resolved_encoding)

@@ -116,6 +116,7 @@ class Pipeline:
             emoji=getattr(self.config, "emoji", True),
             cache_dir=self.config.cache_dir,
             progress_callback=self.progress_callback,
+            encoding=getattr(self.config, "encoding", "utf-8"),
         )
 
         # Stage 4 — post-processor registry.

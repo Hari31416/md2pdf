@@ -208,11 +208,13 @@ class IncludeResolver(PreProcessor):
         progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
         max_depth: int = 10,
         track_source_files: bool = False,
+        encoding: str = "utf-8",
     ) -> None:
         self.main_file = main_file
         self.progress_callback = progress_callback
         self.max_depth = max_depth
         self.track_source_files = track_source_files
+        self.encoding = encoding
 
     def process(self, raw_md: str) -> str:
         if not self.main_file:
@@ -291,8 +293,9 @@ class IncludeResolver(PreProcessor):
                         continue
 
                     try:
-                        with open(target_path, encoding="utf-8") as f:
-                            included_content = f.read()
+                        from md2pdf.core.config import read_file_with_encoding
+
+                        included_content = read_file_with_encoding(target_path, self.encoding)
 
                         # Strip front matter from included files to prevent metadata blocks
                         # from being treated as content or parsed as Setext headings.
@@ -780,6 +783,7 @@ class PreProcessorRegistry:
         cache_dir: str = "",
         emoji_timeout: float = 10.0,
         progress_callback: Callable[[str, dict[str, Any]], None] | None = None,
+        encoding: str = "utf-8",
     ) -> None:
         # Each entry is a (priority, PreProcessor) tuple.
         self._processors: list[tuple[int, PreProcessor]] = []
@@ -789,7 +793,10 @@ class PreProcessorRegistry:
             self.register(FrontMatterStripper(input_file), priority=10)
             self.register(
                 IncludeResolver(
-                    input_file, progress_callback=progress_callback, track_source_files=True
+                    input_file,
+                    progress_callback=progress_callback,
+                    track_source_files=True,
+                    encoding=encoding,
                 ),
                 priority=20,
             )

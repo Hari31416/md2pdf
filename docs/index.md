@@ -19,6 +19,7 @@ Learn about all supported Markdown structures, features, and configuration param
 - **Footnotes**: Reference link maps and automatic page layout positioning.
 - **Deterministic PDF Output**: Pinning timestamps and ID hashes for byte-identical builds.
 - **Page-Size & Orientation Configuration**: Configure custom page sizes and landscape/portrait modes.
+- **Encoding Detection**: Support for reading non-UTF-8 source files with manual overrides or auto-detection.
 - **Inline Formatting**: Support for `~~strikethrough~~`, `==highlight==`, superscript `x^2^`, and subscript `H~2~O` spans.
 - **Tables**: Automatic column alignment parsing (`:---`, `:---:`, `---:`) and layout styling.
 - **Admonitions & GitHub Alerts**: Fenced admonition blocks and inline markdown alerts with distinct color themes.

@@ -141,6 +141,11 @@ def convert(
         "--orientation",
         help="Page orientation: portrait or landscape",
     ),
+    encoding: str | None = typer.Option(  # noqa: B008
+        None,
+        "--encoding",
+        help="Source file encoding (e.g. utf-8, latin-1) or 'auto' for auto-detection.",
+    ),
 ) -> None:
     """Convert a Markdown file to a print-ready PDF."""
     _setup_logging(verbose)
@@ -230,6 +235,8 @@ def convert(
             cfg.page_size = page_size
         if orientation is not None:
             cfg.orientation = orientation
+        if encoding is not None:
+            cfg.encoding = encoding
     else:
         resolved_output = output if output is not None else input.with_suffix(".pdf")
         cfg = Config(
@@ -257,13 +264,21 @@ def convert(
             cfg.page_size = page_size
         if orientation is not None:
             cfg.orientation = orientation
+        if encoding is not None:
+            cfg.encoding = encoding
 
     registry = HandlerRegistry()
     pipeline = Pipeline(
         cfg, registry, progress_callback=cli_progress_callback if progress else None
     )
 
-    raw_md = input.read_text(encoding="utf-8")
+    from md2pdf.core.config import read_file_with_encoding
+
+    try:
+        raw_md = read_file_with_encoding(input, cfg.encoding)
+    except Exception as exc:
+        typer.echo(f"✗ Failed to read input file: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
 
     if validate_only:
         issues = pipeline.validate(raw_md)
