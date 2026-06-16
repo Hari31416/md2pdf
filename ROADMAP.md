@@ -6,10 +6,9 @@ Planned features and known limitations for future releases. Items are loosely or
 
 ## 🗺️ Future Roadmap
 
-### Short-Term (Target: v0.6.0)
+### Short-Term (Target: v0.7.0)
 
-- **Page-Size & Orientation Configuration** — Expose page sizing (e.g., A4, Letter, A3) and page orientation (landscape/portrait) as configuration options in `md2pdf.toml` and as CLI flags.
-- **Watch Mode** — Support live editing with `md2pdf --watch input.md`, automatically re-rendering the output PDF whenever changes are detected in the source file.
+- **TBD** — Planning the next features.
 
 ---
 
@@ -26,8 +25,11 @@ Planned features and known limitations for future releases. Items are loosely or
 
 | Version    | Feature                   | Description                                                                                                     |
 | :--------- | :------------------------ | :-------------------------------------------------------------------------------------------------------------- |
-| **v0.5.4** | JSON Validation Output    | Introduce a `--format json` CLI option for the `--validate-only` command to output structured validation results, making CI/CD automation integration easier. |
-| **v0.5.3** | Encoding Detection        | Add an `--encoding` CLI flag to support reading non-UTF-8 source files, along with optional auto-detection.      |
+| **v0.6.0** | Page-Size & Orientation   | Expose page sizing (e.g., A4, Letter, A3) and page orientation (landscape/portrait) via config and CLI flags.   |
+|            | Watch Mode                | Support live editing with `md2pdf --watch`, automatically re-rendering the output PDF when changes are detected.|
+|            | JSON Validation Output    | Introduce a `--format json` CLI option for the `--validate-only` command to output structured validation results. |
+|            | Encoding Detection        | Add an `--encoding` CLI flag to support reading non-UTF-8 source files, along with optional auto-detection.      |
+| **v0.5.3** | Setext Heading Support    | Remapped `SetextHeading` to `Heading` in the parser to natively support Markdown headings underlined with `===` and `---`. |
 | **v0.5.2** | Deterministic PDF Output  | Introduce a `--deterministic` CLI flag and `deterministic` config option to enable byte-identical PDF builds, pinning timestamps and hashes to support CI/CD caching. |
 |            | Integration Testing      | Create end-to-end regression tests converting reference Markdown files to PDF and asserting text correctness (via PDF text extraction) to prevent visual or layout regressions. |
 | **v0.5.0** | Pre-Built Themes          | Bundle built-in themes (`academic`, `minimal`, `dark`) selectable via the `--theme`/`-t` flag or configuration. |

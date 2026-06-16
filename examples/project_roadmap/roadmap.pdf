@@ -537,12 +537,12 @@ endobj
 endobj
 35 0 obj
 <<
-/Dest [ 11 0 R /Fit ] /Next 36 0 R /Parent 34 0 R /Title (Core Rendering Pipeline &amp; Config)
+/Dest [ 11 0 R /Fit ] /Next 36 0 R /Parent 34 0 R /Title (Core Rendering Pipeline & Config)
 >>
 endobj
 36 0 obj
 <<
-/Dest [ 11 0 R /Fit ] /Next 37 0 R /Parent 34 0 R /Prev 35 0 R /Title (Network &amp; Reliability Safeguards)
+/Dest [ 11 0 R /Fit ] /Next 37 0 R /Parent 34 0 R /Prev 35 0 R /Title (Network & Reliability Safeguards)
 >>
 endobj
 37 0 obj
@@ -563,7 +563,7 @@ endobj
 endobj
 40 0 obj
 <<
-/Dest [ 12 0 R /Fit ] /Parent 38 0 R /Prev 39 0 R /Title (2. Page-Size &amp; Orientation Configuration)
+/Dest [ 12 0 R /Fit ] /Parent 38 0 R /Prev 39 0 R /Title (2. Page-Size & Orientation Configuration)
 >>
 endobj
 41 0 obj
@@ -623,14 +623,14 @@ xref
 0000109009 00000 n 
 0000109114 00000 n 
 0000109268 00000 n 
-0000109386 00000 n 
-0000109517 00000 n 
-0000109626 00000 n 
-0000109769 00000 n 
-0000109874 00000 n 
-0000110000 00000 n 
-0000110068 00000 n 
-0000111982 00000 n 
+0000109382 00000 n 
+0000109509 00000 n 
+0000109618 00000 n 
+0000109761 00000 n 
+0000109866 00000 n 
+0000109988 00000 n 
+0000110056 00000 n 
+0000111970 00000 n 
 trailer
 <<
 /ID 
@@ -642,5 +642,5 @@ trailer
 /Size 44
 >>
 startxref
-114226
+114214
 %%EOF

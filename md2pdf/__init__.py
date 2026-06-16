@@ -13,7 +13,7 @@ from md2pdf.core.errors import (
 from md2pdf.core.pipeline import Pipeline
 from md2pdf.core.registry import HandlerRegistry
 
-__version__ = "0.5.3"
+__version__ = "0.6.0"
 __all__ = [
     "Config",
     "Pipeline",
