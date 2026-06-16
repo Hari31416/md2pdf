@@ -42,6 +42,8 @@ The CLI is built with `typer` and supports the following options:
 | `--emoji` / `--no-emoji` |              | Enable or disable colour Twemoji image substitution.                        |
 | `--progress` / `--no-progress` |        | Show or hide stage-level compilation progress on stderr (default: enabled). |
 | `--deterministic`        |              | Pin document creation timestamps and ID hashes, enabling byte-identical builds for CI caching. |
+| `--page-size`            |              | Page size name (e.g. A4, Letter, A3). Defaults to `"A4"`.                  |
+| `--orientation`          |              | Page orientation: `"portrait"` or `"landscape"`. Defaults to `"portrait"`. |
 
 ---
 
@@ -70,6 +72,8 @@ header               = "{title} | {section}" # Running header template (supports
 header_on_first_page = false                 # true = render running header on the first page
 emoji                = true                  # true = translate emoji codepoints into Twemoji images
 deterministic        = false                 # true = pin creation timestamps and ID hashes for byte-identical builds
+page_size            = "A4"                  # Page size name (e.g., A4, Letter, A3)
+orientation          = "portrait"            # Page orientation (portrait, landscape)
 
 [theme]
 # Typography
@@ -351,7 +355,34 @@ When generating PDFs for automated build systems, documentation servers, or with
 * **Configuration File:** Set the `deterministic` property under the `[md2pdf]` table inside `md2pdf.toml`:
   ```toml
   [md2pdf]
-  deterministic = true
+  deterministic        = true
+  ```
+
+---
+
+## Page-Size & Orientation Configuration
+
+`md2pdf` supports customizable page sizing and orientation.
+
+### Configurable Options
+
+- **Page Size**: Any standard page size supported by ReportLab (e.g. `A4`, `Letter`, `A3`, `A5`, `Legal`, `Tabloid`). Case-insensitive.
+- **Orientation**: Either `portrait` or `landscape`.
+
+### Usage
+
+- **CLI Flags**: Pass `--page-size` and `--orientation` options:
+
+  ```bash
+  md2pdf input.md -o output.pdf --page-size Letter --orientation landscape
+  ```
+
+- **Configuration File**: Set the properties under the `[md2pdf]` table in `md2pdf.toml`:
+
+  ```toml
+  [md2pdf]
+  page_size = "Letter"
+  orientation = "landscape"
   ```
 
 ---

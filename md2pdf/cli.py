@@ -131,6 +131,16 @@ def convert(
         "--deterministic/--no-deterministic",
         help="Pin document creation timestamps and ID hashes, enabling byte-identical builds for CI caching.",
     ),
+    page_size: str | None = typer.Option(  # noqa: B008
+        None,
+        "--page-size",
+        help="Page size name (e.g. A4, Letter, A3)",
+    ),
+    orientation: str | None = typer.Option(  # noqa: B008
+        None,
+        "--orientation",
+        help="Page orientation: portrait or landscape",
+    ),
 ) -> None:
     """Convert a Markdown file to a print-ready PDF."""
     _setup_logging(verbose)
@@ -216,6 +226,10 @@ def convert(
             cfg.emoji = emoji
         if deterministic is not None:
             cfg.deterministic = deterministic
+        if page_size is not None:
+            cfg.page_size = page_size
+        if orientation is not None:
+            cfg.orientation = orientation
     else:
         resolved_output = output if output is not None else input.with_suffix(".pdf")
         cfg = Config(
@@ -239,6 +253,10 @@ def convert(
             cfg.emoji = emoji
         if deterministic is not None:
             cfg.deterministic = deterministic
+        if page_size is not None:
+            cfg.page_size = page_size
+        if orientation is not None:
+            cfg.orientation = orientation
 
     registry = HandlerRegistry()
     pipeline = Pipeline(

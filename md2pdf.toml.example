@@ -13,6 +13,8 @@ header               = "{title} | {section}" # Running header template (supports
 header_on_first_page = false                 # true = render running header on the first page
 emoji                = true                  # true = translate emoji codepoints into Twemoji images
 deterministic        = false                 # true = pin creation timestamps and ID hashes for byte-identical builds
+page_size            = "A4"                  # Page size name (e.g., A4, Letter, A3)
+orientation          = "portrait"            # Page orientation (portrait, landscape)
 
 
 

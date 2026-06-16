@@ -5,6 +5,13 @@ All notable changes to the `md2pdf` project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [Unreleased]
+
+### Added
+- **Page-Size & Orientation Configuration**: Added support for configuring PDF page size (e.g. A4, Letter, A3) and page orientation (portrait/landscape) via config file (`md2pdf.toml`) and CLI flags (`--page-size`, `--orientation`).
+
+
 ## [0.5.3] - 2026-06-15
 
 ### Added

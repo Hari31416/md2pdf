@@ -498,3 +498,14 @@ The cover page is generated dynamically using keys declared in the document's YA
 - `date`: Rendered only if explicitly declared in the front-matter metadata.
 
 When a cover page is generated, page-level running headers, header rules, and footers (page numbers) are automatically suppressed on the first page.
+
+
+## 17. Page-Size & Orientation Configuration
+
+You can customize the PDF page size and orientation:
+
+```bash
+md2pdf docs/showcase.md -o docs/showcase.pdf --page-size A3 --orientation landscape
+```
+
+This compiles the document using the A3 landscape format. Supported page sizes include any standard size in ReportLab (e.g. `A4`, `Letter`, `A3`, `Legal`). Orientation can be `portrait` or `landscape`.

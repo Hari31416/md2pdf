@@ -45,6 +45,8 @@ class Config:
     header_on_first_page: bool = False
     emoji: bool = True
     deterministic: bool = False
+    page_size: str = "A4"
+    orientation: str = "portrait"
 
     # Structured plugin config from [plugins] TOML section.
     # Keys: "handlers", "preprocessors", "postprocessors" → list[str]
@@ -60,6 +62,9 @@ class Config:
                 self.output_file = str(Path(self.input_file).with_suffix(".pdf"))
             else:
                 self.output_file = "output.pdf"
+
+        # Validate page size and orientation
+        resolve_page_geometry(self.page_size, self.orientation)
 
         if self.theme_config is None:
             from md2pdf.styles.theme import PREBUILT_THEMES, ThemeConfig  # noqa: PLC0415
@@ -89,6 +94,11 @@ class Config:
 
             base_theme_data = PREBUILT_THEMES.get(value, {})
             super().__setattr__("theme_config", ThemeConfig.from_dict(base_theme_data))
+        elif name in ("page_size", "orientation"):
+            if hasattr(self, "page_size") and hasattr(self, "orientation"):
+                current_size = value if name == "page_size" else self.page_size
+                current_orient = value if name == "orientation" else self.orientation
+                resolve_page_geometry(current_size, current_orient)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Config:
@@ -157,3 +167,48 @@ class Config:
         with open(path, "rb") as fh:
             data = tomllib.load(fh)
         return cls.from_dict(data)
+
+
+def resolve_page_geometry(page_size: str, orientation: str) -> tuple[float, float]:
+    """Resolve page size name and orientation to a ReportLab coordinate tuple."""
+    from reportlab.lib import pagesizes
+
+    from md2pdf.core.errors import ConfigError
+
+    orientation_clean = orientation.strip().lower()
+    if orientation_clean not in ("portrait", "landscape"):
+        raise ConfigError(
+            f"Invalid orientation: {orientation!r}. Must be 'portrait' or 'landscape'."
+        )
+
+    size_name = page_size.strip().upper()
+    matched_size = None
+    for attr in dir(pagesizes):
+        if attr.upper() == size_name:
+            val = getattr(pagesizes, attr)
+            if (
+                isinstance(val, tuple)
+                and len(val) == 2
+                and all(isinstance(x, (int, float)) for x in val)
+            ):
+                matched_size = val
+                break
+
+    if matched_size is None:
+        supported = []
+        for attr in dir(pagesizes):
+            val = getattr(pagesizes, attr)
+            if (
+                isinstance(val, tuple)
+                and len(val) == 2
+                and all(isinstance(x, (int, float)) for x in val)
+            ):
+                supported.append(attr)
+        supported_str = ", ".join(sorted(supported))
+        raise ConfigError(
+            f"Unknown page size: {page_size!r}. Available page sizes: {supported_str}"
+        )
+
+    if orientation_clean == "landscape":
+        return (matched_size[1], matched_size[0])
+    return matched_size

@@ -10,19 +10,20 @@ Use the guides below to learn about installing, configuring, styling, and extend
 
 ### 1. [User Guide & Feature Reference](./user-guide.md)
 Learn about all supported Markdown structures, features, and configuration parameters including:
-* **YAML Front Matter**: Metadata extraction to PDF properties.
-* **Cover Page**: Auto-generating and prepending cover/title pages using YAML metadata.
-* **Table of Contents (TOC)**: Auto-generating clickable tables of contents.
-* **Running Headers & Section Titles**: Document headers, templates, and page number footers.
-* **Colour Emoji (Twemoji)**: Automatically substituting emoji characters with high-res colour Twemoji images.
-* **Task Lists**: GFM-style checklists (`- [ ]` / `- [x]`) rendered using Twemoji images or Unicode symbols.
-* **Footnotes**: Reference link maps and automatic page layout positioning.
-* **Deterministic PDF Output**: Pinning timestamps and ID hashes for byte-identical builds.
-* **Inline Formatting**: Support for `~~strikethrough~~`, `==highlight==`, superscript `x^2^`, and subscript `H~2~O` spans.
-* **Tables**: Automatic column alignment parsing (`:---`, `:---:`, `---:`) and layout styling.
-* **Admonitions & GitHub Alerts**: Fenced admonition blocks and inline markdown alerts with distinct color themes.
-* **Page Breaks**: Manual pagination using comment directives and backslash syntax.
-* **Mermaid & LaTeX**: Diagram and math rendering via the Kroki API, with concurrent pre-fetching, local caching, offline fallbacks, and optional fast local rendering via Matplotlib.
+- **YAML Front Matter**: Metadata extraction to PDF properties.
+- **Cover Page**: Auto-generating and prepending cover/title pages using YAML metadata.
+- **Table of Contents (TOC)**: Auto-generating clickable tables of contents.
+- **Running Headers & Section Titles**: Document headers, templates, and page number footers.
+- **Colour Emoji (Twemoji)**: Automatically substituting emoji characters with high-res colour Twemoji images.
+- **Task Lists**: GFM-style checklists (`- [ ]` / `- [x]`) rendered using Twemoji images or Unicode symbols.
+- **Footnotes**: Reference link maps and automatic page layout positioning.
+- **Deterministic PDF Output**: Pinning timestamps and ID hashes for byte-identical builds.
+- **Page-Size & Orientation Configuration**: Configure custom page sizes and landscape/portrait modes.
+- **Inline Formatting**: Support for `~~strikethrough~~`, `==highlight==`, superscript `x^2^`, and subscript `H~2~O` spans.
+- **Tables**: Automatic column alignment parsing (`:---`, `:---:`, `---:`) and layout styling.
+- **Admonitions & GitHub Alerts**: Fenced admonition blocks and inline markdown alerts with distinct color themes.
+- **Page Breaks**: Manual pagination using comment directives and backslash syntax.
+- **Mermaid & LaTeX**: Diagram and math rendering via the Kroki API, with concurrent pre-fetching, local caching, offline fallbacks, and optional fast local rendering via Matplotlib.
 
 ### 2. [Styling & Themes](./themes.md)
 Understand how to customize fonts, colors, and layout metrics using `ThemeConfig` blocks inside your configuration files, and how to write stylesheet override plugins.

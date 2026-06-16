@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from collections.abc import Callable
 from typing import Any
 
@@ -159,10 +160,13 @@ class Pipeline:
         self._styles: dict = self._style_registry.build()
         self._styles["_config"] = self.config
         self._styles["_registry"] = self.registry
-        from reportlab.lib.pagesizes import A4
         from reportlab.lib.units import mm
 
-        self._styles["_page_width"] = A4[0]
+        from md2pdf.core.config import resolve_page_geometry
+
+        pagesize = resolve_page_geometry(self.config.page_size, self.config.orientation)
+
+        self._styles["_page_width"] = pagesize[0]
         self._styles["_left_margin"] = 20 * mm
         self._styles["_right_margin"] = 20 * mm
 
@@ -365,7 +369,6 @@ class Pipeline:
 
     def _map(self, tokens: list[dict]) -> list:
         """Stage 3 — dispatch each token to its handler and collect flowables."""
-        import re
 
         self._styles["_seen_slugs"] = set()
         self._styles["_current_source_file"] = self.config.input_file
@@ -389,13 +392,12 @@ class Pipeline:
         diagram_idx = 0
         seen_footnotes = set()
         for token in tokens:
+            source_file = _is_source_file_comment(token)
+            if source_file is not None:
+                self._styles["_current_source_file"] = source_file
+                continue
+
             token_type = token.get("type", "")
-            if token_type in ("HTMLBlock", "RawHTML", "RawText"):
-                raw_val = (token.get("raw") or "").strip()
-                match = re.match(r"^<!--\s*SOURCE_FILE:\s*(.+?)\s*-->$", raw_val)
-                if match:
-                    self._styles["_current_source_file"] = match.group(1)
-                    continue
 
             if token_type == "FootnoteDefinition":
                 continue
@@ -558,12 +560,15 @@ class Pipeline:
             rl_config.invariant = old_invariant
 
     def _build_doc(self):
-        from reportlab.lib.pagesizes import A4
         from reportlab.lib.units import mm
+
+        from md2pdf.core.config import resolve_page_geometry
+
+        pagesize = resolve_page_geometry(self.config.page_size, self.config.orientation)
 
         return MD2PDFDocTemplate(
             self.config.output_file,
-            pagesize=A4,
+            pagesize=pagesize,
             leftMargin=20 * mm,
             rightMargin=20 * mm,
             topMargin=22 * mm,
@@ -840,3 +845,21 @@ def _find_footnote_references(token: dict) -> list[str]:
     for child in token.get("children", []):
         refs.extend(_find_footnote_references(child))
     return refs
+
+
+def _is_source_file_comment(token: dict) -> str | None:
+    """Check if the token represents a SOURCE_FILE comment, returning the filepath if matched."""
+    t_type = token.get("type", "")
+    raw_val = (token.get("raw") or "").strip()
+    if not raw_val and token.get("children"):
+        if t_type == "Paragraph" and len(token["children"]) == 1:
+            child = token["children"][0]
+            if child.get("type") in ("RawText", "RawHTML", "HTMLBlock"):
+                raw_val = (child.get("raw") or "").strip()
+        else:
+            raw_val = "".join(c.get("raw", "") for c in token["children"]).strip()
+
+    match = re.match(r"^<!--\s*SOURCE_FILE:\s*(.+?)\s*-->$", raw_val)
+    if match:
+        return match.group(1)
+    return None
