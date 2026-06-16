@@ -146,9 +146,22 @@ def convert(
         "--encoding",
         help="Source file encoding (e.g. utf-8, latin-1) or 'auto' for auto-detection.",
     ),
+    format: str = typer.Option(  # noqa: B008
+        "text",
+        "--format",
+        help="Format of the validation output (text or json).",
+    ),
 ) -> None:
     """Convert a Markdown file to a print-ready PDF."""
     _setup_logging(verbose)
+
+    if format not in ("text", "json"):
+        typer.echo(f"✗ Invalid format: '{format}'. Supported formats: 'text', 'json'.", err=True)
+        raise typer.Exit(code=1)
+
+    if format == "json" and not validate_only:
+        typer.echo("✗ JSON format is only supported when using --validate-only.", err=True)
+        raise typer.Exit(code=1)
 
     # Defer heavy imports so --help is instant even without all deps installed.
     from md2pdf.core.config import Config
@@ -282,7 +295,14 @@ def convert(
 
     if validate_only:
         issues = pipeline.validate(raw_md)
-        _report_issues(issues)
+        if format == "json":
+            import dataclasses
+            import json
+
+            issues_dict = [dataclasses.asdict(i) for i in issues]
+            typer.echo(json.dumps(issues_dict, indent=2))
+        else:
+            _report_issues(issues)
         has_errors = any(i.severity == "error" for i in issues)
         raise typer.Exit(code=1 if has_errors else 0)
 

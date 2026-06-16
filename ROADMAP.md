@@ -9,7 +9,6 @@ Planned features and known limitations for future releases. Items are loosely or
 ### Short-Term (Target: v0.6.0)
 
 - **Page-Size & Orientation Configuration** — Expose page sizing (e.g., A4, Letter, A3) and page orientation (landscape/portrait) as configuration options in `md2pdf.toml` and as CLI flags.
-- **Structured JSON Validation Output** — Introduce a `--format json` CLI option for the `--validate-only` command to output structured validation results, making CI/CD automation integration easier.
 - **Watch Mode** — Support live editing with `md2pdf --watch input.md`, automatically re-rendering the output PDF whenever changes are detected in the source file.
 
 ---
@@ -27,6 +26,7 @@ Planned features and known limitations for future releases. Items are loosely or
 
 | Version    | Feature                   | Description                                                                                                     |
 | :--------- | :------------------------ | :-------------------------------------------------------------------------------------------------------------- |
+| **v0.5.4** | JSON Validation Output    | Introduce a `--format json` CLI option for the `--validate-only` command to output structured validation results, making CI/CD automation integration easier. |
 | **v0.5.3** | Encoding Detection        | Add an `--encoding` CLI flag to support reading non-UTF-8 source files, along with optional auto-detection.      |
 | **v0.5.2** | Deterministic PDF Output  | Introduce a `--deterministic` CLI flag and `deterministic` config option to enable byte-identical PDF builds, pinning timestamps and hashes to support CI/CD caching. |
 |            | Integration Testing      | Create end-to-end regression tests converting reference Markdown files to PDF and asserting text correctness (via PDF text extraction) to prevent visual or layout regressions. |

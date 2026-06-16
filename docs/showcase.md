@@ -28,6 +28,11 @@ Enable validation checks without writing a PDF:
 md2pdf docs/showcase.md --validate-only
 ```
 
+Run validation and output results in JSON format:
+```bash
+md2pdf docs/showcase.md --validate-only --format json
+```
+
 Run in offline mode to use placeholders for network-dependent elements (e.g. diagrams):
 ```bash
 md2pdf docs/showcase.md -o docs/showcase.pdf --offline

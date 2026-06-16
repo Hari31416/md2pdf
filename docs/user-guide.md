@@ -34,6 +34,7 @@ The CLI is built with `typer` and supports the following options:
 | `--offline`              |              | Skip external API requests (e.g. Kroki). Uses local placeholders instead.   |
 | `--verbose`              | `-v`         | Enable verbose debug-level logging to `stderr`.                             |
 | `--validate-only`        |              | Runs DX-first pre-render validation checks and exits.                       |
+| `--format`               |              | Output format for validation results (`text`, `json`). Defaults to `"text"`.|
 | `--min-image-scale`      |              | Minimum image scale factor (e.g. `0.8`) before moving images to a new page. |
 | `--toc`                  |              | Prepend a dynamically generated Table of Contents page.                     |
 | `--cover`                |              | Prepend an auto-generated cover/title page.                                 |
@@ -45,6 +46,39 @@ The CLI is built with `typer` and supports the following options:
 | `--page-size`            |              | Page size name (e.g. A4, Letter, A3). Defaults to `"A4"`.                  |
 | `--orientation`          |              | Page orientation: `"portrait"` or `"landscape"`. Defaults to `"portrait"`. |
 | `--encoding`             |              | Source file encoding (e.g., `"shift_jis"`, `"latin-1"`) or `"auto"`. Defaults to `"utf-8"`. |
+
+---
+
+## Pre-Render Validation
+
+`md2pdf` provides a pre-render validation stage that scans the parsed Markdown AST for potential formatting or diagram errors before starting the heavy rendering pipeline.
+
+To run the checks and exit immediately, use the `--validate-only` flag:
+
+```bash
+md2pdf input.md --validate-only
+```
+
+### Validation Output Format
+
+By default, the validation output is presented as human-readable text on `stdout`. You can configure the format of this output using the `--format` option, which supports two values:
+
+- `text` (default): Prints validation issues as formatted lines with icons, line numbers, and issue codes.
+- `json`: Serializes validation issues as a JSON array of objects to `stdout`, making it easy to integrate with automated CI/CD checks and validation pipelines.
+
+Example JSON output:
+
+```json
+[
+  {
+    "severity": "error",
+    "code": "EMPTY_DIAGRAM",
+    "message": "Empty Mermaid block found — will render as placeholder.",
+    "line": 12,
+    "element_type": "Mermaid"
+  }
+]
+```
 
 ---
 

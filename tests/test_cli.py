@@ -57,6 +57,62 @@ def test_validate_only_fails_on_empty_diagram(tmp_path: Path) -> None:
     assert "EMPTY_DIAGRAM" in result.output
 
 
+def test_validate_only_json_success(tmp_path: Path, simple_md: str) -> None:
+    """Verify validation runner behavior for standard files when json format is chosen."""
+    src = tmp_path / "test.md"
+    src.write_text(simple_md, encoding="utf-8")
+    result = runner.invoke(app, [str(src), "--validate-only", "--format", "json"])
+
+    assert result.exit_code == 0
+    assert result.stdout.strip() == "[]"
+
+
+def test_validate_only_json_fails_on_empty_diagram(tmp_path: Path) -> None:
+    """Verify JSON validation runner flags errors and includes details in structured output."""
+    src = tmp_path / "test.md"
+    src.write_text("```mermaid\n\n```\n", encoding="utf-8")
+    result = runner.invoke(app, [str(src), "--validate-only", "--format", "json"])
+
+    assert result.exit_code == 1
+
+    import json
+
+    data = json.loads(result.stdout)
+    assert isinstance(data, list)
+    assert len(data) == 1
+    issue = data[0]
+    assert issue["severity"] == "error"
+    assert issue["code"] == "EMPTY_DIAGRAM"
+    assert issue["element_type"] == "Mermaid"
+    assert issue["line"] == 2
+
+
+def test_validate_only_json_without_validate_only(tmp_path: Path, simple_md: str) -> None:
+    """Verify validation error when --format json is provided without --validate-only."""
+    src = tmp_path / "test.md"
+    src.write_text(simple_md, encoding="utf-8")
+    result = runner.invoke(app, [str(src), "--format", "json"])
+
+    assert result.exit_code == 1
+    assert (
+        "JSON format is only supported when using --validate-only" in result.stdout
+        or "JSON format is only supported when using --validate-only" in result.stderr
+    )
+
+
+def test_validate_only_invalid_format(tmp_path: Path, simple_md: str) -> None:
+    """Verify validation error when an invalid output format is specified."""
+    src = tmp_path / "test.md"
+    src.write_text(simple_md, encoding="utf-8")
+    result = runner.invoke(app, [str(src), "--validate-only", "--format", "invalid_format_name"])
+
+    assert result.exit_code == 1
+    assert (
+        "Invalid format: 'invalid_format_name'" in result.stdout
+        or "Invalid format: 'invalid_format_name'" in result.stderr
+    )
+
+
 def test_convert(tmp_path: Path, simple_md: str) -> None:
     """Verify end-to-end file generation path via command line options."""
     src = tmp_path / "test.md"
