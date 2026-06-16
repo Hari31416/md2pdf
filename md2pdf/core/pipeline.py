@@ -840,6 +840,9 @@ def draw_page_number(canvas, doc, state: PageCallbackState | None = None) -> Non
 
             header_text = header_text.strip()
             if header_text:
+                import html
+
+                header_text = html.unescape(header_text)
                 canvas.drawString(20 * mm, doc.pagesize[1] - 15 * mm, header_text)
 
                 canvas.setStrokeColor(colors.HexColor("#cccccc"))

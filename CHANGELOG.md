@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Code Block Text Overflow**: Implemented a custom `WrappedXPreformatted` flowable to automatically wrap code lines that exceed the available layout width, splitting them gracefully at spaces or character-by-character to prevent overflow, with thread-safe/multi-pass re-entry safeguards.
+- **Running Header & Outline HTML Entity Unescaping**: Unescaped HTML/XML entities (such as `&amp;`) in heading bookmark titles and running section templates to prevent literal entity string displays in PDF viewer outline panels and page headers.
+
 
 
 ## [0.5.3] - 2026-06-15

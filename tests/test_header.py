@@ -141,3 +141,45 @@ More text here.
     pipeline.run(md_content)
     assert pdf_path.exists()
     assert pdf_path.stat().st_size > 1000
+
+
+def test_unescape_html_entities_in_headers_and_outlines(tmp_path: Path) -> None:
+    """Verify that headings with HTML entities are unescaped in outlines and headers."""
+    canvas = MagicMock()
+    canvas.getPageNumber.return_value = 2
+
+    doc = MagicMock()
+    doc.pagesize = A4
+
+    # Test draw_page_number unescapes header text
+    state = PageCallbackState(
+        header_template="LLM Notes | {section}",
+        header_on_first_page=False,
+        metadata={"title": "My &amp; Doc"},
+        bookmarks=[BookmarkFlowable("sec1", "Self-Attention &amp; Transformers", level=0)],
+        page_registry={"sec1": 2},
+        is_first_page=False,
+    )
+
+    draw_page_number(canvas, doc, state=state)
+    canvas.drawString.assert_called_once()
+    args, _ = canvas.drawString.call_args
+    assert args[2] == "LLM Notes | Self-Attention & Transformers"
+
+    # Test HeadingHandler unescapes in plain_title
+    from md2pdf.handlers.heading import HeadingHandler
+    from md2pdf.styles.default import build_default_stylesheet
+
+    styles = build_default_stylesheet()
+    token = {
+        "type": "Heading",
+        "attrs": {"level": 2},
+        "children": [{"type": "RawText", "raw": "Self-Attention & Transformers"}],
+    }
+
+    handler = HeadingHandler()
+    flowables = handler.render(token, styles)
+
+    # flowables[0] is the BookmarkFlowable
+    assert isinstance(flowables[0], BookmarkFlowable)
+    assert flowables[0].title == "Self-Attention & Transformers"
