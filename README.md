@@ -41,10 +41,10 @@ To evaluate compilation speeds, we compared `md2pdf` against **Pandoc** (using v
 * **Warm Start (Median)**: Measures rendering throughput by averaging subsequent runs in a warm environment.
 
 #### Warm Start Rendering Speed (Median)
-![Warm Start Performance](scripts/benchmark_outputs/benchmark_chart_warm.png)
+![Warm Start Performance](https://raw.githubusercontent.com/Hari31416/md2pdf/main/scripts/benchmark_outputs/benchmark_chart_warm.png)
 
 #### Cold Start Rendering Speed
-![Cold Start Performance](scripts/benchmark_outputs/benchmark_chart_cold.png)
+![Cold Start Performance](https://raw.githubusercontent.com/Hari31416/md2pdf/main/scripts/benchmark_outputs/benchmark_chart_cold.png)
 
 #### Summary Metrics (seconds, lower is better)
 

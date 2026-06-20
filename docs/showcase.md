@@ -19,31 +19,37 @@ This document serves as both a user guide and a comprehensive rendering test sui
 ### Command Line Interface
 
 Convert this document to a PDF:
+
 ```bash
 md2pdf docs/showcase.md -o docs/showcase.pdf
 ```
 
 Watch for changes and automatically re-render the PDF:
+
 ```bash
 md2pdf docs/showcase.md -o docs/showcase.pdf --watch
 ```
 
 Enable validation checks without writing a PDF:
+
 ```bash
 md2pdf docs/showcase.md --validate-only
 ```
 
 Run validation and output results in JSON format:
+
 ```bash
 md2pdf docs/showcase.md --validate-only --format json
 ```
 
 Run in offline mode to use placeholders for network-dependent elements (e.g. diagrams):
+
 ```bash
 md2pdf docs/showcase.md -o docs/showcase.pdf --offline
 ```
 
 Compile a deterministic PDF (byte-identical builds for CI caching/reproducibility):
+
 ```bash
 md2pdf docs/showcase.md -o docs/showcase.pdf --deterministic
 ```
@@ -74,10 +80,15 @@ pipeline.run(raw_md="# My Doc\nSome text.")
 Below is the vertical stack of headings from H1 through H6. Heading levels 5 and 6 fall back to the H4 style for clean presentation since standard PDF engines support up to 4 heading levels out-of-the-box.
 
 # Heading Level 1 (H1)
+
 ## Heading Level 2 (H2)
+
 ### Heading Level 3 (H3)
+
 #### Heading Level 4 (H4)
+
 ##### Heading Level 5 (H5 - fallback to H4 style)
+
 ###### Heading Level 6 (H6 - fallback to H4 style)
 
 ---
@@ -85,9 +96,10 @@ Below is the vertical stack of headings from H1 through H6. Heading levels 5 and
 ## 3. Inline Elements and Styles
 
 This section tests inline layout and inline style parsing:
+
 - **Strong/Bold**: This is a **strongly emphasized text block** using double asterisks.
-- *Emphasis/Italic*: This is an *emphasized text block* using single asterisks.
-- **Nested Styles**: You can combine styles like ***bold-italic nested runs***.
+- _Emphasis/Italic_: This is an _emphasized text block_ using single asterisks.
+- **Nested Styles**: You can combine styles like **_bold-italic nested runs_**.
 - `Code Inline`: Use backticks for monospace symbols like `Pipeline`, `ThemeConfig`, or `build_default_stylesheet()`.
 - Hyperlinks: Clickable links like the [md2pdf GitHub page](https://github.com/hari31416/md2pdf) are automatically colored.
 - **Strikethrough**: This is a ~~strikethrough text run~~ showing a horizontal line through text.
@@ -97,6 +109,7 @@ This section tests inline layout and inline style parsing:
 - **Footnotes**: Clickable footnote references[^1] linked to their definitions[^2] at the bottom of the page.
 
 [^1]: This is the first footnote definition, explaining reference 1.
+
 [^2]: This is the second footnote definition, containing inline formatting like **bold text** and ~~strikethrough~~.
 
 ---
@@ -106,6 +119,7 @@ This section tests inline layout and inline style parsing:
 `md2pdf` supports ordered, unordered, and multi-level nested lists.
 
 ### Unordered Bullet List
+
 - Top-level item A
 - Top-level item B
   - Nested sub-item B.1
@@ -114,6 +128,7 @@ This section tests inline layout and inline style parsing:
 - Top-level item C
 
 ### Ordered Numbered List
+
 1. First step in the instructions
 2. Second step in the instructions
    1. Sub-step 2.a
@@ -121,9 +136,10 @@ This section tests inline layout and inline style parsing:
 3. Final step
 
 ### Task List Checkboxes
+
 - [ ] Uncompleted task list item
 - [x] Completed task list item (lowercase)
-- [X] Completed task list item (uppercase)
+- [x] Completed task list item (uppercase)
 - [ ] Task list item with a link: [md2pdf GitHub page](https://github.com/hari31416/md2pdf)
 - [ ] Task list item with inline code: `x = 1`
 
@@ -306,11 +322,13 @@ $$
 Standard images are scaled down automatically to fit within the printable page area.
 
 ### Missing Image Placeholder
+
 If an image file is missing or corrupt, a placeholder box is rendered instead of throwing a compiler crash error:
 
 ![Missing Image Example](missing_image.png)
 
 ### Working Image Example
+
 Successful image references are dynamically loaded, scaled, and centered:
 
 ![Sample Document Translation Graphic](sample_image.png)
@@ -451,10 +469,10 @@ All systems nominal 🟢 — pipeline complete 🏁. Found **3 warnings** ⚠️
 
 | Component        | Status |
 | :--------------- | :----- |
-| Core pipeline    | ✅ OK   |
-| Emoji support    | ✅ OK   |
-| LaTeX rendering  | ✅ OK   |
-| Mermaid diagrams | ✅ OK   |
+| Core pipeline    | ✅ OK  |
+| Emoji support    | ✅ OK  |
+| LaTeX rendering  | ✅ OK  |
+| Mermaid diagrams | ✅ OK  |
 
 ### ZWJ Sequences
 
@@ -482,14 +500,17 @@ You can manually control pagination using either the standard HTML comment direc
 <!-- pagebreak -->
 
 ### HTML Comment Syntax
+
 ```markdown
 <!-- pagebreak -->
 ```
 
 ### Backslash Syntax
+
 ```markdown
 \pagebreak
 ```
+
 Both directives must reside on their own line (leading/trailing whitespace is allowed, and they are case-insensitive).
 
 ---
@@ -503,12 +524,12 @@ md2pdf docs/showcase.md -o docs/showcase.pdf --cover
 ```
 
 The cover page is generated dynamically using keys declared in the document's YAML front-matter metadata:
+
 - `title`: Extracted and displayed in a large, bold format. Defaults to the source filename if not explicitly provided.
 - `author`: Rendered only if explicitly declared in the front-matter metadata (omitting the default library branding).
 - `date`: Rendered only if explicitly declared in the front-matter metadata.
 
 When a cover page is generated, page-level running headers, header rules, and footers (page numbers) are automatically suppressed on the first page.
-
 
 ## 17. Page-Size & Orientation Configuration
 

@@ -10,7 +10,7 @@ md2pdf processes a Markdown document through four sequential stages. Plugins
 can intercept at any of the first three stages, plus supply stylesheet
 overrides:
 
-```
+```txt
 [ Raw .md ]
     │
     ▼

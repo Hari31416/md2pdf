@@ -8,10 +8,10 @@
 
 `md2pdf` bundles several pre-built themes selectable via the CLI `--theme` / `-t` flag or the `theme` configuration setting in `md2pdf.toml`:
 
-* **`default`**: The standard layout using DejaVu fonts, a corporate dark-blue table header, gray grid, and default spacing metrics.
-* **`academic`**: A formal serif layout using `Times-Roman` and `Times-Bold` fonts, `Courier` for code, slightly larger font sizes/spacing, and formal dark table styling.
-* **`minimal`**: A clean, modern sans-serif layout using `Helvetica` and `Helvetica-Bold` fonts, generous line margins, thick black blockquote accent bar, black hyperlinks, and plain white table styling.
-* **`dark`**: A dark mode layout painting a dark charcoal background (`#1e1e1e`) across all pages, light-gray body text, soft-blue hyperlinks, dark table structures, and pygments syntax highlighting styled via `monokai`.
+- **`default`**: The standard layout using DejaVu fonts, a corporate dark-blue table header, gray grid, and default spacing metrics.
+- **`academic`**: A formal serif layout using `Times-Roman` and `Times-Bold` fonts, `Courier` for code, slightly larger font sizes/spacing, and formal dark table styling.
+- **`minimal`**: A clean, modern sans-serif layout using `Helvetica` and `Helvetica-Bold` fonts, generous line margins, thick black blockquote accent bar, black hyperlinks, and plain white table styling.
+- **`dark`**: A dark mode layout painting a dark charcoal background (`#1e1e1e`) across all pages, light-gray body text, soft-blue hyperlinks, dark table structures, and pygments syntax highlighting styled via `monokai`.
 
 ---
 
@@ -85,6 +85,7 @@ The default base stylesheet built from `ThemeConfig` contains the following keys
 | `color_page_bg`        | `HexColor`       | Background color for document pages.                       |
 
 All paragraph styles include:
+
 - `allowWidows = 0`
 - `allowOrphans = 0`
 
