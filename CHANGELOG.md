@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.6.1] - 2026-09-02
+
+### Fixed
+- **Section & List Layout Splitting**: Extended `KeepTogetherParts` to support `ListFlowable`, `Paragraph`, `BlockQuoteBar`, and `AdmonitionBox`, allowing content to start on the current page if initial items fit rather than pushing the entire block to a new page.
+- **Consecutive Heading Orphan Prevention**: Grouped consecutive headings and bookmark anchors in `LayoutComposer` so parent headings are never stranded alone when subheadings break across page boundaries.
+
 ## [0.6.0] - 2026-06-16
 
 ### Added

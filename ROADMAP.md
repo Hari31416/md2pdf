@@ -25,6 +25,7 @@ Planned features and known limitations for future releases. Items are loosely or
 
 | Version    | Feature                   | Description                                                                                                     |
 | :--------- | :------------------------ | :-------------------------------------------------------------------------------------------------------------- |
+| **v0.6.1** | Layout Splitting & Orphans| Extended KeepTogetherParts to lists/paragraphs and grouped consecutive headings to eliminate greedy page breaks.|
 | **v0.6.0** | Page-Size & Orientation   | Expose page sizing (e.g., A4, Letter, A3) and page orientation (landscape/portrait) via config and CLI flags.   |
 |            | Watch Mode                | Support live editing with `md2pdf --watch`, automatically re-rendering the output PDF when changes are detected.|
 |            | JSON Validation Output    | Introduce a `--format json` CLI option for the `--validate-only` command to output structured validation results. |
