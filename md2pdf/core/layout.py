@@ -32,49 +32,56 @@ class LayoutComposer:
         return flowables
 
     def _bond_headings_to_next(self, flowables: list[Flowable]) -> list[Flowable]:
-        """Wrap each heading with the immediately following flowable in a KeepTogether.
+        """Wrap each heading (or sequence of consecutive headings) with the following flowable.
 
         This ensures headings never appear alone at the bottom of a page.
-        Supports preceding BookmarkFlowables by keeping them in the same KeepTogether block.
+        Supports preceding BookmarkFlowables by keeping them in the same block.
+        Uses KeepTogetherParts so that splittable content (lists, paragraphs, tables, etc.)
+        can start on the current page if the heading + minimum initial content fits,
+        avoiding unnecessary page breaks and large blank areas.
         """
+        from reportlab.platypus import PageBreak
+
+        from md2pdf.core.flowables import KeepTogetherParts
+
         result: list[Flowable] = []
         i = 0
         while i < len(flowables):
-            current = flowables[i]
-            bookmark = None
-            heading = None
-            idx_next = i + 1
-
-            if (
-                self._is_bookmark(current)
-                and i + 1 < len(flowables)
-                and self._is_heading(flowables[i + 1])
-            ):
-                bookmark = current
-                heading = flowables[i + 1]
-                idx_next = i + 2
-            elif self._is_heading(current):
-                heading = current
-                idx_next = i + 1
-
-            assert idx_next > i
-            if heading is not None and idx_next < len(flowables):
-                nxt = flowables[idx_next]
-                # Don't bond heading to another heading or an image block
-                if not self._is_heading(nxt) and not self._is_image_block(nxt):
-                    elements = [bookmark, heading, nxt] if bookmark else [heading, nxt]
-                    from reportlab.platypus import Table
-
-                    from md2pdf.core.flowables import KeepTogetherParts
-
-                    if isinstance(nxt, Table):
-                        result.append(KeepTogetherParts(elements))
-                    else:
-                        result.append(KeepTogether(elements))
-                    i = idx_next + 1
+            headings_group: list[Flowable] = []
+            idx = i
+            while idx < len(flowables):
+                item = flowables[idx]
+                if self._is_bookmark(item):
+                    if idx + 1 < len(flowables) and (
+                        self._is_heading(flowables[idx + 1])
+                        or self._is_bookmark(flowables[idx + 1])
+                    ):
+                        headings_group.append(item)
+                        idx += 1
+                        continue
+                    break
+                elif self._is_heading(item):
+                    headings_group.append(item)
+                    idx += 1
                     continue
+                break
 
-            result.append(current)
+            if any(self._is_heading(f) for f in headings_group):
+                if idx < len(flowables):
+                    nxt = flowables[idx]
+                    if not isinstance(nxt, PageBreak):
+                        if self._is_image_block(nxt):
+                            result.append(KeepTogether(headings_group + [nxt]))
+                        else:
+                            result.append(KeepTogetherParts(headings_group + [nxt]))
+                        i = idx + 1
+                        continue
+
+                result.extend(headings_group)
+                i = idx
+                continue
+
+            result.append(flowables[i])
             i += 1
         return result
 
@@ -84,38 +91,7 @@ class LayoutComposer:
         Prevents ReportLab from inserting a large empty gap/page break between
         a heading and its corresponding chart/math block.
         """
-        result: list[Flowable] = []
-        i = 0
-        while i < len(flowables):
-            current = flowables[i]
-            bookmark = None
-            heading = None
-            idx_next = i + 1
-
-            if (
-                self._is_bookmark(current)
-                and i + 1 < len(flowables)
-                and self._is_heading(flowables[i + 1])
-            ):
-                bookmark = current
-                heading = flowables[i + 1]
-                idx_next = i + 2
-            elif self._is_heading(current):
-                heading = current
-                idx_next = i + 1
-
-            assert idx_next > i
-            if heading is not None and idx_next < len(flowables):
-                nxt = flowables[idx_next]
-                if self._is_image_block(nxt):
-                    elements = [bookmark, heading, nxt] if bookmark else [heading, nxt]
-                    result.append(KeepTogether(elements))
-                    i = idx_next + 1
-                    continue
-
-            result.append(current)
-            i += 1
-        return result
+        return flowables
 
     def _is_heading(self, f: Flowable) -> bool:
         from reportlab.platypus import Paragraph

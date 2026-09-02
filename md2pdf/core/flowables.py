@@ -412,42 +412,80 @@ class FootnoteFlowable(Flowable):
 class KeepTogetherParts(KeepTogether):
     """A subclass of KeepTogether that checks if a minimum subset of flowables fits.
 
-    Specifically, if the last flowable is a Table, it calculates the height of the preceding
-    flowables plus the height of the first row of the Table (or the repeated header rows plus
-    the first data row). If this minimum height fits in the available space, it splits and
-    allows the components to flow, allowing the table to start on the current page and split
-    to the next page, preventing huge empty gaps at the bottom of pages.
+    Specifically, if the last flowable is a Table, ListFlowable, Paragraph, etc., it calculates
+    the height of the preceding flowables plus the minimum height of the initial portion of the
+    last flowable (e.g., table header + first row, first list item, or first two lines of text).
+    If this minimum height fits in the available space, it allows the content to start on the
+    current page and split to the next page, preventing huge empty gaps at the bottom of pages.
     """
 
     def split(self, aW: float, aH: float) -> list[Flowable]:
         if getattr(self, "_wrapInfo", None) != (aW, aH):
             self.wrap(aW, aH)
 
-        from reportlab.platypus import Table
+        from reportlab.platypus import ListFlowable, Paragraph, Preformatted, Table, XPreformatted
         from reportlab.platypus.flowables import _listWrapOn
 
         dims: list[tuple[float, float]] = []
         _listWrapOn(self._content, aW, self.canv, dims=dims)
 
         h_before = 0.0
-        h_table_first_row = 0.0
+        h_last_min = 0.0
 
         for i, child in enumerate(self._content):
             child_w, child_h = dims[i]
-            if isinstance(child, Table) and i == len(self._content) - 1:
-                row_heights = getattr(child, "_rowHeights", None)
-                if row_heights:
-                    num_rows_to_keep = max(1, getattr(child, "repeatRows", 0))
-                    if len(row_heights) > num_rows_to_keep:
-                        num_rows_to_keep += 1
-                    # Add 15 points safety margin for grid lines/padding/borders
-                    h_table_first_row = sum(row_heights[:num_rows_to_keep]) + 15.0
+            if i == len(self._content) - 1:
+                if isinstance(child, Table):
+                    row_heights = getattr(child, "_rowHeights", None)
+                    if row_heights:
+                        num_rows_to_keep = max(1, getattr(child, "repeatRows", 0))
+                        if len(row_heights) > num_rows_to_keep:
+                            num_rows_to_keep += 1
+                        # Add 15 points safety margin for grid lines/padding/borders
+                        h_last_min = sum(row_heights[:num_rows_to_keep]) + 15.0
+                    else:
+                        h_last_min = 45.0  # 30 + 15 fallback
+                elif isinstance(child, ListFlowable):
+                    list_items = getattr(child, "_content", [])
+                    if list_items:
+                        item_dims: list[tuple[float, float]] = []
+                        _listWrapOn(list_items[:1], aW, self.canv, dims=item_dims)
+                        h_items = sum(d[1] for d in item_dims)
+                        space_before = getattr(child, "spaceBefore", 0) or 0.0
+                        space_after = getattr(child, "spaceAfter", 0) or 0.0
+                        h_last_min = h_items + space_before + space_after + 6.0
+                    else:
+                        h_last_min = child_h
+                elif isinstance(child, Paragraph):
+                    leading = getattr(child.style, "leading", 12.0)
+                    space_before = getattr(child.style, "spaceBefore", 0) or 0.0
+                    space_after = getattr(child.style, "spaceAfter", 0) or 0.0
+                    h_last_min = min(child_h, leading * 2 + space_before + space_after)
+                elif isinstance(child, BlockQuoteBar):
+                    inner = getattr(child, "inner", None)
+                    if isinstance(inner, Paragraph):
+                        leading = getattr(inner.style, "leading", 12.0)
+                        space_before = getattr(inner.style, "spaceBefore", 0) or 0.0
+                        space_after = getattr(inner.style, "spaceAfter", 0) or 0.0
+                        h_last_min = min(child_h, leading * 2 + space_before + space_after)
+                    else:
+                        h_last_min = child_h
+                elif isinstance(child, AdmonitionBox):
+                    title_h = 0.0
+                    if child.title_flowable:
+                        _, title_h = child.title_flowable.wrap(aW, aH)
+                    h_last_min = min(child_h, child.padding * 2 + title_h + 30.0)
+                elif isinstance(child, (XPreformatted, Preformatted)):
+                    leading = getattr(child.style, "leading", 12.0)
+                    space_before = getattr(child.style, "spaceBefore", 0) or 0.0
+                    space_after = getattr(child.style, "spaceAfter", 0) or 0.0
+                    h_last_min = min(child_h, leading * 2 + space_before + space_after)
                 else:
-                    h_table_first_row = 45.0  # 30 + 15 fallback
+                    h_last_min = child_h
             else:
                 h_before += child_h
 
-        h_min = h_before + h_table_first_row
+        h_min = h_before + h_last_min
 
         S = self._content[:]
         cf = atTop = getattr(self, "_frame", None)

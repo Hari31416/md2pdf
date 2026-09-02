@@ -105,6 +105,106 @@ def test_bond_headings_to_table() -> None:
     assert composed[0]._content == [h, t]
 
 
+def test_bond_consecutive_headings() -> None:
+    """Consecutive headings and bookmarks should be grouped together with following content."""
+    from md2pdf.core.flowables import BookmarkFlowable, KeepTogetherParts
+
+    composer = LayoutComposer()
+    h1_style = ParagraphStyle("h1")
+    h2_style = ParagraphStyle("h2")
+    body_style = ParagraphStyle("body")
+
+    b1 = BookmarkFlowable("h1-slug")
+    h1 = Paragraph("Section 1", h1_style)
+    b2 = BookmarkFlowable("h2-slug")
+    h2 = Paragraph("Subsection 1.1", h2_style)
+    p = Paragraph("Body paragraph text", body_style)
+
+    flowables = [b1, h1, b2, h2, p]
+    composed = composer.compose(flowables)
+
+    assert len(composed) == 1
+    assert isinstance(composed[0], KeepTogetherParts)
+    assert composed[0]._content == [b1, h1, b2, h2, p]
+
+
+def test_bond_headings_to_list() -> None:
+    """Heading followed by ListFlowable should be wrapped in KeepTogetherParts."""
+    from reportlab.platypus import ListFlowable, ListItem
+
+    from md2pdf.core.flowables import KeepTogetherParts
+
+    composer = LayoutComposer()
+    h1_style = ParagraphStyle("h1")
+    body_style = ParagraphStyle("body")
+
+    h = Paragraph("Header", h1_style)
+    items = [ListItem(Paragraph("Item 1", body_style)), ListItem(Paragraph("Item 2", body_style))]
+    lf = ListFlowable(items)
+
+    flowables = [h, lf]
+    composed = composer.compose(flowables)
+
+    assert len(composed) == 1
+    assert isinstance(composed[0], KeepTogetherParts)
+    assert composed[0]._content == [h, lf]
+
+
+def test_keep_together_parts_list_splitting() -> None:
+    """Verify KeepTogetherParts allows ListFlowable to start on page if heading + 1st item fits."""
+    from reportlab.pdfgen import canvas
+    from reportlab.platypus import ListFlowable, ListItem
+    from reportlab.platypus.doctemplate import _FrameBreak
+
+    from md2pdf.core.flowables import KeepTogetherParts
+
+    h_style = ParagraphStyle("h1", fontSize=14, leading=16)
+    body_style = ParagraphStyle("body", fontSize=10, leading=12)
+
+    h = Paragraph("Header", h_style)
+    items = [ListItem(Paragraph(f"Item {i}", body_style)) for i in range(10)]
+    lf = ListFlowable(items)
+
+    ktp = KeepTogetherParts([h, lf])
+    c = canvas.Canvas("/dev/null")
+    ktp.canv = c
+
+    # Enough space for heading + 1st item (~40pt), but not all 10 items (~140pt)
+    splits_fit = ktp.split(400.0, 60.0)
+    assert not any(isinstance(f, _FrameBreak) for f in splits_fit)
+
+    # Not enough space for even heading + 1st item (e.g. 10pt available)
+    splits_overflow = ktp.split(400.0, 10.0)
+    assert any(isinstance(f, _FrameBreak) for f in splits_overflow)
+
+
+def test_keep_together_parts_paragraph_splitting() -> None:
+    """Verify KeepTogetherParts allows multi-line paragraph to start if heading + 2 lines fit."""
+    from reportlab.pdfgen import canvas
+    from reportlab.platypus.doctemplate import _FrameBreak
+
+    from md2pdf.core.flowables import KeepTogetherParts
+
+    h_style = ParagraphStyle("h1", fontSize=14, leading=16)
+    body_style = ParagraphStyle("body", fontSize=10, leading=12)
+
+    h = Paragraph("Header", h_style)
+    long_text = "<br/>".join([f"Line {i}" for i in range(15)])
+    p = Paragraph(long_text, body_style)
+
+    ktp = KeepTogetherParts([h, p])
+    c = canvas.Canvas("/dev/null")
+    ktp.canv = c
+
+    # Heading (16pt) + 2 lines (24pt) = ~40pt. Available 50pt -> fits!
+    splits_fit = ktp.split(400.0, 50.0)
+    assert not any(isinstance(f, _FrameBreak) for f in splits_fit)
+
+    # Available 15pt -> does not fit heading + 2 lines -> FrameBreak!
+    splits_overflow = ktp.split(400.0, 15.0)
+    assert any(isinstance(f, _FrameBreak) for f in splits_overflow)
+
+
 def _get_test_image_bytes() -> bytes:
     from io import BytesIO
 
