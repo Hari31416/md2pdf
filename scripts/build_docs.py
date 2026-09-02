@@ -28,6 +28,7 @@ def build_docs() -> bool:
     """Compile documentation files in docs/ to PDFs."""
     docs_to_compile = [
         ("docs/user_manual.md", "docs/user_manual.pdf", Config(toc=True, deterministic=True)),
+        ("docs/showcase.md", "docs/showcase.pdf", Config(toc=True, deterministic=True)),
     ]
 
     logger.info("--- Compiling Documentation Suite ---")
