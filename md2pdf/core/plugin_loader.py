@@ -55,7 +55,9 @@ class PluginLoader:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def register_builtins(registry: HandlerRegistry, cache_dir: str | None = None) -> None:
+    def register_builtins(
+        registry: HandlerRegistry, cache_dir: str | None = None, offline: bool = True
+    ) -> None:
         """Register all built-in handlers directly into a HandlerRegistry.
 
         This is useful for tests or standalone usage where setup.py / pyproject.toml
@@ -88,12 +90,12 @@ class PluginLoader:
         reg(CodeFenceHandler())
         reg(AdmonitionHandler())
         reg(PageBreakHandler())
-        # Register Mermaid and Latex handlers in offline mode by default
+        # Standalone registries default to offline mode. Pipelines pass their configured value.
         import os
 
         default_cache = cache_dir or os.path.expanduser("~/.cache/pymd2pdf")
-        reg(MermaidHandler(KrokiClient(), AssetCache(default_cache), True))
-        reg(LatexHandler(KrokiClient(), AssetCache(default_cache), True))
+        reg(MermaidHandler(KrokiClient(), AssetCache(default_cache), offline))
+        reg(LatexHandler(KrokiClient(), AssetCache(default_cache), offline))
 
     def load_entry_points(self) -> None:
         """Auto-discover installed packages that declare ``md2pdf.*`` entry points.

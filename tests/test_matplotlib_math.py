@@ -88,8 +88,10 @@ def test_matplotlib_math_rendering_fallback_on_unsupported_latex(tmp_path: Path)
 
 
 @pytest.mark.matplotlib
-def test_pipeline_pre_fetch_assets(tmp_path: Path) -> None:
+def test_pipeline_pre_fetch_assets(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify that Pipeline._pre_fetch_assets concurrently scans AST and pre-populates caches."""
+    # This case exercises Kroki fallback independently of optional local Merman.
+    monkeypatch.setattr("md2pdf.handlers.mermaid._merman_cli", lambda: None)
     config = Config(cache_dir=str(tmp_path / "cache"), offline=False)
     pipeline = Pipeline(config)
 

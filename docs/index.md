@@ -25,7 +25,7 @@ Learn about all supported Markdown structures, features, and configuration param
   - **Footnotes**: Reference link maps and automatic page layout positioning.
   - **Colour Emoji (Twemoji)**: Automatically substituting emoji characters with high-res colour Twemoji images.
 - **Advanced Features**
-  - **Mermaid & LaTeX**: Diagram and math rendering via the Kroki API, with concurrent pre-fetching, local caching, offline fallbacks, and optional fast local rendering via Matplotlib.
+  - **Mermaid & LaTeX**: Mermaid renders locally with optional Merman or through Kroki. LaTeX uses Kroki, with optional local Matplotlib rendering for supported equations.
   - **Deterministic PDF Output**: Pinning timestamps and ID hashes for byte-identical builds.
   - **Encoding Detection**: Support for reading non-UTF-8 source files with manual overrides or auto-detection.
   - **Watch Mode**: Automatic re-rendering on changes to source, included, or configuration files.

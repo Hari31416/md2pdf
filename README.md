@@ -19,10 +19,10 @@ Most Markdown-to-PDF tools require heavy system dependencies — and even then, 
 | :------------------- | :-------------- | :-------------- | :--------------------------------------------------------- | :---------- |
 | Pandoc-based         | ✅ Yes           | ❌ No            | ⚠️ Extra packages (e.g. mermaid-filter, LaTeX distribution) | ❌ No        |
 | Puppeteer/Playwright | ❌ No            | ✅ Yes           | ⚠️ Depends on setup                                         | ❌ No        |
-| **md2pdf**           | ❌ **No**        | ❌ **No**        | ✅ **Built-in (via Kroki and matplotlib)**                  | ✅ **Yes**   |
+| **md2pdf**           | ❌ **No**        | ❌ **No**        | ✅ **Built-in (via Merman, Kroki, and matplotlib)**         | ✅ **Yes**   |
 
 Beyond zero system dependencies, you also get:
-- **Diagrams & Math** — Mermaid and LaTeX via Kroki (with SHA-256 disk caching); matplotlib used for offline LaTeX rendering when configured
+- **Diagrams & Math** — Mermaid diagrams render locally with optional Merman or through Kroki; LaTeX uses Kroki, with matplotlib available for local math rendering
 - **PDF bookmarks** — every heading clickable in your PDF viewer's navigation panel
 - **Multi-page tables** — split cleanly across pages with repeated headers
 - **Colour emoji** — Twemoji-powered PNG emoji in your PDFs
@@ -103,6 +103,22 @@ uv tool install "pymd2pdf[matplotlib]"
 
 > **Note:** The PyPI package name is `pymd2pdf`, but the CLI command and Python import are both `md2pdf`.
 
+### Optional local Mermaid rendering
+
+`pip install` and `uv tool install` do not install Merman. To render Mermaid diagrams locally, including with `--offline`, install `merman-cli` separately.
+
+The [official Merman 0.9.2 release](https://github.com/Latias94/merman/releases/tag/v0.9.2) provides prebuilt binaries and installers for macOS, Linux, and Windows. Rust and Cargo are not required for these downloads. On macOS or Linux, use the version-pinned installer:
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Latias94/merman/releases/download/v0.9.2/merman-cli-installer.sh -o merman-cli-installer.sh
+sh merman-cli-installer.sh
+merman-cli --version
+```
+
+Restart your terminal if `merman-cli` is not found after installation. md2pdf detects it automatically on `PATH`. See the [installation guide](docs/user-guide.md#local-mermaid-rendering) for Windows, manual downloads, and Cargo installation.
+
+Without Merman, md2pdf uses Kroki online or cached images and source placeholders offline. Mermaid math labels currently require Kroki.
+
 ---
 
 ## Quick Start
@@ -114,7 +130,7 @@ md2pdf input.md -o output.pdf
 # Run validation checks without producing a PDF
 md2pdf input.md --validate-only
 
-# Work offline (diagrams show source code placeholder instead)
+# Work offline (Merman renders Mermaid when installed; unavailable assets use placeholders)
 md2pdf input.md -o output.pdf --offline
 ```
 
@@ -126,7 +142,7 @@ That's it. For most use cases, the first command is all you need.
 
 - **Standard Elements**: Headings (H1–H6), paragraphs, lists, blockquotes, horizontal rules, and hyperlinks.
 - **Multi-page Tables**: Tables split cleanly across page boundaries with repeated column headers on each page.
-- **Diagrams & Math**: Mermaid diagrams and LaTeX math blocks rendered via the Kroki API, with transparent margin cropping, offline fallbacks, and SHA-256 disk caching.
+- **Diagrams & Math**: Mermaid diagrams render with optional local `merman-cli` or fall back to Kroki. LaTeX math blocks use Kroki, and matplotlib can render supported equations locally. Rendered assets use SHA-256 disk caching.
 - **PDF Bookmarks & Outline Panel**: Every heading (H1–H6) becomes a clickable, correctly nested entry in your PDF viewer's navigation/bookmarks panel.
 - **Colour Emoji**: Twemoji-powered PNG emoji rendering in PDFs, with graceful network fallbacks.
 - **Admonitions & Callouts**: GitHub-style alerts (`> [!NOTE]`, `> [!WARNING]`) and MkDocs/Obsidian fenced containers (`:::note`).
@@ -145,7 +161,7 @@ That's it. For most use cases, the first command is all you need.
 | `--output` | `-o` | Output PDF path (default: `<input>.pdf`). |
 | `--config` | `-c` | Path to a custom `md2pdf.toml` config file. |
 | `--theme` | `-t` | Theme name to apply (default: `default`). |
-| `--offline` | | Skip Kroki API calls; use source code placeholders instead. |
+| `--offline` | | Skip Kroki API calls; use `merman-cli` for Mermaid when installed, then placeholders if rendering is unavailable. |
 | `--validate-only` | | Run validation and exit without producing a PDF. |
 | `--verbose` | `-v` | Output debug-level logging to `stderr`. |
 | `--toc` | | Prepend a dynamically generated Table of Contents page. |

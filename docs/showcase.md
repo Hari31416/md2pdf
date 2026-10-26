@@ -295,7 +295,7 @@ Below is a table demonstrating left, center, right, and default column alignment
 
 ## 9. Diagrams (Mermaid)
 
-Mermaid diagram blocks are rendered as cropped PNG images using the Kroki API and cached locally.
+Mermaid diagram blocks are rendered as cropped PNG images with local `merman-cli` when installed, or through Kroki otherwise. Merman uses native font measurement. Both renderers cache images locally.
 
 ```mermaid
 graph LR
