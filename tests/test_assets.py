@@ -11,7 +11,7 @@ from md2pdf.assets.cache import AssetCache
 from md2pdf.assets.fallback import PlaceholderBox
 from md2pdf.assets.kroki import KrokiClient
 from md2pdf.handlers.latex import LatexHandler, _wrap_latex
-from md2pdf.handlers.mermaid import MermaidHandler
+from md2pdf.handlers.mermaid import MermaidHandler, _render_with_merman, get_mermaid_image
 
 # ---------------------------------------------------------------------------
 # Minimal 1×1 transparent PNG for use as a mock response body
@@ -130,6 +130,10 @@ class TestKrokiClient:
 
 
 class TestMermaidHandler:
+    @pytest.fixture(autouse=True)
+    def disable_optional_merman_for_legacy_cases(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("md2pdf.handlers.mermaid._merman_cli", lambda: None)
+
     def _make_handler(
         self,
         tmp_path: Path,
@@ -202,6 +206,132 @@ class TestMermaidHandler:
         result = handler.render({"type": "Mermaid", "raw": "graph TD; A-->B"}, {})
         assert len(result) == 1
         assert isinstance(result[0], Image)
+
+    def test_local_merman_runs_offline_and_uses_versioned_cache(self, tmp_path: Path) -> None:
+        source = "graph TD; A-->B"
+        cache = AssetCache(str(tmp_path / "cache"))
+        client = MagicMock(spec=KrokiClient)
+        with (
+            patch("md2pdf.handlers.mermaid._merman_cli", return_value=("/bin/merman-cli", "0.9.2")),
+            patch("md2pdf.handlers.mermaid._render_with_merman", return_value=_FAKE_PNG) as render,
+        ):
+            path = get_mermaid_image(source, client=client, cache=cache, offline=True)
+        assert path == str(cache.path_for("merman-png-native-v1-0.9.2", source))
+        assert Path(path).exists()
+        render.assert_called_once_with(source, "/bin/merman-cli")
+        client.render.assert_not_called()
+        with patch(
+            "md2pdf.handlers.mermaid._merman_cli", return_value=("/bin/merman-cli", "0.9.2")
+        ):
+            assert get_mermaid_image(source, client=client, cache=cache, offline=True) == path
+        render.assert_called_once()
+
+        with (
+            patch("md2pdf.handlers.mermaid._merman_cli", return_value=("/bin/merman-cli", "0.9.3")),
+            patch(
+                "md2pdf.handlers.mermaid._render_with_merman", return_value=_FAKE_PNG
+            ) as new_version_render,
+        ):
+            newer_path = get_mermaid_image(source, client=client, cache=cache, offline=True)
+        assert newer_path != path
+        assert newer_path == str(cache.path_for("merman-png-native-v1-0.9.3", source))
+        new_version_render.assert_called_once()
+
+    def test_local_merman_failure_falls_back_to_kroki(self, tmp_path: Path) -> None:
+        source = "graph TD; A-->B"
+        cache = AssetCache(str(tmp_path / "cache"))
+        client = MagicMock(spec=KrokiClient)
+        client.render.return_value = _FAKE_PNG
+        with (
+            patch("md2pdf.handlers.mermaid._merman_cli", return_value=("/bin/merman-cli", "0.9.2")),
+            patch(
+                "md2pdf.handlers.mermaid._render_with_merman",
+                side_effect=TimeoutError("render timed out"),
+            ),
+        ):
+            path = get_mermaid_image(source, client=client, cache=cache, offline=False)
+        assert path == str(cache.path_for("mermaid", source))
+        client.render.assert_called_once_with("mermaid", source)
+
+    def test_local_merman_failure_stays_offline(self, tmp_path: Path) -> None:
+        client = MagicMock(spec=KrokiClient)
+        with (
+            patch("md2pdf.handlers.mermaid._merman_cli", return_value=("/bin/merman-cli", "0.9.2")),
+            patch("md2pdf.handlers.mermaid._render_with_merman", side_effect=TimeoutError),
+        ):
+            path = get_mermaid_image(
+                "graph TD; A-->B",
+                client=client,
+                cache=AssetCache(str(tmp_path / "cache")),
+                offline=True,
+            )
+        assert path is None
+        client.render.assert_not_called()
+
+    def test_merman_math_labels_skip_local_renderer(self, tmp_path: Path) -> None:
+        source = 'flowchart LR\n A["$$E=mc^2$$"] --> B'
+        client = MagicMock(spec=KrokiClient)
+        with (
+            patch("md2pdf.handlers.mermaid._merman_cli") as discover,
+            patch("md2pdf.handlers.mermaid._render_with_merman") as render,
+        ):
+            path = get_mermaid_image(
+                source, client=client, cache=AssetCache(str(tmp_path / "cache")), offline=True
+            )
+        assert path is None
+        discover.assert_not_called()
+        render.assert_not_called()
+        client.render.assert_not_called()
+
+
+def test_merman_cli_reads_stdin_and_writes_native_measured_png() -> None:
+    from io import BytesIO
+
+    from PIL import Image
+
+    png_buffer = BytesIO()
+    Image.new("RGBA", (2, 2), color="blue").save(png_buffer, format="PNG")
+    response = MagicMock(stdout=png_buffer.getvalue())
+    with patch("md2pdf.handlers.mermaid.subprocess.run", return_value=response) as run:
+        png = _render_with_merman("graph TD; A-->B", "/bin/merman-cli")
+
+    assert png == png_buffer.getvalue()
+    assert run.call_args.args[0] == [
+        "/bin/merman-cli",
+        "render",
+        "-",
+        "--format",
+        "png",
+        "--output",
+        "-",
+        "--font-measurement",
+        "native",
+    ]
+    assert run.call_args.kwargs["input"] == b"graph TD; A-->B"
+    assert run.call_args.kwargs["timeout"] == 30
+
+
+def test_merman_cli_rejects_non_png_output() -> None:
+    with patch(
+        "md2pdf.handlers.mermaid.subprocess.run", return_value=MagicMock(stdout=b"not a png")
+    ):
+        with pytest.raises(ValueError, match="did not return PNG"):
+            _render_with_merman("graph TD; A-->B", "/bin/merman-cli")
+
+
+def test_missing_merman_cli_falls_back_to_kroki(tmp_path: Path) -> None:
+    from md2pdf.handlers import mermaid as mermaid_module
+
+    source = "graph TD; A-->B"
+    cache = AssetCache(str(tmp_path / "cache"))
+    client = MagicMock(spec=KrokiClient)
+    client.render.return_value = _FAKE_PNG
+    mermaid_module._merman_cli.cache_clear()
+    with patch("md2pdf.handlers.mermaid.shutil.which", return_value=None):
+        path = get_mermaid_image(source, client=client, cache=cache, offline=False)
+    mermaid_module._merman_cli.cache_clear()
+    assert path == str(cache.path_for("mermaid", source))
+    client.render.assert_called_once_with("mermaid", source)
 
 
 # ===========================================================================

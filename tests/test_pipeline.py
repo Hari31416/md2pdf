@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from md2pdf.core.config import Config
 from md2pdf.core.pipeline import Pipeline
+from md2pdf.handlers.mermaid import MermaidHandler
 
 if TYPE_CHECKING:
     from md2pdf.core.registry import HandlerRegistry
@@ -22,6 +23,45 @@ def test_simple_doc_produces_pdf(
 
     assert tmp_pdf.exists()
     assert tmp_pdf.stat().st_size > 1000  # Non-trivial sized PDF
+
+
+def test_pipeline_uses_configured_mermaid_cache_and_offline_mode(
+    tmp_path: Path,
+) -> None:
+    config = Config(cache_dir=str(tmp_path / "assets"), offline=True)
+    pipeline = Pipeline(config)
+    handler = pipeline.registry.get("Mermaid")
+
+    assert isinstance(handler, MermaidHandler)
+    assert handler.cache.cache_dir == tmp_path / "assets"
+    assert handler.offline is True
+
+
+def test_prefetch_does_not_let_kroki_cache_mask_local_merman(
+    tmp_path: Path,
+) -> None:
+    from md2pdf.assets.cache import AssetCache
+
+    source = "graph TD; A-->B"
+    cache = AssetCache(str(tmp_path / "assets"))
+    cache.put("mermaid", source, b"old Kroki cache entry")
+    pipeline = Pipeline(Config(cache_dir=str(tmp_path / "assets"), offline=True))
+
+    def local_render(source, config, client, cache, offline):
+        cache.put("merman-png-native-v1-0.9.2", source, b"local Merman cache entry")
+
+    from unittest.mock import patch
+
+    with (
+        patch(
+            "md2pdf.handlers.mermaid._merman_cache_type", return_value="merman-png-native-v1-0.9.2"
+        ),
+        patch("md2pdf.handlers.mermaid.get_mermaid_image", side_effect=local_render) as render,
+    ):
+        pipeline._pre_fetch_assets([{"type": "Mermaid", "raw": source}])
+
+    render.assert_called_once()
+    assert cache.path_for("merman-png-native-v1-0.9.2", source).exists()
 
 
 def test_mermaid_offline_uses_placeholder(tmp_pdf: Path, default_registry: HandlerRegistry) -> None:

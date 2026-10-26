@@ -32,7 +32,7 @@ The CLI is built with `typer` and supports the following options:
 | `--output`                     | `-o`         | Output PDF file path. Defaults to `<input-filename>.pdf`.                                      |
 | `--config`                     | `-c`         | Path to a custom `md2pdf.toml` config file.                                                    |
 | `--theme`                      | `-t`         | Theme name to apply (defaults to `"default"`).                                                 |
-| `--offline`                    |              | Skip external API requests (e.g. Kroki). Uses local placeholders instead.                      |
+| `--offline`                    |              | Skip Kroki requests. Mermaid uses local `merman-cli` when installed, then placeholders.         |
 | `--verbose`                    | `-v`         | Enable verbose debug-level logging to `stderr`.                                                |
 | `--validate-only`              |              | Runs DX-first pre-render validation checks and exits.                                          |
 | `--format`                     |              | Output format for validation results (`text`, `json`). Defaults to `"text"`.                   |
@@ -101,7 +101,7 @@ All settings in the file are optional. If omitted, built-in defaults are used.
 [md2pdf]
 output_file          = "output.pdf"
 theme                = "default"             # Theme name: default, academic, minimal, dark
-offline              = false                 # true = skip Kroki API calls, render placeholders instead
+offline              = false                 # true = skip Kroki; local Merman Mermaid rendering remains available
 cache_dir            = "~/.cache/pymd2pdf"
 min_image_scale      = 0.8                   # minimum image scale factor before deferring to a new page
 toc                  = false                 # true = generate a Table of Contents page
@@ -549,6 +549,48 @@ Tags like `<br>`, `<br />`, or `<BR/>` are automatically normalized into PDF-com
 ## Diagrams (Mermaid) & Math (LaTeX)
 
 Diagrams and complex equations can be compiled locally or remotely, and are embedded as cropped high-resolution graphics in the PDF.
+
+### Local Mermaid rendering
+
+When `merman-cli` is on `PATH`, md2pdf uses it to render Mermaid diagrams locally with native font measurement. This works with `--offline` and avoids sending diagram source over the network. Merman is a separate optional installation; installing `pymd2pdf` with pip or uv does not install it.
+
+#### Install a prebuilt binary
+
+The [official Merman 0.9.2 release](https://github.com/Latias94/merman/releases/tag/v0.9.2) provides installers and archives for macOS, Linux, and Windows. These do not require Rust or Cargo.
+
+On macOS or Linux:
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Latias94/merman/releases/download/v0.9.2/merman-cli-installer.sh -o merman-cli-installer.sh
+sh merman-cli-installer.sh
+```
+
+On Windows, run in PowerShell:
+
+```powershell
+Invoke-WebRequest https://github.com/Latias94/merman/releases/download/v0.9.2/merman-cli-installer.ps1 -OutFile merman-cli-installer.ps1
+powershell -ExecutionPolicy Bypass -File .\merman-cli-installer.ps1
+```
+
+For manual installation, download the archive matching your operating system and CPU from the release page, verify its adjacent SHA-256 checksum, and extract it. Put the directory containing `merman-cli` or `merman-cli.exe` on `PATH`. Retain the archive's license and third-party notices.
+
+Restart your terminal if needed, then verify that the command is available:
+
+```bash
+merman-cli --version
+```
+
+It should report `merman-cli 0.9.2`. md2pdf detects it automatically; no additional configuration is required. For Python applications, the executable must be on the application's `PATH`.
+
+#### Install with Cargo
+
+If you already use [cargo-binstall](https://github.com/cargo-bins/cargo-binstall), install the tested release with:
+
+```bash
+cargo binstall merman-cli@0.9.2
+```
+
+If Merman is missing or cannot render a diagram, md2pdf uses Kroki when online. Merman 0.9.2 does not render Mermaid `$$...$$` math labels, so those diagrams go through Kroki online and show the source placeholder offline. Offline conversions also use the placeholder when local rendering is unavailable. Merman and Kroki images use separate cache entries, and Merman entries include its version and rendering mode.
 
 ### Optional Local LaTeX Rendering (Matplotlib)
 

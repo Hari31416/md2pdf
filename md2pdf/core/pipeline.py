@@ -142,7 +142,11 @@ class Pipeline:
             post_registry=self._post_registry,
             style_registry=self._style_registry,
         )
-        loader.register_builtins(self.registry, cache_dir=self.config.cache_dir)
+        loader.register_builtins(
+            self.registry,
+            cache_dir=self.config.cache_dir,
+            offline=getattr(self.config, "offline", False),
+        )
         loader.load_entry_points()
         loader.load_from_config(config.plugins_dict)
 
@@ -637,11 +641,13 @@ class Pipeline:
             offline = getattr(self.config, "offline", False)
 
             mermaid_handler = MermaidHandler(client, cache, offline)
-            if self.registry.get(mermaid_handler.token_type) is None:
+            current_mermaid = self.registry.get(mermaid_handler.token_type)
+            if current_mermaid is None or type(current_mermaid) is MermaidHandler:
                 self.registry.register(mermaid_handler)
 
             latex_handler = LatexHandler(client, cache, offline)
-            if self.registry.get(latex_handler.token_type) is None:
+            current_latex = self.registry.get(latex_handler.token_type)
+            if current_latex is None or type(current_latex) is LatexHandler:
                 self.registry.register(latex_handler)
         except Exception:
             logger.debug("Could not register asset handlers", exc_info=True)
@@ -700,7 +706,11 @@ class Pipeline:
                 wrapped = _wrap_latex(formula)
                 path = cache.path_for("tikz", wrapped)
             elif asset_type == "Mermaid":
-                path = cache.path_for("mermaid", raw_source)
+                from md2pdf.handlers.mermaid import _merman_cache_type
+
+                merman_type = _merman_cache_type()
+                kroki_path = cache.path_for("mermaid", raw_source)
+                path = cache.path_for(merman_type, raw_source) if merman_type else kroki_path
             else:
                 continue
 
